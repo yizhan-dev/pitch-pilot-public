@@ -1,0 +1,104 @@
+/* The line-up show's overlays (src/lineup/LineupShow.tsx), imported by it, so the show looks the same on its own page
+   (/lineup.html) and in the game (GameApp, the pre-match in watch mode). Every class starts with lu-; the HUD's tokens
+   (styles/tokens.css: --glass, --hairline, --ink..., --home / --away, the fonts) are the page's. */
+/* the HUD's tokens come from src/styles/tokens.css (imported by lineupMain.tsx): --glass, --hairline, --ink…, the kit
+   colours --home / --away, the fonts; so the show's overlays follow the game's */
+.lu-loading { position: fixed; inset: 0; display: grid; place-items: center; color: var(--ink-2); }
+.lu-vignette { position: fixed; inset: 0; pointer-events: none; background: radial-gradient(ellipse at 45% 50%, transparent 55%, rgba(0, 0, 0, .42) 100%); }
+/* each overlay in its team's colour: home blue, away orange (Yi, 2026-10-23); the title has both */
+.lu-ov { --team: var(--home); }
+.lu-ov .away { --team: var(--away); }
+.lu-ov svg { display: block; flex: none; }
+/* the small name plates over the heads, on the board and the crane: the HUD's glass, the team's colour along the top */
+.lu-plate { position: fixed; left: 0; top: 0; will-change: transform; pointer-events: none; visibility: hidden; display: flex; align-items: baseline; gap: 5px; padding: 3px 7px 4px;
+  background: var(--glass-strong); border: 1px solid var(--hairline); border-top: 2px solid var(--team); white-space: nowrap; }
+.lu-plate b { font: 700 14px/1 var(--font-display); color: var(--team); }
+.lu-plate span { font: 600 12px/1 var(--font-display); letter-spacing: .04em; }
+.lu-plate i { display: none; font-style: normal; font-size: 12px; font-weight: 600; letter-spacing: .08em; }
+.lu-plate.pos span { display: none; } .lu-plate.pos i { display: inline; }
+/* the plate shows the shirt's name; on an away track it is large, with the flag and the full name (that line's men have
+   no cards of their own in the short version) */
+.lu-plate .lu-pflag, .lu-plate .lu-full { display: none; }
+.lu-plate.big { align-items: center; gap: 8px; padding: 5px 11px 6px 9px; border-top-width: 3px; }
+.lu-plate.big b { font-size: 24px; }
+.lu-plate.big .lu-pflag { display: block; width: 21px; height: 16px; border-radius: 1px; object-fit: cover; outline: 1px solid rgba(0, 0, 0, .25); outline-offset: -1px; }
+.lu-plate.big .lu-short { display: none; }
+.lu-plate.big .lu-full { display: inline; font: 700 21px/1 var(--font-display); letter-spacing: .03em; }
+/* the opening title, crest against crest (Yi chose this layout, 2026-10-23): the HUD's score bug built large, dark
+   glass with a hairline, a team cell each side (the crest on the outside, overhanging the bar, the name inside), the
+   middle cell lighter between the two kit-colour strips */
+.lu-title { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; padding-bottom: 4vh; pointer-events: none; visibility: hidden; }
+.lu-title svg { filter: drop-shadow(0 6px 22px rgba(0, 0, 0, .55)); }
+.lu-lock { position: relative; display: flex; align-items: stretch; height: 92px; }
+.lu-lock-bg { position: absolute; inset: 0; background: var(--glass-strong); backdrop-filter: blur(14px) saturate(1.2); border: 1px solid var(--hairline); box-shadow: 0 10px 40px rgba(0, 0, 0, .35); }
+.lu-lteam { position: relative; display: flex; align-items: center; gap: 24px; padding: 0 34px; }
+.lu-lteam b { display: block; font-size: 40px; font-weight: 700; letter-spacing: .08em; }
+.lu-lmid { position: relative; display: flex; align-items: stretch; }
+/* the middle cell's shade, a layer of its own so it can dock onto the score bug's score cell */
+.lu-lmid-bg { position: absolute; inset: 0; background: rgba(255, 255, 255, .08); }
+.lu-strip { position: relative; }
+/* VS, and under it the score in the score bug's own figures at the title's size (its 26 px digits and drawn colon, as
+   hud.css .hud-score b and .hud-score-sep, at 2.7 times: 2.25 times the bug's 1.2 zoom), shown as VS turns over */
+.lu-lscore { position: relative; display: flex; align-items: center; justify-content: center; perspective: 500px; }
+.lu-zero { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; visibility: hidden; }
+.lu-zero-in { display: flex; align-items: center; zoom: 2.7; }
+.lu-zero-in b { box-sizing: border-box; min-width: 22px; padding: 0 2px; text-align: center; font: 700 26px/1 var(--font-display); font-variant-numeric: tabular-nums; color: var(--ink); }
+/* the part of each name past the score bug's code, folded away as the title docks */
+.lu-rest { display: inline-block; }
+.lu-strip { width: 6px; flex: none; }
+.lu-strip.home { background: var(--home); } .lu-strip.away { background: var(--away); }
+.lu-lmid em { display: flex; align-items: center; padding: 0 30px; font: italic 700 44px/1 var(--font-display); color: var(--ink-2); letter-spacing: .04em; }
+/* the team's head on the board and the crane, top left where the game's score bug sits: glass, the team's colour along
+   the top, the crest and the name, then the line-up's title after a hairline */
+.lu-team { position: fixed; left: 28px; top: 24px; display: flex; align-items: center; gap: 10px; height: 50px; padding: 0 16px 0 12px; visibility: hidden;
+  background: var(--glass-strong); backdrop-filter: blur(14px) saturate(1.2); border: 1px solid var(--hairline); border-top: 3px solid var(--team); }
+.lu-team b { font: 700 26px/1 var(--font-display); }
+.lu-team.away { left: auto; right: 28px; }
+.lu-team span { margin-left: 4px; padding-left: 12px; border-left: 1px solid var(--hairline-strong); font-size: 14px; line-height: 22px; color: var(--ink-2); }
+/* the letterbox through the players, the line's name in the top bar, the crest before the team's name */
+.lu-bar { position: fixed; left: 0; right: 0; height: 10.5vh; background: #000; pointer-events: none; }
+.lu-bar.top { top: 0; transform: translateY(-100%); } .lu-bar.bottom { bottom: 0; transform: translateY(100%); }
+.lu-line { position: absolute; left: 4vw; bottom: 1.6vh; display: flex; align-items: center; gap: 16px; visibility: hidden; }
+.lu-line b { font-size: 24px; font-weight: 700; letter-spacing: .3em; }
+.lu-line span { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; letter-spacing: .12em; color: var(--ink-2); }
+/* the line's name, big, as the camera goes to it */
+.lu-word { position: fixed; left: 50%; top: 50%; pointer-events: none; visibility: hidden; white-space: nowrap; font-size: 150px; font-weight: 800; letter-spacing: .4em; text-indent: .4em;
+  color: rgba(255, 255, 255, .92); text-shadow: 0 6px 40px rgba(0, 0, 0, .55); }
+/* the player's card through his hold, right of him (he is on the left third): free text over the scene (Yi,
+   2026-10-23: "more gamified" than the HUD's glass card), a shade on the right behind it; the tags are small chips
+   whose glass blurs what is behind them, so the boards' lettering cannot run through their words */
+.lu-scrim { position: fixed; inset: 0; pointer-events: none; visibility: hidden; background: linear-gradient(90deg, rgba(3, 5, 9, 0) 40%, rgba(3, 5, 9, .5) 62%, rgba(3, 5, 9, .62) 100%); }
+.lu-card { position: fixed; left: 54vw; top: 52%; pointer-events: none; visibility: hidden; text-shadow: 0 2px 14px rgba(0, 0, 0, .65); }
+.lu-card-top { display: flex; align-items: center; gap: 20px; }
+.lu-no { font: 700 128px/.8 var(--font-display); color: var(--team); letter-spacing: -.02em; }
+.lu-who { display: flex; flex-direction: column; gap: 6px; }
+.lu-mask { overflow: hidden; padding: 2px 0; }
+.lu-name { display: flex; align-items: center; gap: 12px; font: 700 46px/1 var(--font-display); letter-spacing: .02em; white-space: nowrap; }
+/* the flags are 4:3 (flag-icons, lineup/flags/), with a faint edge so white bands hold against light backgrounds */
+.lu-flag { display: block; width: 36px; height: 27px; border-radius: 2px; object-fit: cover; outline: 1px solid rgba(0, 0, 0, .25); outline-offset: -1px; box-shadow: 0 1px 6px rgba(0, 0, 0, .5); }
+.lu-pos { font-size: 18px; font-weight: 500; letter-spacing: .14em; color: var(--ink-2); white-space: nowrap; }
+.lu-rule { display: block; height: 3px; margin: 16px 0 14px; transform-origin: left; background: linear-gradient(90deg, var(--team), transparent 85%); }
+.lu-tags { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
+.lu-tag { display: flex; align-items: baseline; gap: 12px; padding: 8px 16px 9px 12px; background: rgba(8, 12, 20, .84); backdrop-filter: blur(10px);
+  border-left: 3px solid var(--team); text-shadow: none; }
+.lu-tag b { font-size: 21px; font-weight: 700; letter-spacing: .06em; }
+.lu-tag span { font: 400 16px/1 var(--font-body); color: var(--ink-2); white-space: nowrap; }
+/* the title docking into the score bug at the end: it moves and shrinks about its middle */
+.lu-lock { transform-origin: 50% 50%; }
+/* the HUD's score bug (hud.css), where the game has it, shown as the title lands */
+.lu-hud { visibility: hidden; }
+/* Skip, bottom right above the letterbox, in the HUD's button style */
+.lu-skip { position: fixed; right: 28px; bottom: calc(10.5vh + 18px); visibility: hidden; display: inline-flex; align-items: center; gap: 8px; height: 40px; padding: 0 16px;
+  background: var(--glass); backdrop-filter: blur(14px) saturate(1.2); border: 1px solid var(--hairline); color: var(--ink); font: 600 15px/1 var(--font-body); letter-spacing: .02em; cursor: pointer; }
+.lu-skip:hover { border-color: var(--hairline-strong); }
+.lu-skip span { font-size: 20px; line-height: 1; margin-top: -2px; }
+/* in English (the default, Yi 2026-10-23): the condensed face in capitals for names and words, tracking tightened */
+html:lang(en) .lu-word { font: 700 168px/1 var(--font-display); text-transform: uppercase; letter-spacing: .16em; text-indent: .16em; }
+html:lang(en) .lu-line b { font: 700 26px/1 var(--font-display); text-transform: uppercase; letter-spacing: .14em; }
+html:lang(en) .lu-line span { letter-spacing: .06em; }
+html:lang(en) .lu-lteam b { font: 700 54px/1 var(--font-display); text-transform: uppercase; letter-spacing: .08em; }
+html:lang(en) .lu-team b { text-transform: uppercase; letter-spacing: .04em; }
+html:lang(en) .lu-name span, html:lang(en) .lu-plate .lu-full { text-transform: uppercase; }
+html:lang(en) .lu-pos { letter-spacing: .04em; }
+html:lang(en) .lu-tag b { font: 700 23px/1 var(--font-display); letter-spacing: .04em; }
+html:lang(en) .lu-plate i { font: 600 13px/1 var(--font-display); letter-spacing: .04em; }

@@ -1,0 +1,26 @@
+/* Direction A: broadcast package. Dark glass, hairlines, condensed display type. */
+:root {
+  --glass: rgba(8, 12, 20, 0.64);
+  --glass-strong: rgba(8, 12, 20, 0.84);
+  --hairline: rgba(255, 255, 255, 0.12);
+  --hairline-strong: rgba(255, 255, 255, 0.28);
+  --ink: #f2f4f7;
+  --ink-2: #b9c0cc;
+  --ink-3: #7d8696;
+  /* the teams' kit colours, the same in every clip (Yi, 2026-10-23): home (Team A) blue, away (Team B) orange; as
+     TEAM_KIT in src/three/coords.ts */
+  --home: #3987e5;
+  --away: #d95926;
+  /* the older names: --att was always this blue and --def this orange, whichever team attacked. Kept for the rules not
+     moved yet (app.css: the decision lab and the events page; lineup.html, where they already mean home and away); new
+     rules use --home and --away */
+  --att: var(--home);
+  --def: var(--away);
+  --accent: #ffffff;
+  --page: #06090f;
+  --font-display: 'Barlow Condensed', 'Arial Narrow', sans-serif;
+  --font-body: 'Inter', system-ui, sans-serif;
+  --radius: 4px;
+  --cut: 14px;
+  --ease: cubic-bezier(.2, .8, .2, 1);
+}

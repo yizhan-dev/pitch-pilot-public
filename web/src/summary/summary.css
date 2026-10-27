@@ -1,0 +1,243 @@
+/* The match summary's panel (MatchSummary.tsx): dark glass from the top centre, under the top bar, dropping in once the
+   camera has risen to the drone (the delay), lifting out on close. The teams in the radar's lighter kit colours. */
+.ms {
+  --ms-home: #6ab8ff; --ms-away: #ff9560;
+  /* the summary's seven type tiers, each a HUD token (Yi, 2026-10-27: "a font tier standardization for this page, make
+     sure we do not create tons of customized font size"); text in a pitch's SVG is the same tier over --ms-ppm, the
+     pair pitches' pixels a metre at the base layout (MatchSummary.tsx PPM); the chips' numbers alone scale with the chip */
+  --ms-t-score: var(--fd-4xl);    /* the final score */
+  --ms-t-head: var(--fd-3xl);     /* a page's headline figures: the player of the match, the running totals, the attacks' shares */
+  --ms-t-big: var(--fd-2xl);      /* the team codes, the player of the match's facts */
+  --ms-t-value: var(--fd-md);     /* the values in rows: stats, team heads, kilometres (16: Yi, 2026-10-27, a tier smaller than 18) */
+  --ms-t-body: var(--fs-md);      /* tabs, row labels, names */
+  --ms-t-note: var(--fs-sm);      /* a page's line, captions, legends, a team head's side note */
+  --ms-t-small: var(--fs-xs);     /* full time, the facts' labels, the names in the network */
+  --ms-ppm: 3.8545;
+  position: absolute; left: 50%; top: 116px; z-index: 26; width: min(920px, calc(100vw - 32px));
+  /* laid out at 920 x 540 px and scaled to the window by --ms-s (MatchSummary.tsx fitScale: its TOP is this top, its
+     BASE_H this height), from the top centre; the same size on every page (Yi, 2026-10-27: "make sure each tab, the
+     panel size is fixed"), each page centred in it */
+  height: min(568px, calc((100vh - 130px) / var(--ms-s, 1)));   /* 540 + the venue strip's 28 */
+  display: flex; flex-direction: column; pointer-events: auto; background: var(--glass-strong); border-top: 2px solid var(--ink);
+  transform: translateX(-50%) scale(var(--ms-s, 1)); transform-origin: 50% 0; animation: ms-drop .55s var(--ease) 1.9s both; overflow: hidden;
+}
+.ms.leaving { animation: ms-lift .26s ease-in both; }
+@keyframes ms-drop { from { opacity: 0; transform: translate(-50%, -18px) scale(var(--ms-s, 1)); } to { opacity: 1; transform: translate(-50%, 0) scale(var(--ms-s, 1)); } }
+@keyframes ms-lift { from { opacity: 1; transform: translate(-50%, 0) scale(var(--ms-s, 1)); } to { opacity: 0; transform: translate(-50%, -12px) scale(var(--ms-s, 1)); } }
+@media (prefers-reduced-motion: reduce) { .ms, .ms.leaving { animation-duration: .01s; } }
+
+.ms-head { display: flex; flex-direction: column; align-items: center; gap: 6px; position: relative; padding: 14px 20px 8px; }
+.ms-score { display: flex; align-items: center; gap: 12px; }
+.ms-code { font: 700 var(--ms-t-big)/1 var(--font-display); letter-spacing: .04em; }
+.ms-final { font: 700 var(--ms-t-score)/1 var(--font-display); letter-spacing: .02em; padding: 0 6px; font-variant-numeric: tabular-nums; }
+/* under the score, as a broadcast's full-time card has it (Yi, 2026-10-27) */
+/* (in the small tier, Yi 2026-10-27: "the full time text is also too big": no capitals, no wide tracking, lighter) */
+.ms-ft { font: 400 var(--ms-t-small)/1 var(--hud-font); letter-spacing: .02em; color: var(--ink-3); }
+.ms-close { position: absolute; right: 12px; top: 12px; width: 32px; height: 32px; display: grid; place-items: center; color: var(--ink-2); background: none; border: 0; cursor: pointer; }
+.ms-close:hover { color: var(--ink); background: rgba(255, 255, 255, .08); }
+
+/* across the panel, evenly spaced (Yi, 2026-10-27) */
+.ms-tabs { display: flex; justify-content: space-evenly; padding: 2px 12px 0; border-bottom: 1px solid var(--hairline); }
+.ms-tabs button { background: none; border: 0; color: var(--ink-3); font: 600 var(--ms-t-body)/1 var(--hud-font); padding: 9px 12px 10px; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+.ms-tabs button:hover { color: var(--ink-2); }
+.ms-tabs button.on { color: var(--ink); border-bottom-color: var(--ink); }
+
+/* a page's one line on what it shows, no title (the tab names it: Yi, 2026-10-27) */
+.ms-sub + .ms-body { padding-top: 10px; }
+.ms-sub { margin: 0; padding: 22px 24px 2px; text-align: center; font-size: var(--ms-t-note); color: var(--ink-3); }
+.ms-body { flex: 1; display: flex; flex-direction: column; justify-content: center; padding: 22px 24px 14px;   /* (22 px under the tabs, Yi 2026-10-27: the stats sat too close to them) */ min-height: 0; overflow: hidden; animation: ms-page .4s var(--ease) both; }
+@keyframes ms-page { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.ms-wait { text-align: center; color: var(--ink-3); }
+.ms-progress { position: relative; display: block; height: 2px; background: rgba(255, 255, 255, .06); }
+.ms-progress i { position: absolute; inset: 0; background: rgba(255, 255, 255, .45); transform-origin: 0 50%; transform: scaleX(0); }
+
+/* stats: two columns of rows, values at the ends, a split bar under each */
+.ms-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0 28px; }
+.ms-stats-head { margin: 0 0 4px; text-align: center; font: 600 var(--ms-t-small)/1 var(--hud-font); letter-spacing: .04em; color: var(--ink-3); }
+.ms-stat { display: grid; grid-template-columns: 58px 1fr 58px; align-items: baseline; padding: 5px 0 7px; }   /* (Yi, 2026-10-27: 3/5 px was too compact) */
+.ms-stat span { text-align: center; font-size: var(--ms-t-note); color: var(--ink-2); }
+.ms-stat b { font: 700 var(--ms-t-value)/1 var(--font-display); color: var(--ink-2); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.ms-stat b small { font-size: var(--ms-t-note); margin-left: 2px; color: var(--ink-3); }
+.ms-stat b:last-of-type { text-align: right; }
+.ms-stat b.lead { color: var(--ink); }
+.ms-stat-bar { grid-column: 1 / -1; display: flex; gap: 3px; height: 4px; margin-top: 6px; }
+.ms-stat-bar i { display: block; height: 100%; }
+.ms-stat-bar .home { background: var(--ms-home); }
+.ms-stat-bar .away { background: var(--ms-away); }
+
+/* two pitches side by side, a team over each */
+.ms-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+.ms-fig { margin: 0; display: flex; flex-direction: column; gap: 8px; }
+.ms-fig figcaption { font-size: var(--ms-t-note); color: var(--ink-2); text-align: center; }
+.ms-fig figcaption b { color: var(--ink); font-weight: 600; }
+/* the side note on the name's baseline, the crest centred (Yi, 2026-10-27: "make it bottom edge aligned with the team
+   name") */
+.ms-teamhead { display: flex; align-items: baseline; gap: 8px; font-size: var(--ms-t-body); }
+.ms-teamhead > :first-child { align-self: center; }
+.ms-teamhead b { font: 700 var(--ms-t-value)/1 var(--font-display); letter-spacing: .03em; text-transform: uppercase; }
+.ms-teamhead.home b { color: var(--ms-home); }
+.ms-teamhead.away b { color: var(--ms-away); }
+/* its note right after the name, as the shot map has it (Yi, 2026-10-27) */
+.ms-teamhead span { margin-left: 2px; color: var(--ink-3); font-size: var(--ms-t-note); }
+.ms-teamhead.mirror { flex-direction: row-reverse; }
+.ms-teamhead.mirror span { margin-left: 0; margin-right: 2px; }
+.ms-pitch { display: block; width: 100%; height: auto; }
+.ms-grass { fill: rgba(255, 255, 255, .035); }
+.ms-lines rect, .ms-lines path, .ms-lines circle { fill: none; stroke: rgba(255, 255, 255, .32); stroke-width: .35; }
+.ms-heat { image-rendering: auto; }
+.ms-lane-div path { fill: none; stroke: rgba(255, 255, 255, .22); stroke-width: 1; stroke-dasharray: 4 4; vector-effect: non-scaling-stroke; }
+.ms-lane path { opacity: .55; }
+.ms-lane.best path { opacity: .95; }
+.ms-lane-pct { fill: var(--ink); font: 700 calc(var(--ms-t-head) / var(--ms-ppm))/1 var(--font-display); text-anchor: end; }
+
+/* the player of the match: his heat map, his card */
+/* two pitches on end, then his card, a little narrower than it was (Yi, 2026-10-27) */
+.ms-key { display: grid; grid-template-columns: auto auto 324px; justify-content: center; column-gap: 24px; align-items: center; }
+.ms-key-card { margin-left: 8px; }
+.ms-key .ms-pitch.vertical { height: 336px; width: auto; }
+.ms-key .ms-heat-key { justify-content: center; }
+.ms-key .ms-legend { margin-top: 0; }
+.ms-cleat { fill: #f4f5f7; }
+.ms-key-cleat { width: 13px; height: 13px; flex: none; display: inline-block; }
+.ms-key-name { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
+.ms-key-name b { font: 700 var(--ms-t-head)/1 var(--font-display); letter-spacing: .02em; }
+.ms-key-no { font: 700 var(--ms-t-head)/1 var(--font-display); color: var(--ms-home); }
+.ms-key-card.away .ms-key-no { color: var(--ms-away); }
+.ms-facts { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px 10px; }
+.ms-fact { display: flex; flex-direction: column; gap: 4px; padding-top: 8px; border-top: 1px solid var(--hairline); }
+.ms-fact b { font: 700 var(--ms-t-big)/1 var(--font-display); font-variant-numeric: tabular-nums; }
+.ms-fact span { font-size: var(--ms-t-small); color: var(--ink-3); }
+
+/* the furthest runners as bars by speed band (the Physicals' right side) */
+.ms-run-rows { display: flex; flex-direction: column; gap: 6px; }
+.ms-run-row { display: grid; grid-template-columns: 150px 1fr 64px; align-items: center; gap: 12px; font-size: var(--ms-t-body); }
+.ms-run-who { display: flex; align-items: center; gap: 8px; color: var(--ink-2); white-space: nowrap; }
+.ms-run-no { min-width: 20px; font: 700 var(--ms-t-value)/1 var(--font-display); font-variant-numeric: tabular-nums; }
+.ms-run-no.home { color: var(--ms-home); }
+.ms-run-no.away { color: var(--ms-away); }
+.ms-run-bar { display: flex; height: 14px; }
+.ms-run-bar i { display: block; height: 100%; }
+.ms-run-km { font: 700 var(--ms-t-value)/1 var(--font-display); text-align: right; font-variant-numeric: tabular-nums; }
+
+/* the physicals (Yi, 2026-10-27): the intensity across the top, each team's pitch and bands bottom left, the furthest
+   runners bottom right. Grouped by proximity (Yi: "make sure everything is being applied with gestalt law"): 24 px
+   between the intensity and the rest, 16 between the pitches and the bands' bars, 6-8 inside a group (a head to its
+   chart, bar to bar, the bars to their legend); one left edge for the key, the heads and the bars, the bars as wide as
+   the two pitches, the runners from the heads' line down to the legend's foot */
+.ms-phys { display: flex; flex-direction: column; gap: 24px; }
+.ms-phys .ms-stats-head { margin-bottom: 8px; padding-left: 82px; }   /* (centred over the plot, not the key: .ms-int) */
+.ms-int { display: grid; grid-template-columns: 82px 1fr; align-items: start; }
+.ms-int > svg { display: block; width: 100%; height: auto; overflow: visible; }
+.ms-int-teams { display: flex; flex-direction: column; justify-content: center; gap: 8px; height: 64px; }   /* (MatchSummary.tsx INT_H) */
+.ms-int-teams .ms-teamhead { align-items: center; gap: 6px; }
+.ms-int-teams .ms-teamhead > :first-child { align-self: center; }   /* (the line key, then the crest: Yi, 2026-10-27) */
+.ms-int-key { width: 14px; height: 2px; display: inline-block; flex: none; }
+.ms-int-key.home { background: var(--ms-home); }
+.ms-int-key.away { background: var(--ms-away); }
+.ms-int-line { fill: none; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.ms-int-line.home { stroke: var(--ms-home); }
+.ms-int-line.away { stroke: var(--ms-away); }
+.ms-int-under.home { fill: var(--ms-home); opacity: .1; }
+.ms-int-under.away { fill: var(--ms-away); opacity: .1; }
+.ms-int-axis { stroke: rgba(255, 255, 255, .35); stroke-width: 1; }
+.ms-int-grid { stroke: rgba(255, 255, 255, .08); stroke-width: 1; }
+.ms-int text { fill: var(--ink-3); font: 400 var(--ms-t-small)/1 var(--hud-font); text-anchor: middle; }
+.ms-int text.start { text-anchor: start; }
+.ms-int text.end { text-anchor: end; }
+.ms-phys-row { display: grid; grid-template-columns: auto 1fr; gap: 40px; align-items: stretch; }
+.ms-phys-pair { display: flex; gap: 20px; }
+.ms-thirds { width: 222px; }
+.ms-thirds .ms-pitch { width: 100%; }   /* (MatchSummary.tsx PPM_MINI) */
+.ms-third-pct { fill: var(--ink); text-anchor: middle; font: 700 calc(var(--ms-t-value) / var(--ms-ppm))/1 var(--font-display); }
+.ms-third-arrow { fill: rgba(255, 255, 255, .55); }
+.ms-bands-rows { display: flex; flex-direction: column; gap: 6px; margin-top: 16px; }
+.ms-bands-row { display: grid; grid-template-columns: 56px 1fr; align-items: center; }
+.ms-bands-row .ms-teamhead { gap: 6px; }
+.ms-bands-bar { display: flex; height: 16px; border-radius: 2px; overflow: hidden; }
+.ms-bands-bar i { display: flex; align-items: center; justify-content: center; font: 600 var(--ms-t-small)/1 var(--hud-font); font-style: normal; color: #0b1018; }
+.ms-bands-bar i.dark { color: var(--ink); }   /* (white on the walking and jogging greys: Yi, 2026-10-27) */
+/* the runners start level with the pitches' heads */
+.ms-phys-row .ms-run-rows { gap: 0; justify-content: space-between; padding-top: 2px; }
+.ms-phys-row .ms-run-row { grid-template-columns: 128px 1fr 58px; }.ms-phys .ms-legend { margin-top: 8px; }
+/* every legend in the small tier, its marks scaled with it (Yi, 2026-10-27: "All legends should show smaller text and
+   correspondingly adjust the icons and marks") */
+.ms-legend { display: flex; justify-content: center; flex-wrap: wrap; gap: 6px 16px; margin-top: 14px; font-size: var(--ms-t-small); color: var(--ink-2); }
+.ms-legend span { display: inline-flex; align-items: center; gap: 5px; }
+/* each mark centred on its words' capitals, not the line box, which sits 0.7 px lower in Inter (measured: every mark's
+   middle was 3.3 px over the baseline, the capitals' 4.0; Yi, 2026-10-27: "make these all center aligned") */
+.ms-legend span > svg, .ms-legend span > i { position: relative; top: -0.7px; }
+.ms-legend i { width: 10px; height: 7px; display: inline-block; }
+/* a legend in lines, each centred: the plain keys, then the deeper one (Yi: "if it is a more in depth legend, let's make
+   it the second line") */
+.ms-legend.ms-legend-rows { flex-direction: column; align-items: center; gap: 7px; margin-top: 12px; }
+.ms-legend-rows > div { display: flex; justify-content: center; flex-wrap: wrap; gap: 6px 16px; }
+
+/* the glass a touch denser than the HUD's other panels, so the charts read over the bright drone shot */
+.ms.hud-glass { background: rgba(8, 12, 20, .9); }
+/* while it is open, the bottom widgets and the left rail stand aside (Hud.tsx sets .hud-summary) */
+.hud.hud-summary .hud-card, .hud.hud-summary .hud-minimap, .hud.hud-summary .hud-replay, .hud.hud-summary .hud-rail { opacity: 0; pointer-events: none; transition: opacity .4s var(--ease); }
+
+/* the passing network as project_kick draws it (MatchSummary.tsx Chip): the links grey supply lines, the names in black
+   pills under the chips */
+.ms-link { fill: rgba(255, 255, 255, .18); }
+.ms-chip-no { font-family: var(--font-display); font-weight: 700; text-anchor: middle; }
+.ms-pill rect { fill: #0c0c0c; stroke: rgba(255, 255, 255, .6); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.ms-pill text { fill: #f4f4f4; font: 400 calc(var(--ms-t-small) / var(--ms-ppm))/1 var(--hud-font); text-anchor: middle; }
+
+/* the shot map: both teams on one pitch, their totals over it */
+.ms-shots { display: flex; flex-direction: column; gap: 8px; }
+.ms-shots-head { display: flex; justify-content: space-between; }
+.ms-shots .ms-pitch { max-height: 298px; }   /* (the page's line dropped for it, then the legend in two lines, Yi 2026-10-27) */
+.ms-shot { stroke-width: 1.6; vector-effect: non-scaling-stroke; }
+.ms-shot.on { stroke-width: 1; }
+.ms-key-shot { width: 10px; height: 10px; flex: none; box-sizing: border-box; border-radius: 50%; display: inline-block; border: 1.4px solid var(--ink-2); }
+/* (over .ms-legend i, the running page's 12 x 8 swatches) */
+.ms-legend .ms-key-shot { width: 10px; height: 10px; }
+.ms-key-shot.on { background: var(--ink-2); border-color: transparent; }
+.ms-key-shot.off { background: none; }
+.ms-key-ball { width: 12px; height: 12px; flex: none; display: inline-block; }
+
+
+/* the player of the match's toon portrait, on his team's colour as the player card has it */
+.ms-key-photo { margin: -4px 0 14px; aspect-ratio: 544 / 256; display: flex; justify-content: center; border-bottom: 2px solid var(--ms-home);
+  background: linear-gradient(to top, rgba(106, 184, 255, .34), rgba(106, 184, 255, 0)); }
+.ms-key-card.away .ms-key-photo { border-bottom-color: var(--ms-away); background: linear-gradient(to top, rgba(255, 149, 96, .34), rgba(255, 149, 96, 0)); }
+.ms-key-photo img { height: 100%; width: 100%; object-fit: contain; }
+
+/* the venue strip (MatchSummary.tsx STRIP_H): the panel's foot, a shade darker, a hairline over it, no gap; its text as
+   .ms-ft's (Yi, 2026-10-27: "just display the text, smaller font, like the full time one", "separate them by |") */
+.ms-strip { flex: none; height: 28px; display: flex; align-items: center; justify-content: center; border-top: 1px solid var(--hairline);
+  background: rgba(0, 0, 0, .28); font: 400 var(--ms-t-small)/1 var(--hud-font); letter-spacing: .02em; color: var(--ink-3); white-space: pre; }
+
+/* the goal's ball (MatchSummary.tsx BallMark: SVG Repo's football-ball): white, the patches and the ring dark grey */
+/* (the grey darker in two steps and the white a touch brighter, so its small edges read crisp on the dark pitch: Yi,
+   2026-10-27, "it somehow looks a bit blurry", "make the grey slightly darker", "even darker") */
+.ms-ball { fill: #fafbfc; }
+.ms-ball-ink { fill: #15171b; }   /* the patches and the ring near black (Yi, 2026-10-27, over the ball the other way round: "the black ring one is better") */
+.ms-ball-ring { fill: none; stroke: #15171b; }
+/* the shot map's the other way round (MatchSummary.tsx BallMark inv) */
+.ms-ballmark.inv .ms-ball { fill: #15171b; }
+.ms-ballmark.inv .ms-ball-ink { fill: #fafbfc; }
+.ms-ballmark.inv .ms-ball-ring { stroke: #fafbfc; }
+
+/* a page with a legend under its charts (the network, the attacks) */
+/* those two from the top, so their team heads and pitches sit at the same place (Yi, 2026-10-27) */
+/* (the shot map's too, Yi 2026-10-27: "move the pitch up a bit to align with other tabs") */
+.ms-body-network, .ms-body-lanes, .ms-body-heat, .ms-body-shots, .ms-body-run { justify-content: flex-start; }
+.ms-stack { display: flex; flex-direction: column; gap: 10px; }
+.ms-icon-legend { margin-top: 12px; }   /* (as the network's: the attacks' sat 10 px higher, Yi 2026-10-27) */
+.ms-icon-legend svg { height: 16px; width: auto; flex: none; }
+.ms-key-arrow { fill: var(--ink-2); }
+
+/* the shot map's xG scale: Low xG, three filled rings growing from one foot, High xG */
+.ms-xg-scale { gap: 8px !important; }   /* (centred as the others, not on the baseline, where the rings stood too high: Yi, 2026-10-27) */
+.ms-xg-scale svg { height: 15px; width: auto; flex: none; }
+.ms-xg-ring { fill: var(--ink-2); stroke: none; }
+
+/* the attacks' legend in two lines, its icons in a column, the text after them (Yi, 2026-10-27) */
+.ms-icon-legend.ms-rows-1 { display: grid; justify-content: center; justify-items: start; gap: 8px 36px; grid-template-columns: auto; }
+/* the heat maps' keys: Less, five of the map's bands, More, centred under each map (Yi, 2026-10-27) */
+.ms-heat-key { display: flex; justify-content: center; align-items: center; gap: 4px; font-size: var(--ms-t-small); color: var(--ink-3); }
+.ms-heat-key i { width: 15px; height: 8px; border-radius: 2px; }
+.ms-heat-key span:first-child { margin-right: 4px; }
+.ms-heat-key span:last-child { margin-left: 4px; }

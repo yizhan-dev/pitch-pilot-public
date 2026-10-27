@@ -1,0 +1,14 @@
+/* A phone's width (720 px and under; Yi, 2026-10-27: "make it less like a vibe coding product"): at 390 px the radar,
+   the empty player card and the replay plate sat over one another at the bottom. Here the replay plate runs the width
+   of the bottom, a picked player's card stands on it (none while nobody is picked), the radar goes up under the top
+   right's buttons at half size, and the views' passing hints are left out (a phone is touched, not dragged with a
+   mouse). Loaded after hud.css (GameApp.tsx), the same selectors, so these win. */
+@media (max-width: 720px) {
+  .hud-replay { left: var(--hud-edge); right: var(--hud-edge); }
+  .hud-replay .hud-plate { width: auto; }
+  .hud-card { bottom: calc(var(--hud-bottom) + 120px); }
+  .hud-card:has(.hud-plate.empty) { display: none; }
+  .hud-minimap { left: auto; right: var(--hud-edge); bottom: auto; top: calc(10px + var(--hud-h) * var(--hud-bug-zoom) + 8px + 2 * var(--hud-h) + 6px + 12px);
+    transform: scale(.55); transform-origin: top right; }
+  .gm-hint { display: none; }
+}

@@ -1,0 +1,24 @@
+{
+  "synthetic": true,
+  "fixture": true,
+  "clip": "synthetic-pass-01",
+  "teams": {"home": "Pelicans", "away": "Wildcats"},
+  "people": [{"name": "Jamie Brook", "team": "home"}, {"name": "Alex Reed", "team": "home"}],
+  "events": [{"type": "pass", "player": "Jamie Brook", "receiver": "Alex Reed", "outcome": "completed"}],
+  "slots": [
+    {
+      "id": "opening",
+      "notes": ["Jamie Brook has a clear passing lane to Alex Reed."],
+      "picture": "The passing lane is visible between the two players.",
+      "budget": {"target_s": 3.2, "max_s": 4, "target_words": 8, "max_words": 10},
+      "reference": "Jamie Brook finds a clear passing lane. Brook releases the ball into the open channel, keeping the move going while the defender turns back."
+    },
+    {
+      "id": "reception",
+      "notes": ["Alex Reed receives the pass and retains possession."],
+      "picture": "The receiver controls the pass.",
+      "budget": {"target_s": 4.5, "max_s": 5.5, "target_words": 12, "max_words": 14},
+      "reference": "Alex Reed meets the pass, and keeps the move alive."
+    }
+  ]
+}

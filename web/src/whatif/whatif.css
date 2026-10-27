@@ -1,0 +1,88 @@
+/* The What-if mode's own panels (whatif/, chat 2's): the widget at the top centre (AskCard.tsx) and the Details card,
+   the result card's .pw-card (app.css), on the right. The moments are picked in the replay plate (Yi, 2026-10-26). */
+.wi-ask .wi-q { color: var(--ink); font-size: 13px; }
+
+/* the moment's card at the top centre (Yi, 2026-10-26: "What would you do?" and a very short description), under the
+   top bar, as wide as its text up to 520 px */
+.wi-ask { position: absolute; left: 50%; top: 18px; transform: translateX(-50%); z-index: 31; width: max-content; max-width: 520px; padding: 10px 16px 11px; display: grid; gap: 5px; border-top: 2px solid var(--ink); font-family: 'Inter', system-ui, sans-serif; color: var(--ink); text-align: center; }
+.wi-ask-h { display: flex; align-items: baseline; justify-content: center; gap: 10px; }
+.wi-ask-h b { font: 700 18px/1.2 var(--font-display); letter-spacing: .02em; }
+.wi-ask-h span { font: 600 12px var(--font-display); color: var(--ink-3); }
+.wi-ask-q { margin: 0; font-size: 13.5px; line-height: 1.4; color: var(--ink-2, rgba(255, 255, 255, .78)); }
+.wi-ask .pw-n { margin: 0; font-size: 12.5px; line-height: 1.4; color: var(--ink-3); }
+.wi-ask .wi-turn { color: var(--ink); font-size: 13px; }
+
+/* the what-if cards' parts (Yi, 2026-10-24; moved here from app.css): ground or lofted, the real play, the turn */
+.wi-kind { display: flex; gap: 6px; margin: 8px 0 2px; }
+.wi-kind button { flex: 1; height: 28px; font: 600 13px Inter, system-ui, sans-serif; color: var(--ink); background: transparent; border: 1px solid var(--hairline-strong); cursor: pointer; }
+.wi-kind button:hover:not(.on) { background: rgba(255, 255, 255, .08); }
+.wi-kind button.on { background: var(--ink); color: #0b0f15; border-color: var(--ink); }
+.wi-real { display: flex; align-items: center; gap: 10px; margin-top: 8px; font-size: 12.5px; line-height: 1.35; color: var(--ink-2, rgba(255, 255, 255, .72)); }
+.wi-real span { flex: 1; }
+.wi-real button { height: 26px; padding: 0 10px; font: 600 12px Inter, system-ui, sans-serif; color: var(--ink); background: transparent; border: 1px solid var(--hairline-strong); cursor: pointer; }
+.wi-real button:hover { background: rgba(255, 255, 255, .08); }
+.wi-turn { color: var(--ink); }
+/* the run's comparison (RunCard.tsx): the real receiver with the runner's real run and with the new one */
+.wi-cmp { display: grid; gap: 3px; margin-top: 2px; font-size: 12.5px; }
+.wi-cmp > div { display: grid; grid-template-columns: 1fr 46px 60px; align-items: baseline; }
+.wi-cmp > div b { text-align: right; font-weight: 700; color: var(--ink); }
+.wi-cmp > div > span:first-child { color: var(--ink-2, rgba(255, 255, 255, .72)); }
+.wi-cmp .wi-cmp-h { color: var(--ink-3); font-size: 11.5px; }
+.wi-cmp .wi-cmp-h span:not(:first-child) { text-align: right; }
+.wi-cmp .wi-cmp-h span:first-child { color: var(--ink); font-weight: 600; }
+.wi-alt { margin-top: 2px; }
+.wi-picks { display: flex; gap: 6px; }
+.wi-picks button { height: 26px; padding: 0 10px; font: 600 12px Inter, system-ui, sans-serif; color: var(--ink); background: transparent; border: 1px solid var(--hairline-strong); cursor: pointer; }
+.wi-picks button:hover { background: rgba(255, 255, 255, .08); }
+
+/* the shot what-if's read-out (LandCard.tsx): his xG as he takes it, the real shot beside it */
+.wi-shot { display: grid; gap: 2px; margin-top: 4px; padding: 8px 10px; border: 1px solid var(--hairline-strong); background: rgba(255, 255, 255, .04); }
+.wi-shot span { font-size: 12.5px; color: var(--ink-2, rgba(255, 255, 255, .72)); }
+.wi-shot b { font: 700 30px/1.05 var(--font-display); color: var(--ink); letter-spacing: .01em; }
+.wi-shot small { font-size: 12px; line-height: 1.4; color: var(--ink-3); }
+
+/* the chain (LandCard.tsx): each pass, his chance of receiving it and its xA */
+.wi-chain { display: grid; gap: 2px; font-size: 12.5px; }
+.wi-chain > div { display: grid; grid-template-columns: 16px 1fr 40px 58px; align-items: baseline; }
+.wi-chain span:first-child { color: var(--ink-3); }
+.wi-chain b { text-align: right; font-weight: 700; color: var(--ink); }
+.wi-next { margin-top: 2px; }
+.wi-next button { flex: 1; height: 30px; }
+.wi-next button:disabled { opacity: .45; cursor: default; }
+
+
+/* the folded details (LandCard.tsx "More") and the chain's sum */
+.wi-more { margin-top: 2px; border-top: 1px solid var(--hairline); padding-top: 6px; display: grid; gap: 6px; }
+.wi-more-h { justify-self: start; height: 24px; padding: 0 8px; font: 600 12px Inter, system-ui, sans-serif; color: var(--ink-3); background: transparent; border: 0; cursor: pointer; }
+.wi-more-h:hover { color: var(--ink); }
+.wi-chain-sum { border-top: 1px solid var(--hairline); padding-top: 2px; margin-top: 2px; }
+.wi-chain-sum span:nth-child(2) { color: var(--ink-3); }
+
+/* the result card's two actions, one above the other: side by side "Back to the real play" broke onto two lines */
+.wi-card .wi-actions { flex-direction: column; gap: 6px; }
+.wi-card .wi-actions button { flex: none; white-space: nowrap; }
+
+/* the widget's parts (AskCard.tsx, 2026-10-26): Pass | Shoot, the xG at the stop, the one button and the small links */
+.wi-seg { display: inline-flex; justify-self: center; margin: 8px 0 2px; border: 1px solid var(--hairline-strong); }
+.wi-seg button { height: 30px; padding: 0 18px; font: 600 13px Inter, system-ui, sans-serif; color: var(--ink-2, rgba(255, 255, 255, .78)); background: transparent; border: 0; cursor: pointer; }
+.wi-seg button + button { border-left: 1px solid var(--hairline-strong); }
+.wi-seg button.on { background: var(--ink); color: #0b0f15; }
+/* the stop (Yi, 2026-10-26: "these buttons are not designed well; make sure their layout is good"): the outcome in a word
+   where it has one, then one row of buttons of one height and one type, the way on first (filled, as Pass | Shoot's
+   chosen half), the others outlined like the segment's frame */
+.wi-ask-out { margin: 2px 0 0; text-align: center; font: 700 20px/1.1 var(--font-display); letter-spacing: .02em; color: var(--ink); }
+.wi-ask-act { display: flex; justify-content: center; gap: 8px; margin-top: 8px; }
+.wi-ask-act button { height: 30px; min-width: 108px; padding: 0 14px; font: 600 13px Inter, system-ui, sans-serif; color: var(--ink); background: transparent;
+  border: 1px solid var(--hairline-strong); cursor: pointer; white-space: nowrap; transition: background .15s, border-color .15s; }
+.wi-ask-act button:hover { border-color: rgba(255, 255, 255, .62); background: rgba(255, 255, 255, .06); }
+.wi-ask-act .wi-ask-go { color: #0b0f15; background: var(--ink); border-color: var(--ink); font-weight: 700; }
+.wi-ask-act .wi-ask-go:hover { background: #fff; border-color: #fff; }
+.wi-ask-act button:disabled { opacity: .5; cursor: default; }
+
+/* the names over the What-if's players (three/whatif/WhatIfTags.tsx): the Watch mode's Show tag look (the Shell
+   chat's .gm-tag in app.css, same sizes: --name from TELE.pointer.stackName, scaled by --s) */
+.wi-ntags { position: absolute; inset: 0; z-index: 5; overflow: hidden; pointer-events: none; }
+.wi-ntag { --s: 1; position: absolute; left: 0; top: 0; display: grid; justify-items: center; will-change: transform; }
+.wi-ntag-name { font: 600 calc(var(--name) * var(--s))/1 var(--font-display, 'Barlow Condensed', sans-serif); letter-spacing: .04em; text-transform: uppercase; white-space: nowrap; color: #f2f4f7; text-shadow: 0 1px 2px rgba(0, 0, 0, .9), 0 0 6px rgba(0, 0, 0, .55); }
+.wi-ntag-name b { margin-right: .3em; font-weight: 700; }
+.wi-ntag-name { position: relative; }   /* the pass chance hangs off it (app.css .gm-tag-chance.hang, the Tactics tag's) */

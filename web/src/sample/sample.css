@@ -1,0 +1,15 @@
+.sample-shell { position: fixed; inset: 0; background: #05070b; color: #eef2f7; font-family: Inter, system-ui, sans-serif; }
+.sample-header { position: absolute; z-index: 2; inset: 24px 32px auto; display: flex; align-items: center; justify-content: space-between; gap: 20px; }
+.sample-header b { font-size: 22px; letter-spacing: -.04em; }
+.sample-header span { display: block; color: #a9b6c6; font-size: 12px; margin-top: 6px; }
+.sample-header a { color: #eef2f7; text-decoration: none; border-bottom: 1px solid #60738b; padding-bottom: 5px; font-size: 13px; }
+.sample-scene { position: absolute; inset: 0; }
+.sample-note { position: absolute; top: 115px; left: 32px; max-width: 330px; padding: 22px; background: #101823e8; border: 1px solid #34404d; border-radius: 12px; pointer-events: none; }
+.sample-label { font-size: 10px; letter-spacing: .15em; color: #9dc5ee; }
+.sample-note h1 { font-size: 24px; line-height: 1.2; letter-spacing: -.04em; margin: 12px 0; }
+.sample-note p { font-size: 12px; line-height: 1.65; color: #bdc7d3; }
+.sample-controls { position: absolute; z-index: 2; bottom: 24px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 14px; width: min(600px, calc(100% - 40px)); padding: 14px 18px; background: #101823ef; border: 1px solid #34404d; border-radius: 12px; }
+.sample-controls button { background: #e9f1fc; color: #0e1826; border: 0; border-radius: 6px; padding: 9px 13px; cursor: pointer; }
+.sample-controls input { flex: 1; min-width: 40px; accent-color: #9dc5ee; }
+.sample-controls output { font-size: 12px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+@media (max-width: 650px) { .sample-header { inset: 18px; } .sample-note { left: 18px; top: 90px; max-width: 220px; padding: 14px; } .sample-note h1 { font-size: 19px; } .sample-note p { font-size: 11px; } .sample-controls { gap: 8px; padding: 12px; } }

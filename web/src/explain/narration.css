@@ -1,0 +1,23 @@
+/* the 讲解 subtitles (src/explain/Narration.tsx): bottom centre, just above the minimap (proposal A, 2026-10-22) */
+.nr { position: absolute; z-index: 28; left: 50%; transform: translateX(-50%); bottom: calc(var(--hud-bottom, 20px) + 226px);
+  display: flex; flex-direction: column; align-items: center; gap: 6px; pointer-events: none; max-width: calc(100% - 680px); min-width: 0; }
+.nr.nr-low { bottom: calc(var(--hud-bottom, 20px) + 14px); }
+.nr, .nr-dbg { --nr-font: 'Inter', 'Noto Sans CJK SC', 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', system-ui, sans-serif; }
+.nr-prev { font: 600 17px/1.3 var(--nr-font); color: #fff; letter-spacing: .02em; white-space: nowrap; text-shadow: 0 1px 3px rgba(0, 0, 0, .75), 0 0 10px rgba(0, 0, 0, .45); opacity: 0; }
+.nr-box { position: relative; display: flex; align-items: stretch; background: rgba(8, 11, 16, .64); backdrop-filter: blur(14px) saturate(1.2); -webkit-backdrop-filter: blur(14px) saturate(1.2);
+  border: 1px solid rgba(255, 255, 255, .14); border-top: 2px solid #fff; opacity: 0; }
+.nr-tag { display: flex; align-items: center; padding: 0 12px; font: 600 13px/1 var(--nr-font); letter-spacing: .12em; color: rgba(255, 255, 255, .62); border-right: 1px solid rgba(255, 255, 255, .14); white-space: nowrap; }
+.nr-txt { padding: 10px 18px 11px; font: 600 24px/1.35 var(--nr-font); color: #fff; letter-spacing: .02em; white-space: nowrap; text-shadow: 0 1px 2px rgba(0, 0, 0, .4); }
+.nr-key { display: flex; align-items: center; gap: 6px; padding: 0 12px; font: 500 12px/1 var(--nr-font); color: rgba(255, 255, 255, .55); border-left: 1px solid rgba(255, 255, 255, .14); white-space: nowrap; }
+.nr-key b { font: 600 11px/15px 'Barlow Condensed', sans-serif; letter-spacing: .06em; border: 1px solid rgba(255, 255, 255, .3); border-radius: 3px; padding: 0 5px; color: rgba(255, 255, 255, .7); }
+.nr-hold { position: absolute; left: 0; right: 0; bottom: -1px; height: 3px; background: rgba(255, 255, 255, .18); }
+.nr-hold i { position: absolute; left: 0; top: 0; bottom: 0; width: 0; background: #fff; }
+/* ?narrdebug=1: the touch under way, from the ball's track (for checking the timing by eye) */
+.nr-dbg { position: absolute; z-index: 28; left: 20px; top: 104px; padding: 4px 9px; font: 600 14px/1.2 var(--nr-font); font-variant-numeric: tabular-nums; color: #ffd54a; background: rgba(0, 0, 0, .55); white-space: pre; pointer-events: none; opacity: 0; }
+/* the sound switch, under the score bug: always visible in 讲解, so the viewer sees whether the commentary speaks */
+.nr-sound { position: absolute; z-index: 31; left: 20px; top: 85px; display: flex; align-items: center; gap: 7px; height: 30px; padding: 0 11px 0 9px;
+  font: 600 13px/1 var(--nr-font, sans-serif); letter-spacing: .04em; color: rgba(255, 255, 255, .62); background: rgba(8, 11, 16, .6);
+  backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border: 1px solid rgba(255, 255, 255, .16); cursor: pointer; pointer-events: auto; }
+.nr-sound.on { color: #fff; border-color: rgba(255, 255, 255, .5); }
+.nr-sound:hover { border-color: rgba(255, 255, 255, .7); }
+.nr-sound, .nr-dbg { --nr-font: 'Inter', 'Noto Sans CJK SC', 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', system-ui, sans-serif; }
