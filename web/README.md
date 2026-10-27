@@ -6,9 +6,11 @@ The default synthetic preview uses the production pitch, stadium and player-rend
 and poses are generated from hand-authored formulas in `src/sample/scene.ts`. It makes no match-data or model
 requests. This is a source-verification scene, not the complete licensed-data demonstration.
 
-`src/GameApp.tsx` contains the full data-dependent application. `/app.html` is a separate entry for developers who
-already have a compatible authorized local pack mounted at `public/data`. No such pack is included, and it must
-not be committed. Default builds do not copy `public/data`; only the explicit favicon and preview image are public.
+`src/GameApp.tsx` contains the full data-dependent application. `/app.html` is a separate integration entry for
+developers who configure an authorized pack behind a same-origin `/data/` route. This public Vite configuration
+sets `publicDir: false`: placing a pack in `public/data` alone will neither serve it at `/data/` nor copy it into
+the build. A private integration must supply that routing explicitly. No pack is included or may be committed.
+Only explicitly imported assets, including the preview favicon, are bundled.
 
 The private release exporter and identity mapping are intentionally absent. The public Vite configuration contains
 no decryption key or private endpoint. Use the live demo linked in the root README for the full experience.

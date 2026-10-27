@@ -77,8 +77,9 @@ an entirely hand-authored synthetic scene. No match feed, model download or clou
 labelled **Synthetic fixture** and demonstrates rendering, camera interaction and playback, not the production
 model's accuracy. The illustrative threat surface in this public copy is also hand-authored, not fitted xT.
 
-The full data-dependent application remains at `web/src/GameApp.tsx` and can be opened at `/app.html` when a
-separately authorized, compatible local data pack is supplied. That pack is not distributed here.
+The full data-dependent application remains at `web/src/GameApp.tsx`; `/app.html` is its integration entry point.
+Running that entry requires a separately configured same-origin `/data/` route serving a compatible authorized
+pack. This public Vite configuration does not mount or copy private data. The pack is not distributed here.
 
 ### Agent workflow without cloud calls
 
