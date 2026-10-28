@@ -9,6 +9,8 @@ cinematic broadcast.
 
 **[Try the full demo](https://pitch-pilot.projkick.com/)** · Desktop or laptop browser with WebGL · No sign-in
 
+**[Watch the demo video](https://www.youtube.com/watch?v=Uj26v33SzVM)**
+
 Built for Microsoft's **Inside the Game: Developer Hackathon**, presented with the Premier League.
 
 ![Pitch Pilot broadcast view](docs/images/watch.jpg)
