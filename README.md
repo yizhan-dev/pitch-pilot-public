@@ -9,11 +9,11 @@ cinematic broadcast.
 
 **[Try the full demo](https://pitch-pilot.projkick.com/)** · Desktop or laptop browser with WebGL · No sign-in
 
-**[Watch the demo video](https://www.youtube.com/watch?v=Uj26v33SzVM)**
+**[Watch the demo video](https://youtu.be/J5rmnDvkE3k)**
 
 Built for Microsoft's **Inside the Game: Developer Hackathon**, presented with the Premier League.
 
-[![Watch the Pitch Pilot demo video](https://github.com/user-attachments/assets/16c0b7b8-342f-4fbc-abd9-91febb3c0422)](https://www.youtube.com/watch?v=Uj26v33SzVM)
+[![Watch the Pitch Pilot demo video](https://github.com/user-attachments/assets/16c0b7b8-342f-4fbc-abd9-91febb3c0422)](https://youtu.be/J5rmnDvkE3k)
 
 ## Four ways to explore a moment
 
@@ -30,7 +30,7 @@ read the game, or a presenter and guest breaking it down in the studio.
 A match summary connects individual moments to statistics, passing networks, attacks, heat maps and running.
 Explain is available for selected directed clips; What-if is available for supported moments.
 
-![Pitch Pilot tactics view](docs/images/tactics.jpg)
+![Watch, Explain, Tactics, and What-if modes](https://github.com/user-attachments/assets/013180c2-f8ab-4ef0-9f9b-05c6d9489b8d)
 
 ## Microsoft AI, with a checkable handoff
 
@@ -44,16 +44,7 @@ A deterministic check between writing and review flags unsupported names, forbid
 passages and subtitle clauses. In the production authoring pipeline, **Azure AI Speech** measures spoken duration
 and produces the narration. Human feedback can send selected passages through revision again.
 
-```mermaid
-flowchart LR
-    F[Fact sheet and time slots] --> A[Analyst]
-    A --> C[Commentator]
-    C --> V[Duration and content checks]
-    V --> E[Editor]
-    E -->|Revise selected passages| C
-    E -->|Accepted or round limit reached| P[Output and review trace]
-    P --> S[Azure AI Speech and timed playback]
-```
+![Pitch Pilot agent workflow: authoring, review, narration, and timed playback](https://github.com/user-attachments/assets/9c73dd5e-958d-4205-b403-1a9d9f542db7)
 
 The workflow records drafts, checks, reviews and call metadata. Reaching the round limit does **not** imply
 approval: unresolved passages remain flagged for a person. Numerical checks assist the Editor; they are not a
