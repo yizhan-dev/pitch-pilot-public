@@ -14,7 +14,7 @@ import { closeSummary, summaryOpen } from '../summary/summary';
 import { land } from '../whatif/state';
 import { momentById, resolveMoment, wiNow } from '../whatif/moments';
 import { clipSwap } from '../game/clipSwap';
-import { varReplay } from '../game/varReplay';
+import { endVar, varActive, varReplay } from '../game/varReplay';
 import { useExplain } from '../explain/director';
 import { endTour, startTour, tourLock, tourStep } from './tour';
 import './tour.css';
@@ -283,6 +283,10 @@ export function Tour({ host }: { host: TourHost }) {
     const ask = () => {
       const now = performance.now();
       if (hostRef.current.moment === clip || clipSwap.get() !== 'off' || now - asked < 1500 || tries >= 5 || getSettings().mode === 'whatif') return;
+      // a VAR check still on owns the camera: it ends first, its camera back on the view it came from, and the clip
+      // changes once it is off (Yi, 2026-10-28: Next during the check reloaded the pitch in the check's close-up)
+      const vr = varReplay.get();
+      if (vr.phase !== 'off') { if (varActive(vr)) endVar(); return; }
       asked = now; tries++; hostRef.current.gotoMoment(clip);
     };
     ask();

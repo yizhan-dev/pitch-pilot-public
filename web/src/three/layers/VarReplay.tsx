@@ -95,7 +95,9 @@ export function VarReplay({ data, clock, surface }: { data: Loaded; clock: Clock
 function VarCam({ st }: { st: { wide: Pose | null; last: Pose | null } }) {
   useFrame(() => {
     const set = (window as unknown as CamW).__camSet, F = VAR_FACTS, V = TELE.offside.var;
-    if (!set || !st.wide || !F.on || F.exit !== null) return;
+    // (only while the check is on: a clip change ends it outright, and a frame of this before it unmounts would take the
+    // camera back to the close-up, over the change's own view)
+    if (!set || !st.wide || !F.on || F.exit !== null || varReplay.get().phase !== 'on') return;
     const c0 = varCamera(F, st.wide[3], V.turnDeg);
     if (!c0) return;
     const c: Pose = [c0[0], c0[1] - LIFT, c0[2], c0[3], c0[4], c0[5]];
