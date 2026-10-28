@@ -30,7 +30,7 @@ read the game, or a presenter and guest breaking it down in the studio.
 A match summary connects individual moments to statistics, passing networks, attacks, heat maps and running.
 Explain is available for selected directed clips; What-if is available for supported moments.
 
-![Watch, Explain, Tactics, and What-if modes](https://github.com/user-attachments/assets/013180c2-f8ab-4ef0-9f9b-05c6d9489b8d)
+![Watch, Explain, Tactics, and What-if modes](https://github.com/user-attachments/assets/35a70ce1-6e27-4589-b1fb-9305dfe2ec19)
 
 ## Microsoft AI, with a checkable handoff
 
@@ -44,7 +44,7 @@ A deterministic check between writing and review flags unsupported names, forbid
 passages and subtitle clauses. In the production authoring pipeline, **Azure AI Speech** measures spoken duration
 and produces the narration. Human feedback can send selected passages through revision again.
 
-![Pitch Pilot agent workflow: authoring, review, narration, and timed playback](https://github.com/user-attachments/assets/9c73dd5e-958d-4205-b403-1a9d9f542db7)
+![Pitch Pilot agent workflow: authoring, review, narration, and timed playback](https://github.com/user-attachments/assets/873d866a-4438-4cc4-a29c-2561eb522459)
 
 The workflow records drafts, checks, reviews and call metadata. Reaching the round limit does **not** imply
 approval: unresolved passages remain flagged for a person. Numerical checks assist the Editor; they are not a
