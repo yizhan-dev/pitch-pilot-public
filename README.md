@@ -1,15 +1,15 @@
 # Pitch Pilot
 
-**Watch the play. Understand the decision. Explore the possibility.**
+**An interactive 3D football broadcast that explains every moment, and lets you ask what if.**
 
-Pitch Pilot turns football moments into an interactive 3D broadcast: change the camera, follow an explanation,
-inspect the tactics, or ask what might happen after a different pass or run. It connects what a viewer sees to
-the decisions that made the moment matter.
+Think of Pitch Pilot as a navigation app for a football match. Instead of sitting through 90 minutes of the
+broadcast you are given, you choose your route: it flags the moments worth stopping for, explains why they matter,
+and lets you try another road. Every moment is rebuilt in 3D from player tracking and events and staged as a
+cinematic broadcast.
 
 **[Try the full demo](https://pitch-pilot.projkick.com/)** · Desktop or laptop browser with WebGL · No sign-in
 
 Built for Microsoft's **Inside the Game: Developer Hackathon**, presented with the Premier League.
-This is an independent submission, not an official Microsoft or Premier League product.
 
 ![Pitch Pilot broadcast view](docs/images/watch.jpg)
 
@@ -17,10 +17,13 @@ This is an independent submission, not an official Microsoft or Premier League p
 
 | Mode | Experience |
 |---|---|
-| **Watch** | Follow the action through broadcast, tactical and player cameras, with a radar, player cards and replay controls. |
-| **Explain** | Follow directed replays with commentary, synchronized subtitles, camera cuts and on-pitch markings. |
-| **Tactics** | Inspect pitch control, passing options, the offside line and other overlays; draw on a frozen frame. |
-| **What-if — beta** | Change a supported pass or run and explore a modelled continuation. It is a simulation, not an observed outcome. |
+| **Watch** | Switch views, from the broadcast angle to a bird's-eye map to a player's own eyes, with a radar, player cards and replay controls. |
+| **Explain** | Turn-by-turn guidance: an AI-directed replay with camera cuts, commentary, synchronized subtitles and on-pitch markings. |
+| **Tactics** | Open the map layers to read the space (pitch control, the offside line and more) and draw on a frozen frame. |
+| **What-if — beta** | Take a different road: change a supported pass or run and watch a modelled continuation. It is a simulation, not an observed outcome. |
+
+The same journey serves a fan following a favourite player, an analyst, an academy coach teaching young players to
+read the game, or a presenter and guest breaking it down in the studio.
 
 A match summary connects individual moments to statistics, passing networks, attacks, heat maps and running.
 Explain is available for selected directed clips; What-if is available for supported moments.

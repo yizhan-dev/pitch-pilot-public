@@ -20,13 +20,4 @@ an assertion that every event requirement is met.
 - **Personalize:** camera choice, selected-player views and different modes let viewers choose depth and perspective.
   Automated personalized language, club preferences and multilingual narration are not implemented.
 
-## Submission checks requiring a person
-
-- Confirm the final public repository URL and verify access while signed out.
-- Verify the final demo video URL is public and satisfies the event's permitted hosting requirements.
-  The portal's current embedded video was observed to play with a displayed duration of 1:59; the hosting URL and
-  unrestricted access still need verification.
-- Keep the working demo available through the judging period.
-- Review the final project description so it does not imply a deployed private model service or live ingestion.
-
 Official reference: [Microsoft Inside the Game rules](https://github.com/microsoft/insidethegamehackathon/blob/main/OFFICIAL%20RULES.md).
