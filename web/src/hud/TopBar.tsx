@@ -11,6 +11,7 @@ import { VIEW_UI, VIEW_GROUPS, VIEW_GROUP_LABEL, viewUI, viewBlocked } from './v
 import { tr } from '../i18n';
 import { CreditsList } from '../credits/Credits';
 import { summaryOpen } from '../summary/summary';
+import { startTour } from '../tour/tour';
 
 // The top bar: top left the score bug, top right the minimap switch, the mode button and the view button. Only designed
 // parts are shown (Yi, 2026-10-22): the level, display and games buttons come back as their panels are designed. One
@@ -71,7 +72,7 @@ export function ViewMenu({ hasOfficials }: { hasOfficials: boolean }) {
             <p className="hud-vgroup-label">{VIEW_GROUP_LABEL[g]}</p>
             <div className="hud-vtiles">
               {VIEW_UI.filter((v) => v.group === g && !v.hidden).map((v) => (
-                <button key={v.key} type="button" role="menuitemradio" aria-checked={view === v.key} aria-disabled={!!viewBlocked(v, selected, hasOfficials, tactical)} className="hud-vtile"
+                <button key={v.key} type="button" role="menuitemradio" data-view={v.key} aria-checked={view === v.key} aria-disabled={!!viewBlocked(v, selected, hasOfficials, tactical)} className="hud-vtile"
                   onPointerEnter={() => setHover(v.key)} onFocus={() => setHover(v.key)} onBlur={() => setHover(null)}
                   onClick={() => { if (!viewBlocked(v, selected, hasOfficials, tactical)) pick(v.key); }}>
                   <ViewIcon view={v.key} size={22} />
@@ -113,7 +114,7 @@ export function ModeMenu() {
   return (
     <div className="hud-pop hud-mpick" role="menu" aria-label={tr('模式', 'Mode')} data-hud-pop>
       {MODES.map((m) => (
-        <button key={m.key} type="button" role="menuitemradio" aria-checked={mode === m.key} className="hud-mrow" disabled={off(m.key)} onClick={() => pick(m.key)}>
+        <button key={m.key} type="button" role="menuitemradio" data-mode={m.key} aria-checked={mode === m.key} className="hud-mrow" disabled={off(m.key)} onClick={() => pick(m.key)}>
           <ModeIcon mode={m.key} size={28} />
           <span className="hud-mtext">
             <b>{m.label}{BETA[m.key] && <i className="hud-tag hud-beta">{BETA[m.key]}</i>}{said(m.key) && <i className="hud-tag hud-wip">{why[m.key]}</i>}</b>
@@ -157,6 +158,8 @@ export function TopBar({ bug, hasOfficials, varBtn, backToWatch }: TopBarProps) 
         {bug && <ScoreBug {...bug} />}
       </div>
       <div className="hud-tr">
+        {/* the judges' tour, again at any time (Yi, 2026-10-28; src/tour/) */}
+        <button type="button" className="hud-btn hud-glass" data-tour="tutorial" title="A guided tour of the four modes, about three minutes" onClick={() => startTour(1)}>Tutorial</button>
         {varBtn && (
           <button type="button" className={`hud-btn hud-glass hud-var${varBtn.on ? '' : ' pulse'}`} aria-pressed={varBtn.on}
             title={varBtn.on ? 'Leave the VAR check (or press play)' : 'VAR check: the offside line at the moment of the pass'} onClick={varBtn.toggle}>VAR</button>
@@ -166,7 +169,7 @@ export function TopBar({ bug, hasOfficials, varBtn, backToWatch }: TopBarProps) 
           title={sum ? 'No radar over the match summary' : mode === 'tactics' ? 'No radar in Tactics: the legend has its place' : 'Radar: show or hide (R)'} onClick={() => toggleLayer('map')}>
           <kbd className="hud-kbd hud-key" aria-hidden="true">R</kbd><MapIcon size={18} />Radar
         </button>
-        <div className="hud-anchor">
+        <div className="hud-anchor" data-tour="mode">
           <button type="button" className="hud-btn hud-glass" aria-haspopup="menu" aria-expanded={open === 'mode'} disabled={sum} title={sum ? 'Close the match summary to change the mode' : 'Mode (M)'} data-hud-toggle onClick={() => togglePanel('mode')}>
             <kbd className="hud-kbd hud-key" aria-hidden="true">M</kbd>{tr('模式', 'Mode')}<span className="hud-val"><ModeIcon mode={mode} size={18} />{curMode.label}</span>
           </button>
@@ -175,7 +178,7 @@ export function TopBar({ bug, hasOfficials, varBtn, backToWatch }: TopBarProps) 
             <button type="button" className="hud-btn hud-glass hud-back" onClick={backToWatch}><ModeIcon mode="watch" size={18} />Back to Watch</button>
           )}
         </div>
-        <div className="hud-anchor">
+        <div className="hud-anchor" data-tour="view">
           <button type="button" className="hud-btn hud-glass" aria-haspopup="menu" aria-expanded={open === 'view'} disabled={sum} title={sum ? 'Close the match summary to change the view' : 'View (V)'} data-hud-toggle onClick={() => togglePanel('view')}>
             <kbd className="hud-kbd hud-key" aria-hidden="true">V</kbd>{tr('视角', 'View')}<span className="hud-val"><ViewIcon view={view} size={18} />{cur.label}</span>
           </button>

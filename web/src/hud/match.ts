@@ -21,7 +21,9 @@ export type ClipPkg = Loaded['pkg'] & {
   /** each side's detected shape then: in and out of possession, e.g. { label: '4-2-3-1 Off. FB', formation: '4-5-1' } */
   shapes?: { window: [number, number]; att: Record<'in' | 'out', { label: string; formation: string }>; def: Record<'in' | 'out', { label: string; formation: string }> };
   run0?: { dist: number; hsr: number }[];
-  run?: { hz: number; dist: number[][]; hsr: number[][] };
+  /** once a second through the clip: metres from kick-off (dist, hsr from 20 km/h), the fastest second so far in the
+   *  match (top, km/h) and the sprints so far (spr: 25 km/h and up for 1 s); top and spr since 2026-10-28 */
+  run?: { hz: number; dist: number[][]; hsr: number[][]; top?: number[][]; spr?: number[][] };
   match_events?: { fields: string[]; players: [number, string, number, number | null, string[]][][] };
   /** cards shown so far in the match, by package player (to come from the export: Opta MA2 liveData.card matched through
    *  the tracking's shirt numbers); clock in match seconds */

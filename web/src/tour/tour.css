@@ -1,0 +1,85 @@
+/* the tour's card (tour/Tour.tsx): top centre, under the top bar, in the HUD's glass and type. It sits outside the
+   HUD, so the HUD's own sizes are restated here. Its colour is the Pelicans' cyan (Yi, 2026-10-28: the home side is the
+   perspective the demo takes; white glows read too faintly) */
+.tour {
+  --hud-h: 40px; --hud-edge: 20px; --hud-bottom: 20px;
+  --fs-md: 14px; --fs-lg: 15px; --fd-sm: 14px; --fd-xl: 20px;
+  --s4: 8px; --s7: 16px; --s8: 24px;
+  --hud-font: 'Inter', system-ui, sans-serif;
+  --tour: #3ec8ff; --tour-ink: #04141c;
+  position: fixed; z-index: 60; left: 50%; top: calc(18px + var(--hud-h) + var(--s7)); transform: translateX(-50%);
+  width: min(560px, calc(100vw - 2 * var(--hud-edge))); padding: var(--s7) var(--s8);
+  border-radius: 10px; background: var(--glass-strong); color: var(--ink); font-family: var(--hud-font);
+  border-top: 2px solid var(--tour); box-shadow: 0 12px 40px rgba(0, 0, 0, .45); pointer-events: auto;
+  animation: tour-in .28s ease both;
+}
+@keyframes tour-in { from { opacity: 0; transform: translate(-50%, -6px); } to { opacity: 1; transform: translate(-50%, 0); } }
+/* on the What-if step its own card has the top centre and its teammates stand left and right: this one takes the player
+   card's place at the bottom left (the card, with nobody picked there, stands aside) */
+.tour.tour-corner { left: var(--hud-edge); top: auto; bottom: var(--hud-bottom); transform: none; width: min(380px, calc(100vw - 2 * var(--hud-edge))); animation-name: tour-in-plain; }
+body.tour-corner .hud-card { visibility: hidden; }
+/* under the open match summary, which leaves it the room (MatchSummary.tsx TOUR_H) */
+.tour.tour-bottom { top: auto; bottom: calc(var(--hud-bottom) + 4px); }
+.tour.tour-bottom .tour-text { min-height: 0; }
+@keyframes tour-in-plain { from { opacity: 0; } to { opacity: 1; } }
+/* a click the tour holds: the card nods once */
+.tour.tour-nudge { animation: tour-nudge .42s ease both; }
+.tour.tour-corner.tour-nudge { animation-name: tour-nudge-plain; }
+@keyframes tour-nudge { 0%, 100% { transform: translateX(-50%); } 25% { transform: translateX(calc(-50% - 6px)); } 60% { transform: translateX(calc(-50% + 5px)); } }
+@keyframes tour-nudge-plain { 0%, 100% { transform: none; } 25% { transform: translateX(-6px); } 60% { transform: translateX(5px); } }
+
+.tour-head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--s7); margin-bottom: var(--s4); }
+.tour-title { font: 600 var(--fd-xl)/1.1 var(--font-display); letter-spacing: .02em; text-transform: uppercase; }
+.tour-count { font: 600 var(--fd-sm)/1 var(--font-display); letter-spacing: .06em; color: var(--ink-3); }
+.tour-text { margin: 0; min-height: 2.9em; font-size: var(--fs-lg); line-height: 1.45; color: var(--ink-2); }
+.tour-text b { color: var(--ink); font-weight: 600; }
+/* a word on what just happened (the show skipped), above the step's line */
+.tour-note { margin: 0 0 var(--s4); font-size: var(--fs-md); color: var(--tour); }
+.tour-note b { font-weight: 600; }
+/* while the next clip loads: a quiet line under the lead, its dot breathing */
+.tour-status { display: flex; align-items: center; gap: var(--s4); margin: var(--s4) 0 0; font-size: var(--fs-md); color: var(--ink-3); }
+/* a turning ring: something is on its way (a clip, the match behind the show), not stuck */
+.tour-spin { display: inline-block; flex: none; width: 12px; height: 12px; border-radius: 50%; border: 2px solid rgba(62, 200, 255, .25);
+  border-top-color: var(--tour); animation: tour-spin .8s linear infinite; }
+.tour-btn .tour-spin { margin-right: var(--s4); vertical-align: -2px; border-color: rgba(4, 20, 28, .25); border-top-color: var(--tour-ink); }
+.tour-btn.go:disabled { opacity: 1; }
+@keyframes tour-spin { to { transform: rotate(360deg); } }
+.tour-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s4); margin-top: var(--s7); }
+.tour-btn {
+  height: 34px; padding: 0 var(--s7); border-radius: 6px; border: 1px solid var(--hairline-strong); background: transparent;
+  color: var(--ink); font: 600 var(--fs-md)/1 var(--hud-font); cursor: pointer; transition: background-color .15s, border-color .15s, opacity .15s;
+}
+.tour-btn:hover { border-color: rgba(255, 255, 255, .6); }
+.tour-btn:disabled { opacity: .4; cursor: default; }
+.tour-btn.go { background: var(--tour); color: var(--tour-ink); border-color: var(--tour); }
+.tour-btn.go:hover { background: #6fd6ff; }
+/* Next, once the step is done: it breathes */
+.tour-btn.ready { animation: tour-ready 1.6s ease-in-out infinite; }
+@keyframes tour-ready { 0%, 100% { box-shadow: 0 0 0 0 rgba(62, 200, 255, .55); } 50% { box-shadow: 0 0 0 7px rgba(62, 200, 255, 0); } }
+.tour-btn.quiet { margin-left: auto; border-color: transparent; color: var(--ink-3); padding: 0 var(--s4); }
+.tour-btn.quiet:hover { color: var(--ink); }
+
+/* the HUD part a step points at: a cyan ring that breathes until it is clicked */
+/* (box-shadow only: the parts keep their own position, some are placed absolutely) */
+.tour-glow { animation: tour-glow 1.5s ease-in-out infinite; border-color: #3ec8ff !important; }
+@keyframes tour-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(62, 200, 255, .65), 0 0 0 1px rgba(62, 200, 255, .9); }
+  50% { box-shadow: 0 0 0 8px rgba(62, 200, 255, 0), 0 0 0 1px rgba(62, 200, 255, 1); }
+}
+
+/* a HUD control the step does not let through: dimmed and grey, the pointer saying so (tour.ts holds the press) */
+.tour-off { opacity: .32 !important; filter: grayscale(1); cursor: not-allowed !important; transition: opacity .2s; }
+.tour-off * { cursor: not-allowed !important; }
+
+/* the arrow beside a small target: a cyan chevron nudging towards it */
+.tour-point { position: fixed; z-index: 61; width: 0; height: 0; pointer-events: none; transform: translateY(-50%);
+  border-top: 9px solid transparent; border-bottom: 9px solid transparent; border-right: 14px solid #3ec8ff;
+  filter: drop-shadow(0 0 6px rgba(62, 200, 255, .7)); animation: tour-point .9s ease-in-out infinite; }
+@keyframes tour-point { 0%, 100% { margin-left: 8px; } 50% { margin-left: 0; } }
+
+/* while the tour runs, the bottom hint and the pause window keep clear of the card */
+body.tour-on .gm-hint, body.tour-on .pw { display: none !important; }
+/* and the HUD's own calls to act stand aside, so the card's Next is the only one: Play Next Clip and Match Summary at the
+   end of a clip, Back to Watch, the VAR check's pulse */
+body.tour-on:not(.tour-sum) .hud-nextclip, body.tour-on .hud-back, body.tour-on:not(.tour-var) .hud-var { display: none !important; }
+body.tour-var-done .hud-var.pulse { animation: none; }

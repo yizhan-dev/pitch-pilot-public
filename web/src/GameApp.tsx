@@ -26,6 +26,8 @@ import { clipSwap, swapBoard, swapTarget, until, SWAP_PULSE_S, SWAP_SETTLE_S } f
 import { setDirected } from './explain/director';
 import { summaryOpen } from './summary/summary';
 import { boot } from './boot';
+import { Tour } from './tour/Tour';
+import { tourStep } from './tour/tour';
 
 /** ?synth=1: every player drawn from his positions only, as the what-if's simulated players will be (whatif/motion.ts),
  *  to compare with the tracked bodies (Yi, 2026-10-24) */
@@ -79,7 +81,7 @@ const HINT_S = 5;
 export function GameApp() {
   matchEnds.on = true;   // again on every render: a hot reload of coords.ts brings a fresh switch (the module-level line may not rerun)
   const q = useMemo(() => new URLSearchParams(location.search), []);
-  const introAtOpen = useMemo(() => !q.get('moment') && q.get('t') === null && q.get('capture') !== '1' && q.get('intro') !== '0' && getSettings().mode === 'watch', [q]);
+  const introAtOpen = useMemo(() => !q.get('moment') && q.get('t') === null && q.get('capture') !== '1' && q.get('intro') !== '0' && getSettings().mode === 'watch' && tourStep.get() < 1, [q]);   // (a tour under way: a reload resumes it, no show)
   // the clip on screen; a clip change swaps it in place (gotoMoment), so it is state, not the address
   // (an address from before the data took its fictional identity names the match's old folder: the same clip, renamed)
   const first = useMemo(() => normalized(q.get('moment')) ?? (introAtOpen ? KICKOFF : DEFAULT_MOMENT), [q, introAtOpen]);
@@ -251,6 +253,7 @@ export function GameApp() {
     W.__replayIntro = () => replayIntro();
     W.__gotoClip = (m: string) => gotoMoment(m);   // for the headless checks: a clip change, as the replay plate makes it
     W.__swapPhase = () => clipSwap.get();
+    W.__clipEnd = () => end;   // the clip's length, for the headless checks (the tour's end hold)
     if (q.get('capture') === '1') W.__capture = true;
   });
 
@@ -282,6 +285,7 @@ export function GameApp() {
         <ExplainPlayer data={data} />
       </div>
       {show}
+      <Tour host={{ moment, gotoMoment, t, end, playing, play, seek: playback.seek, intro: intro !== 'off', pkg: data.pkg }} />
     </div>
   );
 }

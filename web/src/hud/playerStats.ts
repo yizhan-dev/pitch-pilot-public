@@ -286,7 +286,8 @@ const ON_BALL = new Set(['Pass', 'BallTouch', 'TakeOn', 'BallRecovery', 'Clearan
 /** This match up to clip time t, measured: distance and high-speed distance (above 20 km/h; about 8% under MA45's figure,
  *  speed bands not reconciled) from `run`, the counts from `match_events`. Assists are passes tagged Assist that a
  *  team-mate's goal follows within 20 s (a shot's IntentionalGoalAssist tag means the shot was assisted, not that the
- *  shooter assisted). Top speed, sprints and the speed bands are not in the export, so they stay `fallback` (examples). */
+ *  shooter assisted). Top speed (the fastest second so far) and sprints come from `run` too where the package has them
+ *  (since 2026-10-28; Yi: it showed a fixed example from the first second); the speed bands stay `fallback` (examples). */
 export function realStats(pkg: ClipPkg, p: number, t: number, fallback: MatchStats): MatchStats {
   const now = (pkg.clock0 ?? 0) + t, nAtt = nAttOf(pkg), all = pkg.match_events?.players ?? [];
   const ev = (all[p] ?? []).filter((e) => e[0] <= now);
@@ -298,9 +299,13 @@ export function realStats(pkg: ClipPkg, p: number, t: number, fallback: MatchSta
   const tackles = count((e) => e[1] === 'Tackle'), tried = tackles + count((e) => e[1] === 'Attempted tackle');
   const dist = pkg.run ? atSecond(pkg.run.dist[p], t, hz) / 1000 : fallback.distanceKm;
   const hsr = pkg.run ? atSecond(pkg.run.hsr[p], t, hz) / 1000 : fallback.highSpeedKm;
+  // the running maximum and the count change only at a second's mark: the value of the second reached, not a blend
+  const step = (s: number[] | undefined) => (s?.length ? s[Math.min(s.length - 1, Math.max(0, Math.floor(t * hz)))] : null);
+  const top = step(pkg.run?.top?.[p]), spr = step(pkg.run?.spr?.[p]);
   return {
     ...fallback,
     distanceKm: dist, highSpeedKm: hsr,
+    topSpeed: top ?? fallback.topSpeed, sprints: spr ?? fallback.sprints,
     touches: count((e) => ON_BALL.has(e[1])),
     passes: pair((e) => e[1] === 'Pass'),
     keyPasses: count((e) => e[1] === 'Pass' && (e[4].includes('KeyPass') || e[4].includes('Assist'))),

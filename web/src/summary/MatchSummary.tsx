@@ -4,6 +4,7 @@ import { Crest } from '../hud/crests';
 import { TEAM_CODE, TEAM_LABEL } from '../hud/match';
 import { closeSummary, heatBytes, loadSummary, VENUE, type MatchSummaryData, type Side } from './summary';
 import { setSettings, useGameSettings } from '../game/settings';
+import { tourOn, tourStep } from '../tour/tour';
 import './summary.css';
 
 // The match summary's panel (summary.ts): it drops from the top centre once the camera has risen to the drone, and turns
@@ -24,7 +25,10 @@ const AUTO_TURN = new URLSearchParams(location.search).get('mscycle') === '1';
  *  under the pages (STRIP_H, summary.css .ms-strip) */
 const STRIP_H = 28, BASE_W = 920, BASE_H = 540 + STRIP_H, TOP = 116, BOTTOM = 14, EDGE = 32;
 const MAX_SCALE = (() => { const q = Number(new URLSearchParams(location.search).get('ms')); return q > 0 ? q : 1.5; })();
-const fitScale = () => Math.max(1, Math.min((innerWidth - 2 * EDGE) / BASE_W, (innerHeight - TOP - BOTTOM) / BASE_H, MAX_SCALE));
+/** while the judges' tour runs, its last card sits under the panel (src/tour/): the panel leaves it TOUR_H, and on a
+ *  short screen goes below its usual smallest scale to do so (back to it once the tour ends) */
+const TOUR_H = 176;
+const fitScale = () => Math.max(tourOn() ? 0.78 : 1, Math.min((innerWidth - 2 * EDGE) / BASE_W, (innerHeight - TOP - BOTTOM - (tourOn() ? TOUR_H : 0)) / BASE_H, MAX_SCALE));
 const L = 105, W = 68;
 const KIT: Record<Side, string> = { home: '#6ab8ff', away: '#ff9560' };     // the radar's lighter kit colours, for dark glass
 const BANDS = ['Walking', 'Jogging', 'Running', 'High speed', 'Sprinting'];
@@ -641,7 +645,7 @@ export function MatchSummary({ portrait }: { portrait?: Portrait }) {
   const [page, setPage] = useState(0);
   const [leaving, setLeaving] = useState(false);
   const [scale, setScale] = useState(fitScale);
-  useEffect(() => { const on = () => setScale(fitScale()); window.addEventListener('resize', on); return () => window.removeEventListener('resize', on); }, []);
+  useEffect(() => { const on = () => setScale(fitScale()); window.addEventListener('resize', on); const off = tourStep.subscribe(on); return () => { window.removeEventListener('resize', on); off(); }; }, []);
   const hold = useRef(false), bar = useRef<HTMLElement>(null);
   // nobody selected while it is open (Yi, 2026-10-27: "at this page, any selected players will be deselected")
   const { selected } = useGameSettings();
