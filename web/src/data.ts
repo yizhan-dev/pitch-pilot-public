@@ -36,6 +36,20 @@ export async function loadMoment(file: string): Promise<Loaded> {
   return { pkg, joints, officials };
 }
 
+/** a clip's files fetched ahead into the browser's cache, nothing kept (GameApp: the next clip while this one plays, so
+ *  a change to it waits on no download; a clip is 2 to 9 MB). Once a page; a failed try is tried again next time */
+const fetchedAhead = new Set<string>();
+export async function prefetchMoment(file: string): Promise<void> {
+  if (fetchedAhead.has(file)) return;
+  fetchedAhead.add(file);
+  try {
+    const match = parseClip(file).match;
+    const pkg = await (await fetch(clipFile(file))).json() as { joints?: { file: string }; officials?: { joints: { file: string } | null } };
+    const files = [pkg.joints?.file, pkg.officials?.joints?.file].filter((f): f is string => !!f);
+    await Promise.all(files.map((f) => fetch(inMatch(f, match)).then((r) => r.arrayBuffer())));
+  } catch { fetchedAhead.delete(file); }
+}
+
 /** Seconds covered by a package and the decision time. */
 export const duration = (p: MomentPkg) => (p.frames.length - 1) / p.meta.fps;
 export const decisionTime = (p: MomentPkg) => p.meta.decision_frame / p.meta.fps;
@@ -87,12 +101,20 @@ function cleanJoints(J: Joints) {
   const len = (f: number, p: number, a: number, b: number) => { const i = at(f, p, a), k = at(f, p, b); return Math.hypot(D[i] - D[k], D[i + 1] - D[k + 1], D[i + 2] - D[k + 2]); };
   const upright = (f: number, p: number) => { const i = at(f, p, ix.neck), k = at(f, p, ix.midHip), dz = D[i + 2] - D[k + 2]; return dz / (Math.hypot(D[i] - D[k], D[i + 1] - D[k + 1], dz) || 1); };
   let spikes = 0, fixedBones = 0, lying = 0;
-  // 1. one-frame spikes: a joint far from the median of its neighbours over +-3 frames is replaced by that median
-  const W = 3;
+  // 1. one-frame spikes: a joint far from the median of its neighbours over +-3 frames is replaced by that median. The
+  //    medians of these windows (22 x 29 x 3 x every frame of them) are taken in two fixed buffers, not sorted copies:
+  //    the same values bit for bit on every clip, ten times quicker (0.8 s of a clip change, 2026-10-27)
+  const W = 3, w7 = new Float64Array(2 * W + 1), d7 = new Float64Array(2 * W + 1);
+  const mid = (b: Float64Array, n: number) => { for (let i = 1; i < n; i++) { const v = b[i]; let k = i - 1; while (k >= 0 && b[k] > v) { b[k + 1] = b[k]; k--; } b[k + 1] = v; } return b[n >> 1]; };
+  const x = new Float64Array(F), out = new Float64Array(F);
   for (let p = 0; p < P; p++) for (let j = 0; j < nJ; j++) for (let c = 0; c < 3; c++) {
-    const x = Array.from({ length: F }, (_, f) => D[at(f, p, j) + c]), out = x.slice();
+    for (let f = 0; f < F; f++) out[f] = x[f] = D[at(f, p, j) + c];
     for (let f = 0; f < F; f++) {
-      const w = x.slice(Math.max(0, f - W), Math.min(F, f + W + 1)), m = med(w), mad = med(w.map((v) => Math.abs(v - m)));
+      const lo = Math.max(0, f - W), n = Math.min(F, f + W + 1) - lo;
+      for (let i = 0; i < n; i++) w7[i] = x[lo + i];
+      const m = mid(w7, n);
+      for (let i = 0; i < n; i++) d7[i] = Math.abs(x[lo + i] - m);
+      const mad = mid(d7, n);
       if (Math.abs(x[f] - m) > 3 * 1.4826 * mad + 0.08) { out[f] = m; spikes++; }
     }
     for (let f = 0; f < F; f++) D[at(f, p, j) + c] = out[f];

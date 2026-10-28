@@ -8,6 +8,7 @@ import type { Loaded, Joints } from '../data';
 import type { MomentPkg } from '../types';
 import type { ClipEvent } from '../hud/match';
 import { synthesize, type AnimClip, type Track } from './motion';
+import { synthesizeGait, type GaitLib } from './gait';
 import { faceAt, type Played, type Scene0, type Outcome, type Pass } from './onball';
 import type { XY } from '../response/engine';
 
@@ -18,24 +19,38 @@ const FPS_J = 25, PRE_S = 0.4, FADE_S = 0.4;
  *  header's lean back, the head furthest back at 0.78 s, presents the chest), the header (the head drives through at
  *  1.0 s), the standing tackle (the first kick's left-foot jab, furthest out at 0.30 s), the slide tackle (right foot
  *  stretched out and low at 0.56 s, then up again) */
-interface Act { clip: string; at: number; from: number; to: number; leg?: boolean }
+/** `part`: what of the body the clip replaces, the rest keeping its strides: a leg (about its hip) with the upper body
+ *  (about the hips), or the upper body alone; the whole body when unset (the slide). Since 2026-10-27 the touches
+ *  are partial too: laid over whole, the receive ran in place for a second while the receiver's path still moved at a
+ *  sprint, and he slid to the ball (Yi: "#37 was 平移 for the last few frames before showing xG") */
+interface Act { clip: string; at: number; from: number; to: number; part?: 'r' | 'l' | 'upper' }
 /** the pass (Yi, 2026-10-25: "the ball does not feel like being passed from his feet"): the earlier kick
  *  (kick-soccerball-2) lifted the leg and stamped down, the foot moving back as the ball left; the penalty kick is the
  *  pack's one real swing, but it runs in at 2.7 m/s, so only its right leg is laid over, about his right hip, and the
  *  standing foot stays where his own steps put it: the leg from behind, contact at 0.71 s (the toe 3 cm off the grass,
  *  at its fastest), the follow-through low (to 0.5 m), down again at 1.12 s */
-const KICK: Act = { clip: 'soccer-penalty-kick', at: 0.71, from: 0.48, to: 1.04, leg: true };
+const KICK: Act = { clip: 'soccer-penalty-kick', at: 0.71, from: 0.48, to: 1.04, part: 'r' };
 /** the right leg's joints, laid about the right hip; and the upper body, about the hips (the torso turning into the
  *  kick, the arms out for balance), the pelvis and the standing leg left as his steps have them */
-const LEG = ['rKnee', 'rAnkle', 'rBigToe', 'rSmallToe', 'rHeel'];
+const LEGS = { r: ['rKnee', 'rAnkle', 'rBigToe', 'rSmallToe', 'rHeel'], l: ['lKnee', 'lAnkle', 'lBigToe', 'lSmallToe', 'lHeel'] } as const;
 const UPPER = ['neck', 'nose', 'rEye', 'lEye', 'rEar', 'lEar', 'rShoulder', 'lShoulder', 'rElbow', 'lElbow', 'rWrist', 'lWrist', 'rThumb', 'rPinky', 'lThumb', 'lPinky'];
-const RECEIVE: Act = { clip: 'receive-soccerball', at: 1.0, from: 0.55, to: 1.6 };
-const THIGH: Act = { clip: 'kneeing-soccerball-2', at: 0.28, from: 0, to: 0.6 };
-const CHEST: Act = { clip: 'header-soccerball', at: 0.78, from: 0.3, to: 0.95 };
-const HEADER: Act = { clip: 'header-soccerball', at: 1.0, from: 0.4, to: 1.5 };
-const STAND: Act = { clip: 'kick-soccerball', at: 0.3, from: 0, to: 0.56 };
+const RECEIVE: Act = { clip: 'receive-soccerball', at: 1.0, from: 0.75, to: 1.3, part: 'l' };
+const THIGH: Act = { clip: 'kneeing-soccerball-2', at: 0.28, from: 0.05, to: 0.55, part: 'r' };
+const CHEST: Act = { clip: 'header-soccerball', at: 0.78, from: 0.3, to: 0.95, part: 'upper' };
+const HEADER: Act = { clip: 'header-soccerball', at: 1.0, from: 0.6, to: 1.3, part: 'upper' };
+const STAND: Act = { clip: 'kick-soccerball', at: 0.3, from: 0, to: 0.56, part: 'l' };
+/** the first-time finishes (2026-10-27): the header whole (the head drives through at 1.0 s), lifted by the lay's `hop`
+ *  for a ball above his standing head; the volley the kick's swing with the leg turned up about the hip until the foot
+ *  reaches the ball (the lay's `lift`); a first-time drive the kick itself */
+const HEAD_SHOT: Act = { clip: 'header-soccerball', at: 1.0, from: 0.6, to: 1.3 };
+const VOLLEY: Act = { clip: 'soccer-penalty-kick', at: 0.71, from: 0.48, to: 1.04, part: 'r' };
 const SLIDE: Act = { clip: 'soccer-tackle-2', at: 0.56, from: 0.1, to: 1.72 };
-export const ACT_CLIPS = [...new Set([KICK, RECEIVE, THIGH, CHEST, HEADER, STAND, SLIDE].map((a) => a.clip))];
+/** the keeper's claim of a ball into his goal area (onball.ts keeperRule / outcomes; 2026-10-28): the high catch, the
+ *  hands together 1.4 m up at 0.4 s, laid over whole, the ball into his hands */
+const GK_CATCH: Act = { clip: 'goalkeeper-catch-2', at: 0.4, from: 0, to: 0.8 };
+/** a ball along the ground he gathers low: the hands at the grass at 0.7 s */
+const GK_SCOOP: Act = { clip: 'goalkeeper-scoop', at: 0.7, from: 0.3, to: 1.1 };
+export const ACT_CLIPS = [...new Set([KICK, RECEIVE, THIGH, CHEST, HEADER, STAND, SLIDE, GK_CATCH, GK_SCOOP].map((a) => a.clip))];
 /** the first touch's clip by the ball's height there */
 const touchAct = (z: number) => (z < 0.5 ? RECEIVE : z < 1.0 ? THIGH : z < 1.6 ? CHEST : HEADER);
 /** a tackle: standing when the tackler is within 2.2 m of the ball 0.4 s before, a slide from further */
@@ -87,8 +102,17 @@ export interface BranchOpts {
   real?: { p: number; until: number }[];
   /** drag (Yi, 2026-10-25: "use the ghost player style to drag the player to that position, instead of animate it"):
    *  every player keeps his pose of the moment and is carried along his simulated path; no locomotion, kick or touch is
-   *  synthesised (the shell shows the branch in the ghost style, useWhatIf.tsx) */
+   *  synthesised (the shell shows the branch in the ghost style, useWhatIf.tsx). The default until 2026-10-27, when
+   *  the real strides came (gait.ts; Yi: "actually animate each player to that spot"); kept behind ?widrag=1 */
   drag?: boolean;
+  /** the real strides (gait.ts): the locomotion comes from the library, each man continuing from his real pose at the
+   *  pause, his own strides first; without it the Mixamo loops (motion.ts) */
+  gait?: GaitLib | null;
+  /** the receiver's finish as the shot what-if decided it (shot.ts evalShot; 2026-10-27, Yi: "they are always ground
+   *  shot, never header or a volley"): first time, it is laid over at his touch facing the goal (a header, jumping for
+   *  a ball above his standing head; a volley, the leg raised to the ball; a drive), and the ball stays where he met it
+   *  (the shot itself is not simulated: the xG says it); after a touch, the touch as before */
+  finish?: { how: 'first' | 'touch'; kind: 'header' | 'volley' | 'drive'; z: number } | null;
 }
 export function buildBranch(real: Loaded, clips: Record<string, AnimClip>, t0: number, c: Scene0, pl: Played, target: XY, outcome: Outcome, pass: Pass, opts: BranchOpts = {}): { data: Loaded; info: BranchInfo } {
   const pkg = real.pkg as Pkg, fr = pkg.frames, fps = pkg.meta.fps, nAtt = fr[0].att.length, P = nAtt + fr[0].def.length, s = c.flipped ? -1 : 1;
@@ -127,7 +151,8 @@ export function buildBranch(real: Loaded, clips: Record<string, AnimClip>, t0: n
   };
   const tracks: Track[] = Array.from({ length: P }, (_, p) => ({ keeper: (pkg.keepers ?? []).includes(p), pos: Array.from({ length: pre + 1 + simF }, (_, i) => posAt(T0 + (i - pre) / FPS_J, p)) }));
   const ballTrack = Array.from({ length: pre + 1 + simF }, (_, i) => { const b = ballFrames(T0 + (i - pre) / FPS_J); return b ? [b[0], b[1]] as [number, number] : null; });
-  const S = opts.drag ? null : synthesize(clips, tracks, ballTrack, FPS_J, nAtt, J.names);
+  const pids = ((pkg.players ?? []) as { pid?: string }[]).map((q) => q?.pid ?? null);
+  const S = opts.drag ? null : opts.gait ? synthesizeGait(opts.gait, tracks, ballTrack, FPS_J, nAtt, J.names, Array.from({ length: P }, (_, p) => pids[p] ?? null), { J, f0, pre }) : synthesize(clips, tracks, ballTrack, FPS_J, nAtt, J.names);
   const data = new Float32Array(F * P * nJ * 3);
   data.set(J.data.subarray(0, (f0 + 1) * P * nJ * 3));
   const hip = J.names.indexOf('midHip'), carrierPkg = c.toPkg[c.kicker], tStrike = T0 + pass.hold * 0.1, lost = outcome.kind === 'lost';
@@ -136,7 +161,10 @@ export function buildBranch(real: Loaded, clips: Record<string, AnimClip>, t0: n
   const dirTo = (a: [number, number], b: [number, number]) => Math.atan2(b[1] - a[1], b[0] - a[0]);
   const ball2 = (t: number): [number, number] => { const b = ballFrames(t)!; return [b[0], b[1]]; };
   const far = (p: number, t: number) => Math.hypot(...(([a, b]) => [a[0] - b[0], a[1] - b[1]] as [number, number])([posAt(t - 0.4, p), ball2(t)]));
-  const lays: { p: number; act: Act; t: number; face: number }[] = [];
+  /** `pick`: a finish with the foot, struck with whichever foot the ball comes to (`side`, settled at its first frame
+   *  from the hips' distances to the ball; the clip's right leg is mirrored onto the left) */
+  const lays: { p: number; act: Act; t: number; face: number; hop?: number; lift?: number; pick?: boolean; side?: 'l' | 'r' }[] = [];
+  let finishDir: number | null = null;   // the way the receiver's first-time finish goes (towards the goal), for the ball
   // tracked bodies kept past the pause (opts.real), each to a frame; the others from the pause
   const realTo = new Map((opts.real ?? []).map((r) => [r.p, Math.min(J.frames - 1, Math.max(f0, Math.round(r.until * FPS_J)))]));
   const realAt = (p: number, t: number) => (realTo.get(p) ?? f0) >= Math.round(t * FPS_J);
@@ -147,6 +175,15 @@ export function buildBranch(real: Loaded, clips: Record<string, AnimClip>, t0: n
   if (kicked) lays.push({ p: carrierPkg, act: KICK, t: tStrike, face: kickFace });
   if (who !== null && realAt(who, tTouch)) { /* his tracked body makes the touch */ }
   else if (who !== null && lost) lays.push({ p: who, act: tackleAct(far(who, tTouch)), t: tTouch, face: dirTo(posAt(tTouch - 0.4, who), ball2(tTouch)) });
+  else if (who !== null && opts.finish?.how === 'first') {
+    // first time at the goal (the attacking goal is +x in the model's frame, s turns it to the package's)
+    const fin = opts.finish, toGoal = dirTo(posAt(tTouch, who), [s * 52.5, 0]), noseZ = J.data[((f0 * P + who) * nJ + J.names.indexOf('nose')) * 3 + 2] || 1.6;
+    finishDir = toGoal;
+    if (fin.kind === 'header') lays.push({ p: who, act: HEAD_SHOT, t: tTouch, face: toGoal, hop: Math.max(0, Math.min(0.5, fin.z - (noseZ + 0.08))) });
+    else if (fin.kind === 'volley') lays.push({ p: who, act: VOLLEY, t: tTouch, face: toGoal + Math.PI / 2 - (swing?.theta ?? Math.PI / 2), lift: fin.z, pick: true });
+    else lays.push({ p: who, act: KICK, t: tTouch, face: toGoal + Math.PI / 2 - (swing?.theta ?? Math.PI / 2), pick: true });
+  }
+  else if (who !== null && outcome.kind === 'cut' && (pkg.keepers ?? []).includes(who)) lays.push({ p: who, act: (ballFrames(tTouch)?.[2] ?? 0.11) >= 0.8 ? GK_CATCH : GK_SCOOP, t: tTouch, face: dirTo(ball2(tTouch), ball2(tTouch - 0.3)) });
   else if (who !== null) lays.push({ p: who, act: touchAct(ballFrames(tTouch)?.[2] ?? 0.11), t: tTouch, face: dirTo(ball2(tTouch), ball2(tTouch - 0.3)) });
   if (tackler !== null) lays.push({ p: tackler, act: tackleAct(far(tackler, tTackle)), t: tTackle, face: dirTo(posAt(tTackle - 0.4, tackler), ball2(tTackle)) });
   // the passer's turn on the ball: his body held to the way he faces (faceAt, from the pause round to the pass) until
@@ -198,15 +235,36 @@ export function buildBranch(real: Loaded, clips: Record<string, AnimClip>, t0: n
         if (p !== L.p || !k || tk < L.act.from || tk > L.act.to + 0.2) continue;
         const wk = smooth((tk - L.act.from) / 0.12) * (1 - smooth((tk - L.act.to) / 0.2)), kf = Math.min(k.frames - 1, Math.min(L.act.to, tk) * k.fps), kk = Math.floor(kf), ku = kf - kk, k1 = Math.min(k.frames - 1, kk + 1);
         const [rx, ry] = [data[o + hip * 3], data[o + hip * 3 + 1]], cs = Math.cos(L.face), sn = Math.sin(L.face), kh = k.names.indexOf('midHip');
-        if (L.act.leg) {
-          // the kicking leg alone, about his right hip (the clip's own joint order), the foot kept off the grass
-          const nK = k.names.length, kr = k.names.indexOf('rHip'), br = ix('rHip'), bx = data[o + br * 3], by = data[o + br * 3 + 1], bz = data[o + br * 3 + 2];
+        if (L.act.part) {
+          // the acting leg alone, about its hip (the clip's own joint order), the foot kept off the grass; then the
+          // upper body about the hips; the other leg and the hips keep their strides
+          const part = L.act.part;
+          // a finish with the foot takes the foot the ball comes to (the hip nearer the ball at the act's first frame);
+          // the clip's leg is mirrored across his facing when it is the other one (2026-10-27 night)
+          if (L.pick && part !== 'upper' && L.side === undefined) {
+            const b = ballFrames(L.t), lh = ix('lHip'), rh = ix('rHip');
+            L.side = b && Math.hypot(b[0] - data[o + lh * 3], b[1] - data[o + lh * 3 + 1]) < Math.hypot(b[0] - data[o + rh * 3], b[1] - data[o + rh * 3 + 1]) ? 'l' : 'r';
+          }
+          const side = part === 'upper' ? part : L.side ?? part, mirror = part !== 'upper' && side !== part, flip = mirror ? -1 : 1;
+          const hipN = side === 'l' ? 'lHip' : 'rHip', clipHip = part === 'l' ? 'lHip' : 'rHip';
+          const nK = k.names.length, kr = k.names.indexOf(part === 'upper' ? hipN : clipHip), br = ix(hipN), bx = data[o + br * 3], by = data[o + br * 3 + 1], bz = data[o + br * 3 + 2];
           const c = (j: number, d: number) => lerp(k.data[(kk * nK + j) * 3 + d], k.data[(k1 * nK + j) * 3 + d], ku);
-          for (const n of LEG) {
-            const jc = k.names.indexOf(n), jb = ix(n), ax = c(jc, 0) - c(kr, 0), ay = c(jc, 1) - c(kr, 1), az = c(jc, 2) - c(kr, 2);
+          // the volley: the leg turned up about the hip (forward and up, in the clip's own frame) until the ankle at the
+          // contact frame reaches a hand's breadth under the ball; a ball out of reach gets the full lift
+          let th = 0;
+          if (L.lift !== undefined && part !== 'upper') {
+            const fa = Math.min(k.frames - 1, Math.round(L.act.at * k.fps)), ja = k.names.indexOf(`${part}Ankle`), fy = k.data[(fa * nK + ja) * 3 + 1] - k.data[(fa * nK + kr) * 3 + 1], fz = k.data[(fa * nK + ja) * 3 + 2] - k.data[(fa * nK + kr) * 3 + 2];
+            let lo = 0, hi = 1.35;
+            for (let it = 0; it < 20; it++) { const mid = (lo + hi) / 2; if (bz + fy * Math.sin(mid) + fz * Math.cos(mid) < L.lift - 0.1) lo = mid; else hi = mid; }
+            // (the leg comes up over the whole backswing, from the act's start to the contact, not in the 0.12 s ramp)
+            th = lo * smooth((tk - L.act.from) / Math.max(0.05, L.act.at - L.act.from));
+          }
+          const ct = Math.cos(th), stt = Math.sin(th);
+          for (const n of side === 'upper' ? [] : LEGS[side]) {
+            const jc = k.names.indexOf(mirror ? n.replace(/^[lr]/, part) : n), jb = ix(n), ax = (c(jc, 0) - c(kr, 0)) * flip, ay0 = c(jc, 1) - c(kr, 1), az0 = c(jc, 2) - c(kr, 2), ay = ay0 * ct - az0 * stt, az = ay0 * stt + az0 * ct;
             data[o + jb * 3] = lerp(data[o + jb * 3], bx + ax * sn + ay * cs, wk);
             data[o + jb * 3 + 1] = lerp(data[o + jb * 3 + 1], by - ax * cs + ay * sn, wk);
-            data[o + jb * 3 + 2] = lerp(data[o + jb * 3 + 2], Math.max(n === 'rKnee' ? 0.25 : 0.02, bz + az), wk);
+            data[o + jb * 3 + 2] = lerp(data[o + jb * 3 + 2], Math.max(n.endsWith('Knee') ? 0.25 : 0.02, bz + az), wk);
           }
           const km = k.names.indexOf('midHip'), hz = data[o + hip * 3 + 2];
           for (const n of UPPER) {
@@ -218,8 +276,10 @@ export function buildBranch(real: Loaded, clips: Record<string, AnimClip>, t0: n
           continue;
         }
         const g = (i: number, j: number, d: number) => lerp(k.data[(kk * nJ + j) * 3 + d], k.data[(k1 * nJ + j) * 3 + d], ku) - (i >= 0 ? lerp(k.data[(kk * nJ + i) * 3 + d], k.data[(k1 * nJ + i) * 3 + d], ku) : 0);
+        // the jump for a header (the lay's `hop`): the whole body up and down over 0.7 s about the contact
+        const hz = L.hop ? L.hop * Math.max(0, Math.cos((Math.PI * (tk - L.act.at)) / 0.7)) : 0;
         for (let j = 0; j < nJ; j++) {
-          const ax = g(kh, j, 0), ay = g(kh, j, 1), az = g(-1, j, 2);
+          const ax = g(kh, j, 0), ay = g(kh, j, 1), az = g(-1, j, 2) + hz;
           // the clip faces +y; its +x goes a quarter turn clockwise of the facing (motion.ts)
           data[o + j * 3] = lerp(data[o + j * 3], rx + ax * sn + ay * cs, wk);
           data[o + j * 3 + 1] = lerp(data[o + j * 3 + 1], ry - ax * cs + ay * sn, wk);
@@ -257,6 +317,40 @@ export function buildBranch(real: Loaded, clips: Record<string, AnimClip>, t0: n
         q = [lerp(P0[0] + V0[0] * d, q[0], w), lerp(P0[1] + V0[1] * d, q[1], w), lerp(Math.max(0.11, P0[2]), q[2], w)];
       }
       xyz[f] = q;
+    }
+  }
+
+  // a first-time finish: over the last 0.3 s the ball comes to the part that strikes it, the toe for a volley or a
+  // drive, the forehead for a header, and stays there, in the air (the shot is not played; the xG says it). The meeting
+  // point is under his body, so without this the ball sat at the standing foot while the other swung (Yi, 2026-10-27:
+  // "ball should be next to its feet ... if it is header, ball should be next to head")
+  if (opts.finish?.how === 'first' && who !== null && !lost && !realAt(who, tTouch) && finishDir !== null) {
+    const fT = Math.min(F - 1, Math.round(tTouch * FPS_J)), g = (n: string, d: number) => data[((fT * P + who) * nJ + ix(n)) * 3 + d];
+    const head = opts.finish.kind === 'header', cx = Math.cos(finishDir), cy = Math.sin(finishDir), toe = `${lays.find((L) => L.p === who && L.pick)?.side ?? 'r'}BigToe`;
+    const contact: [number, number, number] = head ? [g('nose', 0) + cx * 0.14, g('nose', 1) + cy * 0.14, g('nose', 2) + 0.02] : [g(toe, 0) + cx * 0.1, g(toe, 1) + cy * 0.1, Math.max(0.11, g(toe, 2) + 0.04)];
+    const from = Math.max(f0 + 1, fT - 8);
+    for (let f = from; f < F; f++) {
+      const m = xyz[f];
+      if (!m) continue;
+      const u = f >= fT ? 1 : smooth((f - from) / Math.max(1, fT - from));
+      xyz[f] = [lerp(m[0], contact[0], u), lerp(m[1], contact[1], u), lerp(m[2], contact[2], u)];
+    }
+    // and he holds the contact: the frame or two the clip runs past the touch would show the follow-through with the
+    // ball still at his foot (the stop is on the contact)
+    for (let f = fT + 1; f < F; f++) data.copyWithin(((f * P + who) * nJ) * 3, ((fT * P + who) * nJ) * 3, ((fT * P + who) * nJ + nJ) * 3);
+  }
+
+  // the keeper's catch: the ball comes into his hands over the last 0.3 s and stays between them
+  if (who !== null && outcome.kind === 'cut' && (pkg.keepers ?? []).includes(who) && !realAt(who, tTouch)) {
+    const fT = Math.min(F - 1, Math.round(tTouch * FPS_J)), lw = ix('lWrist'), rw = ix('rWrist');
+    const hands = (f: number): [number, number, number] => { const g = (j: number, d: number) => data[((f * P + who) * nJ + j) * 3 + d]; return [(g(lw, 0) + g(rw, 0)) / 2, (g(lw, 1) + g(rw, 1)) / 2, Math.max(0.15, (g(lw, 2) + g(rw, 2)) / 2)]; };
+    const from = Math.max(f0 + 1, fT - 8), hT = hands(fT);
+    for (let f = from; f < F; f++) {
+      const m = xyz[f];
+      if (!m) continue;
+      if (f >= fT) { xyz[f] = hands(f); continue; }
+      const u = smooth((f - from) / Math.max(1, fT - from));
+      xyz[f] = [lerp(m[0], hT[0], u), lerp(m[1], hT[1], u), lerp(m[2], hT[2], u)];
     }
   }
 

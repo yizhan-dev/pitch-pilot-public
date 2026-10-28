@@ -3,7 +3,21 @@ import type { Look } from '../three/players/looks';
 import { attackingOf, playerTeam } from '../three/coords';
 import { useLand } from './state';
 import { namer } from './names';
-import { noShotWhy } from './shot';
+import { noShotWhy, type ShotEval } from './shot';
+
+/** the chain (Continue from here, Start over) is off for this version: one step, the pass and what came of it (Yi,
+ *  2026-10-27 night: "we only allow user to make one step, they can not continue from there"); the code stays */
+const CHAIN = false;
+
+/** how he finished and what the control would have cost, as data (Yi, 2026-10-27 night: the control's chance of being
+ *  disrupted shown, not only used): "Volley first time · a touch 71% disrupted", "A touch, then a drive · 29% disrupted" */
+function finishLine(ev: ShotEval): string {
+  const b = ev.best, t = ev.touch, pct = t ? `${Math.round(t.pLose * 100)}% disrupted` : null;
+  if (!b) return '';
+  if (b.how === 'touch') return `A touch, then a drive${pct ? ` · ${pct}` : ''}`;
+  const kind = b.kind === 'header' ? 'Header' : b.kind === 'volley' ? 'Volley' : 'Drive';
+  return `${kind} first time${pct ? ` · a touch ${pct}` : ''}`;
+}
 
 // The What-if's widget at the top centre (Yi, 2026-10-26: "keep it simple: What would you do?"; "the goal is to make it
 // very easy to use and read"; "keep the top widget simple and minimal"). While he picks: the question and Pass | Shoot
@@ -32,7 +46,7 @@ export function AskCard({ meta, nAtt, looks, onShoot, onContinue, onRetry, onSta
   const o = st.outcomes[st.shown];
   const word = !done ? null : off ? 'Offside'
     : st.shot && (got || ownShot || st.isShot) ? (st.shot.no || !st.shot.eval.best ? 'No shot' : null)
-    : o && o.kind !== 'kept' ? (o.kind === 'cut' ? 'Cut out' : o.kind === 'lost' ? 'Dispossessed' : o.kind === 'tackled' ? 'Tackled' : o.kind === 'out' ? 'Out of play' : 'Nobody reaches it') : null;
+    : o && o.kind !== 'kept' ? (o.kind === 'cut' ? (looks[o.who]?.keeper ? 'Claimed by the keeper' : 'Cut out') : o.kind === 'lost' ? 'Dispossessed' : o.kind === 'tackled' ? 'Tackled' : o.kind === 'out' ? 'Out of play' : 'Nobody reaches it') : null;
   const title = picking ? (first ? 'What would you do?' : 'What next?') : computing ? (st.auto ? 'His choice' : 'Simulating') : st.isReal ? 'Real play' : 'Simulation';
   return (
     <div className="glass wi-ask" aria-label="What if">
@@ -48,10 +62,11 @@ export function AskCard({ meta, nAtt, looks, onShoot, onContinue, onRetry, onSta
       </>}
       {done && <>
         {word && <p className="wi-ask-out">{word}</p>}
+        {!word && got && st.shot?.eval.best && !st.isReal && <p className="wi-ask-out">{finishLine(st.shot.eval)}</p>}
         <div className="wi-ask-act">
-          {got && <button className="wi-ask-go" onClick={onContinue} disabled={st.thinking}>Continue from here</button>}
+          {CHAIN && got && <button className="wi-ask-go" onClick={onContinue} disabled={st.thinking}>Continue from here</button>}
           <button onClick={onRetry}>Try another</button>
-          {!first && <button onClick={onStartOver}>Start over</button>}
+          {CHAIN && !first && <button onClick={onStartOver}>Start over</button>}
         </div>
       </>}
     </div>

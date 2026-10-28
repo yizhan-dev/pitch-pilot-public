@@ -51,8 +51,9 @@ export const explainable = store<boolean | null>(null);
 /** the What-if clips Yi has approved (2026-10-26: "there is only one clip I approved for what if, we will examine other
  *  ones before uploading them"): 26:40, the chip over the back line. Add a clip here once he approves it. Then (Yi, the
  *  same day, to the What-if chat: "let's make the 48:14 Offside another What if moment", "and 74:34"): 48:14's offside
- *  and 74:33's blocked shot */
-export const WHATIF_APPROVED = new Set(['pass-26-40', 'offside-48-14', 'shot-74-33']);
+ *  and 74:33's blocked shot. 48:14 dropped again 2026-10-27 night (Yi, to the What-if chat: the real man was offside,
+ *  so it had one option; "let's just remove this"; this line changed by the What-if chat at his word) */
+export const WHATIF_APPROVED = new Set(['pass-26-40', 'shot-74-33', 'shot-17-30', 'shot-90-04']);   // + 17:28's lay-off and 90:10's cross (Yi, 2026-10-27 night, to the What-if chat)
 /** the clips the What-if mode is open on, and the replay plate tags: a moment in whatif/moments.ts (the What-if chat's
  *  list) that Yi has approved (Yi, 2026-10-26: as Explain) */
 export const WHATIF_CLIPS = new Set(MOMENTS.map((m) => m.clip).filter((c) => WHATIF_APPROVED.has(c)));

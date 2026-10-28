@@ -46,8 +46,13 @@ export function pressed(c: Scene0) {
   for (let i = 11; i < 22; i++) d = Math.min(d, Math.hypot(c.now[i][0] - c.now[c.kicker][0], c.now[i][1] - c.now[c.kicker][1]));
   return d < PRESSED_M;
 }
-export function keepWorth<T extends { worth: number }>(list: T[], underPressure: boolean): T[] {
+export function keepWorth<T extends { worth: number; xg: number }>(list: T[], underPressure: boolean): T[] {
   if (!underPressure || !list.length) return list;
   const best = Math.max(...list.map((o) => o.worth));
-  return list.filter((o) => o.worth >= WORTH_SHARE * best);
+  // (a man with a shot worth the name stays whatever the share: at 17:28 one option at 0.53 hid Lowe, free 20 m out
+  // for a 0.07 shot; Yi, 2026-10-28: "he is in an open space, available for a shot if he wants". 26:40's #13 by the
+  // corner flag, 0.03, still goes)
+  return list.filter((o) => o.worth >= WORTH_SHARE * best || o.xg >= SHOT_XG_MIN);
 }
+/** a shot worth showing on its own */
+export const SHOT_XG_MIN = 0.05;

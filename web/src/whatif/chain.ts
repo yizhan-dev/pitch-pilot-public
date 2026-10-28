@@ -6,14 +6,15 @@
 // next man or letting him choose (the best of shooting and every useful pass, by expected xG). A pass's xA here is his
 // chance of receiving it times his xG as he takes it (the assist it would be if he shot); the whole move's value is
 // the chances of every pass times the last man's xG. Everything after the moment is a simulation.
-import { leadPoint, passTo, outcomes as passOutcomes, play, velOf, type Models, type Scene0, type Pass, type Outcome } from './onball';
+import { leadPoint, passTo, outcomes as passOutcomes, play, velOf, HEAD_Z, FOOT_Z, type Meet, type Models, type Scene0, type Pass, type Outcome } from './onball';
 import { noShot, receives, shotOnPaths, type NoShot, type ShotEval } from './shot';
 import { xgFreeze, type XgFreezeModel, type XgPoint } from '../response/xg';
 import { DT, PAST, type XY } from '../response/engine';
 
 /** a pass played to `to` (model index), the better of the two kinds: the pass, what can become of it, his chance of
  *  receiving it, his xG as he takes it, and the other kind's numbers */
-export interface Tried { loft: boolean; Q: XY; pass: Pass; outs: Outcome[]; p: number; xg: number; no: NoShot; shot: ShotEval | null; value: number; other: { loft: boolean; p: number; xg: number } | null; lane: number | null }
+/** `claim`: the keeper's share of the first touch against him (onball.ts outcomes, a ball into the goal area), 0 to 1 */
+export interface Tried { loft: boolean; meet: Meet; Q: XY; pass: Pass; outs: Outcome[]; p: number; claim: number; xg: number; no: NoShot; shot: ShotEval | null; value: number; other: { loft: boolean; p: number; xg: number } | null; lane: number | null }
 
 /** the ground lane covered (Yi, 2026-10-26, 26:40 from #15 at the far post to #32 at the spot: "there is likely not a
  *  chance to pass as a ground one, instead a lofted one would make more sense"): an opponent who can reach the ball's
@@ -55,19 +56,37 @@ export function offsideAtStrike(c: Scene0, pass: Pass): boolean {
 export function tryPass(M: Models, c: Scene0, xg: XgFreezeModel | null, to: number): Tried {
   // (window.__wiForceLoft: the lofted pass alone, for looking at it; checks only)
   const force = (globalThis as { __wiForceLoft?: boolean }).__wiForceLoft;
-  const tries = (force ? [true, true] : [false, true]).map((loft) => {
+  // four ways: along the ground, and lofted for him to meet at his chest or thigh, at his head, or at his feet after a
+  // step or two more (2026-10-27, Yi: "they are always ground shot, never header or a volley"; "he either keep running
+  // a few more steps for the ball to fall lower, or run toward ball earlier, to make it a header"); the head and foot
+  // ones only when he can meet it there (onball.ts HEAD_Z, FOOT_Z)
+  const ways: { loft: boolean; meet: Meet }[] = force ? [{ loft: true, meet: 'chest' }, { loft: true, meet: 'chest' }] : [{ loft: false, meet: 'chest' }, { loft: true, meet: 'chest' }, { loft: true, meet: 'head' }, { loft: true, meet: 'foot' }];
+  // (a man who cannot meet the lofted ball at his chest meets it nowhere: the head and foot ways are skipped for him,
+  // which keeps the options' time near what two ways took)
+  let loftPlan: boolean | null = null;
+  const tries = ways.map(({ loft, meet }) => {
+    if (loft && meet !== 'chest' && loftPlan === false) return null;
     const Q = leadPoint(c.now[c.kicker], c.facing, c.now[to], velOf(c.past, to), loft);
-    const pass = passTo(c, Q, loft, to), outs = receives(passOutcomes(M, c, pass)), mine = outs.find((o) => o.kind === 'kept' && o.who === to);
+    const pass = passTo(c, Q, loft, to, meet);
+    if (loft && meet === 'chest') loftPlan = !!pass.plan && pass.plan.who === to;
+    const z = pass.plan ? pass.plan.ball[PAST + pass.plan.n][2] : NaN;
+    if (meet === 'head' && !(pass.plan && pass.plan.who === to && z >= HEAD_Z[0])) return null;
+    if (meet === 'foot' && !(pass.plan && pass.plan.who === to && z <= FOOT_Z)) return null;
+    const outs = receives(passOutcomes(M, c, pass)), mine = outs.find((o) => o.kind === 'kept' && o.who === to);
     // xg: the shot's xG (what the cards show as xG); value: the pass's worth, the chance it reaches him times the shot's
     // worth (its xG times the chance he keeps it through a touch first): what decides
     let x = 0, w = 0, no: NoShot = null, shot: ShotEval | null = null;
     if (mine && xg) { const pl = play(M, c, pass, mine), k = Math.max(0, Math.round(mine.t / 0.1) - 1); shot = shotOnPaths(xg, M.tov, pl.paths, k, to, c.gk, pl.ball[k]?.[2] ?? 0.11); x = shot.best?.xg ?? 0; w = shot.best?.value ?? 0; no = shot.no; }
-    const p = mine?.p ?? 0;
-    return { loft, Q, pass, outs, p, xg: x, no, shot, value: p * w + 1e-6 * p };
-  });
-  // the ground lane covered: lofted, whatever the values say (laneCovered); else the better value
-  const lane = laneCovered(c, tries[0].pass), best = lane !== null || tries[1].value > tries[0].value ? tries[1] : tries[0], o = best === tries[0] ? tries[1] : tries[0];
-  return { ...best, other: { loft: o.loft, p: o.p, xg: o.xg }, lane: best.loft ? lane : null };
+    const p = mine?.p ?? 0, cutGk = outs.find((o) => o.kind === 'cut' && c.gk[o.who])?.p ?? 0, claim = p + cutGk > 0 ? cutGk / (p + cutGk) : 0;
+    return { loft, meet, Q, pass, outs, p, claim, xg: x, no, shot, value: p * w + 1e-6 * p };
+  }).filter((t): t is NonNullable<typeof t> => t !== null);
+  // the ground lane covered: lofted, whatever the values say (laneCovered); else the best value; `other` the best of the
+  // rest, the other kind of pass when there is one
+  const ground = tries.find((t) => !t.loft), lane = ground ? laneCovered(c, ground.pass) : null;
+  const pool = lane !== null ? tries.filter((t) => t.loft) : tries;
+  const best = pool.reduce((a, b) => (b.value > a.value ? b : a), pool[0]);
+  const rest = tries.filter((t) => t !== best), o = rest.find((t) => t.loft !== best.loft) ?? rest.reduce<typeof best | null>((a, b) => (!a || b.value > a.value ? b : a), null);
+  return { ...best, other: o ? { loft: o.loft, p: o.p, xg: o.xg } : null, lane: best.loft ? lane : null };
 }
 
 /** the man on the ball's xG if he shot now, from the scene (model frame); nothing where he cannot shoot (shot.ts) */

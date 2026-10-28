@@ -34,11 +34,16 @@ export const MOMENTS: WiMoment[] = [
   { id: 'm3', clip: 'pass-26-40', t: 13.09, player: 6, clock: 1600.4, title: 'Chip over the back line', asks: ['target'] },   // Yi's own: #2 chips first time over the back line (2026-10-25)
   { id: 'm6', clip: 'shot-33-28', t: 17.6, player: 8, clock: 2005.5, title: 'Marsh\'s goal', asks: ['target'] },   // passer, 23.0 m out, shot 2.9 s on
   { id: 'm7', clip: 'shot-41-23', t: 19.73, player: 10, clock: 2481.8, title: 'Marsh\'s shot wide', asks: ['target'] },   // shooter, 23.0 m out, shot 1.07 s on
-  { id: 'm11', clip: 'offside-48-14', t: 7.1, player: 10, clock: 2893.3, title: 'Ellison offside', asks: ['target'] },   // Yi's own (2026-10-26): #9 takes #31's ball 38 m out, plays #30 in 1.1 s on, 0.2 m offside
+  // m11, offside-48-14 (t 7.1, player 10, clock 2893.3, 'Ellison offside'; Yi's own, 2026-10-26: #9 takes #31's ball 38 m
+  // out, plays #30 in 1.1 s on, 0.2 m offside) is parked since 2026-10-27 night: its real man was offside, so the
+  // what-if had one option (Yi: "let's just remove this"); the clip is off hud/directed.ts WHATIF_APPROVED too, plays #30 in 1.1 s on, 0.2 m offside
   { id: 'm8', clip: 'shot-55-43', t: 7.07, player: 3, clock: 3342.2, title: 'Lowe\'s goal', asks: ['target'] },   // shooter, 17.8 m out, shot 0.93 s on
   { id: 'm12', clip: 'shot-74-33', t: 7.0, player: 5, clock: 4471.7, title: 'Munro\'s shot, blocked', asks: ['target'] },   // Yi's own (2026-10-26): #31's carry after his interception, 36 m out, his pass 0.35 s on, #9's first-time shot blocked
   { id: 'm9', clip: 'shot-80-17', t: 25.71, player: 9, clock: 4815.0, title: 'Lowe\'s goal', asks: ['target'] },   // passer, 27.0 m out, shot 1.89 s on
-  { id: 'm10', clip: 'shot-90-04', t: 10.01, player: 5, clock: 5401.0, title: 'Nolan\'s shot, saved', asks: ['target'] },   // shooter, 19.3 m out, shot 2.99 s on
+  // m10 (shot-90-04, t 10.01, player 5, clock 5401.0, 'Nolan's shot, saved': shooter, 19.3 m out, shot 2.99 s on) is
+  // parked since 2026-10-27 night: the clip's moment is the cross below (Yi: "we can pause at around 90:10, when it is
+  // a cross, we can let user to choose which one to do")
+  { id: 'm13', clip: 'shot-90-04', t: 19.5, player: 4, clock: 5410.5, title: 'Croft\'s cross', asks: ['target'] },   // Yi's own (2026-10-27): #4 Croft on the right at 90:10, his cross headed by #7 Lowe at 90:12, saved
 ];
 /** a moment plays in from this long before it (Yi: 3-4 s) */
 export const LEAD = 3.5;

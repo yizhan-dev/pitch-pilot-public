@@ -26,6 +26,8 @@ const LOOPS = {
 } as const;
 export const MOTION_CLIPS = [...Object.values(LOOPS), 'offensive-idle', 'goalkeeper-idle'];
 
+/** the clips by name through a reader of one's own (the node checks, scripts/gait_check.ts) */
+export const loadClipsFrom = (read: (name: string) => AnimClip, names: string[] = MOTION_CLIPS): Record<string, AnimClip> => Object.fromEntries(names.map((n) => [n, read(n)]));
 /** the clips by name, fetched once */
 export async function loadClips(names: string[] = MOTION_CLIPS): Promise<Record<string, AnimClip>> {
   const xs = await Promise.all(names.map((n) => fetch(animFile(n)).then((r) => r.json() as Promise<AnimClip>)));
@@ -151,6 +153,11 @@ export function synthesize(clips: Record<string, AnimClip>, tracks: Track[], bal
 /** a clip's players from its 10 Hz positions only (the check against the tracked bodies, ?synth=1): each player's path
  *  resampled to the joints' 25 fps, the ball likewise, keepers from the package */
 export function synthFromPositions(clips: Record<string, AnimClip>, pkg: MomentPkg & { keepers?: number[] }, frames: number, fps: number, names: string[], opts: FacingOpts = FACING): Joints {
+  const { tracks, ball, nAtt } = positionTracks(pkg, frames, fps);
+  return synthesize(clips, tracks, ball, fps, nAtt, names, opts);
+}
+/** a clip's 10 Hz positions as tracks at fps (the players' paths, the ball, keepers from the package) */
+export function positionTracks(pkg: MomentPkg & { keepers?: number[] }, frames: number, fps: number): { tracks: Track[]; ball: ([number, number] | null)[]; nAtt: number } {
   const src = pkg.frames, sfps = pkg.meta.fps, P = src[0].att.length + src[0].def.length, nAtt = src[0].att.length;
   const at = <T,>(k: number, get: (fr: (typeof src)[number]) => T) => get(src[Math.min(src.length - 1, Math.max(0, k))]);
   const lerp2 = (a: [number, number], b: [number, number], u: number): [number, number] => [a[0] + (b[0] - a[0]) * u, a[1] + (b[1] - a[1]) * u];
@@ -165,5 +172,5 @@ export function synthFromPositions(clips: Record<string, AnimClip>, pkg: MomentP
     const b0 = at(k, (fr) => fr.ball), b1 = at(k + 1, (fr) => fr.ball);
     ball.push(b0 && b1 ? lerp2([b0[0], b0[1]], [b1[0], b1[1]], u) : b0 ? [b0[0], b0[1]] : null);
   }
-  return synthesize(clips, tracks, ball, fps, nAtt, names, opts);
+  return { tracks, ball, nAtt };
 }

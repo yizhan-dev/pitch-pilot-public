@@ -116,6 +116,15 @@ export const loftApex = (d: number) => (loftG(d) * loftTime(d) ** 2) / 8;
 /** the height the intended receiver takes a lofted ball at: thigh or chest, or if no one can, up to his head (anyone
  *  may still touch it up to 2 m, the first-touch resolver's zOutfield) */
 const REACH_Z = [1.5, 1.9];
+/** a header instead (the what-if's third way of playing a lofted ball, 2026-10-27, Yi: "they are always ground shot,
+ *  never header or a volley"): he meets it at head height, 1.3 m (shot.ts HEAD_Z, stooping) up to the resolver's 2.0 m */
+export const HEAD_Z: [number, number] = [1.3, 2.0];
+/** or at his feet: he runs on a step or two and lets it drop to hip height or lower (a volley, or a drive off the
+ *  bounce) rather than take a chest-high ball (Yi, 2026-10-27: "he either keep running a few more steps for the ball
+ *  to fall lower, or run toward ball earlier, to make it a header") */
+export const FOOT_Z = 1.0;
+/** where the man a lofted pass is meant for meets it: at his chest or thigh (REACH_Z), his head (HEAD_Z), his feet (FOOT_Z) */
+export type Meet = 'chest' | 'head' | 'foot';
 /** the pitch's half-length and half-width: a ball past them is out of play */
 const HX = 52.5, HY = 34;
 
@@ -276,14 +285,14 @@ export function atFeet(ball: V3[], path: XY[], n: number, carry: XY): V3[] {
 /** the teammate the pass is meant for (the viewer picks a spot, not a man): of those who can meet the ball where it
  *  arrives (6 m short of the spot or beyond, within 4 s), the one who meets it first; he then carries it on as in
  *  meetPath. The keepers and the passer are left out. */
-export function intended(c: Scene0, ball: V3[], Q: XY, hold = HOLD, reach = REACH_Z[0], only: number | null = null): Plan | null {
+export function intended(c: Scene0, ball: V3[], Q: XY, hold = HOLD, reach = REACH_Z[0], only: number | null = null, minZ = 0): Plan | null {
   const b0: XY = [ball[PAST + hold][0], ball[PAST + hold][1]], d = only === null ? len(sub(Q, b0)) : 0;
   let best: Plan | null = null;
   for (let i = 0; i < 11; i++) {
     if (only !== null ? i !== only : i === c.kicker || c.gk[i]) continue;
     for (let n = hold + 2; n <= TOUCH_N && (!best || n < best.n); n++) {
       const X: XY = [ball[PAST + n][0], ball[PAST + n][1]];
-      if (len(sub(X, b0)) < d - SHORT || Math.abs(X[0]) > HX || Math.abs(X[1]) > HY || ball[PAST + n][2] > reach) continue;
+      if (len(sub(X, b0)) < d - SHORT || Math.abs(X[0]) > HX || Math.abs(X[1]) > HY || ball[PAST + n][2] > reach || ball[PAST + n][2] < minZ) continue;
       const { carry } = carryOf(i, ball, n), r = runTo(c.now[i], velOf(c.past, i), X, n * DT, carry);
       if (r.miss > 0.5) continue;
       best = { who: i, n, path: r.path, ball: atFeet(ball, r.path, n, carry) };
@@ -320,6 +329,10 @@ export function leadPoint(from: XY, facing: XY, p0: XY, v: XY, loft = false): XY
  *  the touch (the shot comes from there); he reads the pass 0.15 s after the strike and moves at up to 6 m/s, 6 m/s².
  *  The response model's keeper was slow (0.9 m/s against the real 2.5 at 26:40) and 1.4 m off that line. */
 const GK_DEPTH: [number, number][] = [[5, 1.2], [9, 1.7], [14, 3.0], [22, 3.3], [30, 3.0], [40, 4.7], [60, 8]];
+/** the keeper's claim zone: the goal area (5.5 m deep, 18.3 m wide) and a step beyond it; his share of a ball there
+ *  against the attacker (StatsBomb open data, see outcomes) */
+const CLAIM_DEPTH = 6.5, CLAIM_HALF_W = 10, GK_CLAIM = 0.64;
+export const claimZone = (X: XY) => HX - X[0] <= CLAIM_DEPTH && Math.abs(X[1]) <= CLAIM_HALF_W;
 function keeperDepth(dist: number) {
   if (dist <= GK_DEPTH[0][0]) return GK_DEPTH[0][1];
   for (let i = 1; i < GK_DEPTH.length; i++) { const [x1, y1] = GK_DEPTH[i], [x0, y0] = GK_DEPTH[i - 1]; if (dist <= x1) return y0 + ((y1 - y0) * (dist - x0)) / (x1 - x0); }
@@ -329,6 +342,11 @@ export function keeperRule(c: Scene0, ball: V3[], hold: number, plan: Plan | nul
   const gk = c.gk.findIndex((g, i) => g && i >= 11);
   if (gk < 0) return null;
   const h = 0.02, per = Math.round(DT / h), path: XY[] = [], X: XY | null = plan ? plan.path[plan.n - 1] : null;
+  // a ball to be taken in his goal area is his to claim (2026-10-28, Yi on 17:28: a chip dropping 3 m in front of the
+  // keeper for a 0.53 chance was "quite irrealistic"; by the depth rule he stepped back onto his line): from the moment
+  // he reads the pass he goes for the point it is taken at, at his full pace, and the first-touch resolver (his reach
+  // 2 m, 2.6 m up) decides whether he or the receiver gets there
+  const claim = !!X && claimZone(X);
   let p: XY = [...c.now[gk]], v: XY = velOf(c.past, gk);
   for (let k = 1; k <= SIM_N * per; k++) {
     const t = k * h, step = Math.min(SIM_N, Math.ceil(t / DT)), b = ball[Math.min(ball.length - 1, PAST + step)];
@@ -338,7 +356,7 @@ export function keeperRule(c: Scene0, ball: V3[], hold: number, plan: Plan | nul
     const d = Math.hypot(HX - bx, by), ux = d > 1e-6 ? (bx - HX) / d : -1, uy = d > 1e-6 ? by / d : 0, dep = Math.min(keeperDepth(d), Math.max(0.5, d - 1));
     let want: XY = v;
     if (t > hold * DT + 0.15) {
-      const T: XY = [HX + ux * dep, uy * dep], to = sub(T, p), dl = len(to), sp = Math.min(6, Math.sqrt(2 * 6 * dl));
+      const T: XY = claim && X ? X : [HX + ux * dep, uy * dep], to = sub(T, p), dl = len(to), sp = Math.min(6, Math.sqrt(2 * 6 * dl));
       want = dl > 1e-6 ? [(to[0] / dl) * sp, (to[1] / dl) * sp] : [0, 0];
     }
     const dv = sub(want, v), dvl = len(dv), ka = Math.min(1, (6 * h) / Math.max(dvl, 1e-9));
@@ -392,10 +410,14 @@ export function pressRule(c: Scene0, plan: Plan, keeperAt: XY | null): Held[] {
 
 /** `to`: the teammate it is meant for (model index), when the viewer clicked a man rather than a spot; he makes the run
  *  onto it if he can, else whoever first can, as for a spot */
-export function passTo(c: Scene0, Q: XY, loft = false, to: number | null = null): Pass {
+export function passTo(c: Scene0, Q: XY, loft = false, to: number | null = null, meet: Meet = 'chest'): Pass {
   const turn = turnTo(c, Q), hold = holdFor(turn), kp = kickerPath(c, hold, turn), ball = ballTo(c, Q, loft, hold, kp);
   const pd = sub(Q, kp[hold - 1]), pl = Math.max(len(pd), 1e-6);
-  const mine = to !== null && to !== c.kicker ? intended(c, ball, Q, hold, REACH_Z[0], to) : null, plan = mine ?? intended(c, ball, Q, hold);
+  // (head / foot: the man it is meant for meets it at head height (HEAD_Z) or lets it drop to his feet (FOOT_Z); no
+  // plan when he cannot, and the pass reads as any other, which chain.ts tryPass then drops)
+  const mine = to !== null && to !== c.kicker
+    ? meet === 'head' ? intended(c, ball, Q, hold, HEAD_Z[1], to, HEAD_Z[0]) : meet === 'foot' ? intended(c, ball, Q, hold, FOOT_Z, to) : intended(c, ball, Q, hold, REACH_Z[0], to)
+    : null, plan = mine ?? intended(c, ball, Q, hold);
   const gk = keeperRule(c, plan ? plan.ball : ball, hold, plan), extra = gk ? [gk] : [];
   // the pressing rule only for the what-if's pass to one man (the Tactics chat's pass chances call passTo without one)
   if (mine && plan) extra.push(...pressRule(c, plan, gk ? gk.path[Math.min(gk.path.length - 1, plan.n - 1)] : null));
@@ -435,6 +457,21 @@ export function outcomes(M: Models, c: Scene0, pass: Pass): Outcome[] {
   ft.t = ft.t.map((t) => t + hold * DT);
   ft.p = ft.p.map((p) => p * keep);
   ft.none *= keep;
+  // the keeper's claim (keeperRule): a ball to be taken in his goal area that he reaches in time is his to take, by
+  // StatsBomb's share of such balls between the keeper and the attacker (64%: 381 taken by the keeper against 212 by a
+  // teammate of 1,583 open-play high passes into the goal area, 326 matches). The resolver alone, fitted on outfield
+  // touches, gave him one step of hazard under a dropping ball (2026-10-28, Yi on 17:28)
+  const gk = c.gk.findIndex((g, i) => g && i >= 11);
+  if (plan && gk >= 0 && claimZone(plan.path[plan.n - 1])) {
+    const X = plan.path[plan.n - 1], g = paths0[gk][Math.min(paths0[gk].length - 1, plan.n - 1)], d = len(sub(g, X));
+    // (the whole share when he is on the spot, within 1 m; none from 2 m, his reach, where the resolver's own hazard
+    // is all he has)
+    if (d <= M.prm.rKeeper) {
+      const take = ft.p[plan.who] * GK_CLAIM * Math.min(1, Math.max(0, (M.prm.rKeeper - d) / Math.max(0.5, M.prm.rKeeper - 1)));
+      ft.p[plan.who] -= take; ft.p[gk] += take;
+      if (!Number.isFinite(ft.t[gk])) ft.t[gk] = plan.n * DT;
+    }
+  }
   if (pLose > 0.02) out.push({ who: by, p: pLose, t: Math.max(2, at) * DT, kind: 'lost' });
   ft.p.forEach((p, i) => {
     if (p <= 0.03) return;
@@ -446,7 +483,7 @@ export function outcomes(M: Models, c: Scene0, pass: Pass): Outcome[] {
     const pr = respondN(M, c, m.ball, cm, cp, n), pos = pr[i][n - 1], t = mine ? n * DT : ft.t[i];
     let best = Infinity, by = 11;
     for (let d = 11; d < 22; d++) { const dd = len(sub(pr[d][n - 1], pos)); if (dd < best) { best = dd; by = d; } }
-    const pt = turnover(M.tov, best), tau = Math.min(1.5, Math.max(0.3, best / 4)), at = n + Math.round(tau / DT);
+    const pt = turnover(M.tov, best, pass.ball[PAST + n]?.[2] ?? 0.11), tau = Math.min(1.5, Math.max(0.3, best / 4)), at = n + Math.round(tau / DT);
     out.push({ who: i, p: p * (1 - pt), t, kind: 'kept' });
     if (p * pt > 0.02) out.push({ who: i, p: p * pt, t, kind: 'tackled', tackle: { by, at } });
   });

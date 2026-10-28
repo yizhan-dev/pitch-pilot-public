@@ -21,6 +21,19 @@ interface Pkg {
 let xgP: Promise<XgFreezeModel | null> | null = null;
 export const loadXgModel = () => (xgP ??= fetch(modelFile('xg_shot.json')).then((r) => (r.ok ? r.json() : fetch(modelFile('xg_freeze.json')).then((q) => (q.ok ? q.json() : null)))).catch(() => null));
 
+/** a high ball received in the box (aerial.json, private/response/aerial_fit.py on StatsBomb's 360 data: 2026-10-27,
+ *  Yi: "likely the ball will not be able to get on the ground without defender clearing them"): `control` the chance he
+ *  loses it if he takes it down, `first` the share taken first time, both logistic in the nearest opponent's distance
+ *  (log m). Loaded once beside the xG model; without it the tracking turnover model (with the ball's height) stands in. */
+export interface AerialModel { control: number[]; first: number[] }
+let AER: AerialModel | null = null, aerP: Promise<AerialModel | null> | null = null;
+export const loadAerial = (): Promise<AerialModel | null> => (aerP ??= fetch(modelFile('aerial.json')).then((r) => (r.ok ? r.json() as Promise<AerialModel> : null)).then((m) => (AER = m)).catch(() => null));
+const sig = (x: number) => 1 / (1 + Math.exp(-Math.max(-50, Math.min(50, x))));
+export const aerialLoss = (nearest: number, tov: TurnoverModel | null, ballZ: number) => AER ? sig(AER.control[0] + AER.control[1] * Math.log(Math.max(nearest, 0.3))) : tov ? turnover(tov, nearest, ballZ) : 0;
+/** the share of such balls played first time (null without the model): 72% with a man within 1 m, 62% at 1-2 m, 56%
+ *  at 2-3 m, 45% at 3-5 m, 21% beyond 5 m */
+export const aerialFirst = (nearest: number) => (AER ? sig(AER.first[0] + AER.first[1] * Math.log(Math.max(nearest, 0.3))) : null);
+
 /** whether `shooter` (package index) can shoot at clip time t (noShot): facing given (his own body), else the way he
  *  moves on the 10 Hz frames */
 export function noShotAt(pkg: Pkg, t: number, shooter: number, facing: XgPoint | null = null): NoShot {
@@ -93,7 +106,14 @@ export function movingFacing(pos: (k: number) => XgPoint, k: number): XgPoint | 
 export type ShotKind = 'header' | 'volley' | 'drive';
 export interface ShotWay { how: 'first' | 'touch'; kind: ShotKind; xg: number; value: number; adjust: number; pLose: number; at: XgPoint }
 export interface ShotEval { first: ShotWay | null; touch: ShotWay | null; best: ShotWay | null; no: NoShot }
-export const TURN_FREE_DEG = 35, TOUCH_S = 0.5, TURN_S_PER_90 = 0.6, LIFT_S = 0.3, CHEST_S = 0.5, HEAD_Z = 1.6, KNEE_Z = 0.5, CHEST_MAX_Z = 1.9;
+// (HEAD_Z 1.3 since 2026-10-27 night, 1.6 before: a ball at chest height is headed stooping, or chested down, not
+// volleyed with the leg at 1.3 m; Yi: "sounds good")
+export const TURN_FREE_DEG = 35, TOUCH_S = 0.5, TURN_S_PER_90 = 0.6, LIFT_S = 0.3, CHEST_S = 0.5, HEAD_Z = 1.3, KNEE_Z = 0.5, CHEST_MAX_Z = 1.9;
+/** a ball between the hip and the chest (VOLLEY_MAX_Z to HEAD_Z) is not struck first time at all: it is chested down,
+ *  or he meets it elsewhere on its flight (onball.ts: at his head earlier, at his feet a step or two later; Yi,
+ *  2026-10-27: "this point player won't get the ball, he either keep running a few more steps for the ball to fall
+ *  lower, or run toward ball earlier, to make it a header") */
+export const VOLLEY_MAX_Z = 1.1;
 // (A stricter touch under pressure was built as a switch on 2026-10-27, an opponent within 1.2 m before the strike ruling
 // the touch out, and dropped the same day at Yi's word: the turnover model is the fitted one, and StatsBomb's shots say
 // 55-62% of box shots with an opponent within 2 m came after a touch; the xG model already carries the block and the
@@ -106,29 +126,40 @@ export function evalShot(model: XgFreezeModel, tov: TurnoverModel | null, S: Sho
   const opp = S.opp.map((i) => at(i, k)), near = S.opp.map((i) => ({ p: at(i, k), who: i })), keeper = S.gk !== null ? at(S.gk, k) : null;
   const no = noShot(me, S.facing, near);
   if (no) return { first: null, touch: null, best: null, no };
-  const kind: ShotKind = S.ballZ >= HEAD_Z ? 'header' : S.ballZ >= KNEE_Z ? 'volley' : 'drive';
-  let x1 = xgFreeze(model, me, kind === 'header', opp, keeper, false, { volley: kind === 'volley', firstTime: true });
+  const kind: ShotKind = S.ballZ >= HEAD_Z ? 'header' : S.ballZ >= KNEE_Z ? 'volley' : 'drive', awkward = S.ballZ >= VOLLEY_MAX_Z && S.ballZ < HEAD_Z;
+  let x1 = awkward ? 0 : xgFreeze(model, me, kind === 'header', opp, keeper, false, { volley: kind === 'volley', firstTime: true });
   // close in (within 6 m) the keeper is the whole question, and the model sees him as a 1 m body: a man 4 m out with
   // the keeper a step aside got 0.49 (2026-10-25). There the keeper is taken as set on the line from the goal's centre
   // to the shooter, 1 m off his line, whichever gives the lower value
-  if (Math.hypot(52.5 - me[0], me[1]) < 6) {
+  if (!awkward && Math.hypot(52.5 - me[0], me[1]) < 6) {
     const dxg = 52.5 - me[0], dyg = -me[1], dl = Math.max(1e-6, Math.hypot(dxg, dyg)), set: XgPoint = [52.5 - (dxg / dl) * 1.0, -(dyg / dl) * 1.0];
     x1 = Math.min(x1, xgFreeze(model, me, kind === 'header', opp, set, false, { volley: kind === 'volley', firstTime: true }));
   }
-  const first: ShotWay = { how: 'first', kind, xg: x1, value: x1, adjust: 0, pLose: 0, at: me };
+  const first: ShotWay | null = awkward ? null : { how: 'first', kind, xg: x1, value: x1, adjust: 0, pLose: 0, at: me };
+  let nearest = Infinity;
+  for (const o of opp) nearest = Math.min(nearest, Math.hypot(o[0] - me[0], o[1] - me[1]));
   let touch: ShotWay | null = null;
   if (S.ballZ < CHEST_MAX_Z) {
     const dx = 52.5 - me[0], dy = -me[1], dl = Math.hypot(dx, dy), f = S.facing, fl = f ? Math.hypot(f[0], f[1]) : 0;
     const turn = f && fl > 1e-6 ? (Math.acos(Math.max(-1, Math.min(1, (f[0] * dx + f[1] * dy) / (fl * dl)))) * 180) / Math.PI : 0;
     const adjust = Math.min(1.5, TOUCH_S + (TURN_S_PER_90 * Math.max(0, turn - TURN_FREE_DEG)) / 90 + (S.ballZ >= HEAD_Z ? CHEST_S : S.ballZ >= KNEE_Z ? LIFT_S : 0));
     const j = k + Math.round(adjust / 0.1), me2 = at(who, j), opp2 = S.opp.map((i) => at(i, j)), keeper2 = S.gk !== null ? at(S.gk, j) : null;
-    let nearest = Infinity;
-    for (const o of opp) nearest = Math.min(nearest, Math.hypot(o[0] - me[0], o[1] - me[1]));
-    const pLose = tov ? turnover(tov, nearest) * Math.min(1, adjust / 1.5) : 0;
+    // the control simulated (Yi, 2026-10-27: "if at that point he needs to stop the ball, and then we will calculate
+    // how likely that will be disrupted by a defender, and thus maybe he had to do a direct shot"): while he brings
+    // the ball down and sets himself, the opponents close on the engine's paths; the nearest any of them comes to him
+    // over that window is what the loss model reads. A ball above the knee pays the aerial model's loss whole (that is
+    // where a high ball is lost); a ground ball the turnover model's share of its 1.5 s
+    // (the keeper among them: in his box he comes for a high ball; the aerial model counts him, 2026-10-27 night)
+    let closest = nearest;
+    for (let jj = k; jj <= j; jj++) { const q = at(who, jj); for (const i of S.gk !== null ? [...S.opp, S.gk] : S.opp) { const o = at(i, jj); closest = Math.min(closest, Math.hypot(o[0] - q[0], o[1] - q[1])); } }
+    const pLose = S.ballZ >= KNEE_Z ? aerialLoss(closest, tov, S.ballZ) : tov ? turnover(tov, closest, S.ballZ) * Math.min(1, adjust / 1.5) : 0;
     const x2 = xgFreeze(model, me2, false, opp2, keeper2, false, { volley: false, firstTime: false });
     touch = { how: 'touch', kind: 'drive', xg: x2, value: x2 * (1 - pLose), adjust, pLose, at: me2 };
   }
-  const best = touch && touch.value > first.value ? touch : first;
+  // his decision (this version: the disruption enters as a probability only, no disrupted branch is played; Yi,
+  // 2026-10-27): a control more likely disrupted than not forces the first-time strike; otherwise the way worth more
+  // (Yi, 2026-10-25), the control's worth already discounted by the disruption
+  const best = first && touch && touch.pLose >= 0.5 ? first : touch && (!first || touch.value > first.value) ? touch : first;
   return { first, touch, best, no: null };
 }
 

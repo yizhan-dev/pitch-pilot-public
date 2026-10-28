@@ -35,8 +35,10 @@ export function firstTouch(prm: ResolverParams, ball: V3[], paths: XY[][], gk: b
   return { p, t: tsum.map((x, i) => (raw[i] > 0 ? x / raw[i] : NaN)), none: S, cut, rawCut: share, raw };
 }
 
-/** the chance a receiver loses the ball within 1.5 s, from the nearest opponent's distance */
-export const turnover = (m: TurnoverModel, nearest: number) => sig(m.weights[0] + m.weights[1] * Math.log(Math.max(nearest, 0.3)));
+/** the chance a receiver loses the ball within 1.5 s, from the nearest opponent's distance and the ball's height at the
+ *  touch (turnover.py: a ball taken high is lost more often, 18% at 1.2 m and above against 6.5% on the ground; a model
+ *  without the height term reads as before) */
+export const turnover = (m: TurnoverModel, nearest: number, ballZ = 0.11) => sig(m.weights[0] + m.weights[1] * Math.log(Math.max(nearest, 0.3)) + (m.weights[2] ?? 0) * Math.min(ballZ, 2.5));
 
 /** Spearman pitch control at points, for a ball at `ball`: the share each team would win (engine/pitch_control.py) */
 export function pitchControl(points: XY[], att: XY[], attV: XY[], def: XY[], defV: XY[], ball: XY) {

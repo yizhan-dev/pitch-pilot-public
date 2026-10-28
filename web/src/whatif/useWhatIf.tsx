@@ -6,16 +6,17 @@ import type { Clock } from '../clock';
 import type { Look } from '../three/players/looks';
 import { getSettings, setSettings, guardLeave, type GameMode } from '../game/settings';
 import { loadClips, MOTION_CLIPS, type AnimClip } from './motion';
+import { loadGait, type GaitLib } from './gait';
 import { land, useLand, LAND_OFF, wiStyle, wiRewind, useWiRewind, wiTagged, type LandState, type ChainStep } from './state';
 import { loadModels, sceneAt, play as playOutcome, fromModel, facingOf, shootFromHere, type Models, type Scene0, type Outcome, type Pass } from './onball';
 import { buildBranch, isBranch, ACT_CLIPS, type BranchInfo } from './branch';
-import { decide, tryPass, type Tried } from './chain';
+import { decide, tryPass, offsideAtStrike, type Tried } from './chain';
 import { candidates, optionFor, pressed, keepWorth, OPTION_MIN_P } from './options';
 import { WhatIfScene } from '../three/whatif/WhatIfScene';
 import { realAfter } from './snap';
 import { RunCard } from './RunCard';
 import { realPass, runWhatIf, type RealPass } from './offball';
-import { loadXgModel, realShot as realShotOf, shotInClip, shotOnPaths, type ShotEval } from './shot';
+import { loadXgModel, loadAerial, realShot as realShotOf, shotInClip, shotOnPaths, type ShotEval } from './shot';
 import type { XgFreezeModel } from '../response/xg';
 import { AskCard } from './AskCard';
 import { LEAD, MOMENTS, WI_NONE, clipOf, momentById, resolveMoment, useWiNow, wiNow, type WiMoment } from './moments';
@@ -82,7 +83,7 @@ export function useWhatIf(h: WhatIfHost) {
   // a chain's step is built on what the last one left (the real clip, or the last step's simulation): `stepBase`; and
   // the models, kept once loaded, for "let him choose"
   const stepBase = useRef<Loaded | null>(null);
-  const mods = useRef<{ M: Models; clips: Record<string, AnimClip>; xg: XgFreezeModel | null } | null>(null);
+  const mods = useRef<{ M: Models; clips: Record<string, AnimClip>; xg: XgFreezeModel | null; gait: GaitLib | null } | null>(null);
   // the passes tried for his options while he picks (options.ts), by package index, so a click plays one at once
   const optCache = useRef<{ key: string; tried: Map<number, Tried> }>({ key: '', tried: new Map() });
   // (for a run, `pass` is the real pass with the new run and `alt` the pass into the run, `target` where each goes)
@@ -96,9 +97,11 @@ export function useWhatIf(h: WhatIfHost) {
   useEffect(() => { handed.current = data; }, [data]);
   const show = useCallback((d: Loaded) => { handed.current = d; setData(d); }, [setData]);
   // the ghost style (Yi, 2026-10-25): from the pause on ("when we pause, we should already transform from cartoon
-  // player style to ghost style just without trail"), its trail only while a pass plays; the players dragged along their
-  // paths (?wianim=1 keeps the synthesised animation for a comparison). The viewer's own style comes back after.
-  const ANIM = typeof location !== 'undefined' && new URLSearchParams(location.search).get('wianim') === '1';
+  // player style to ghost style just without trail"), its trail while a pass plays and while a play runs back. The
+  // branch's bodies (Yi, 2026-10-27: "actually animate each player to that spot"): the ghosts move by the real strides
+  // (gait.ts); until then they were dragged along their paths in their pose of the pause (?widrag=1 keeps that;
+  // ?wigait=0 the Mixamo loops of motion.ts alone). The viewer's own style comes back after.
+  const Q = typeof location !== 'undefined' ? new URLSearchParams(location.search) : null, DRAG = Q?.get('widrag') === '1', GAIT = Q?.get('wigait') !== '0';
   const ghostAs = (want: 'ghost' | 'ghost-still' | null) => { if (wiStyle.get() !== want) wiStyle.set(want); };
   const halt = (x: number) => { const s = st.current; clock.t = x; s.playing = false; setPlaying(false); s.ui = 1; };
   // every way back runs the play back first (Yi, 2026-10-26, leaving to Watch: "we should first animate the clip in
@@ -178,7 +181,11 @@ export function useWhatIf(h: WhatIfHost) {
   const asked = useRef(typeof location === 'undefined' ? null : new URLSearchParams(location.search).get('wi'));
   useEffect(() => {
     if (!data || real.current || mode !== 'whatif' || land.get().phase !== 'off') return;
-    const clip = clipOf(moment), m = (asked.current ? momentById(asked.current) : null) ?? OPEN.find((x) => x.clip === clip);
+    // (a ?wi= of another clip is ignored: the shell's clip change keeps the address's other parameters, so coming from
+    // 26:40 to 48:14 brought wi=m3 along and nothing played in there, Yi 2026-10-27: "what if seems to be not yet there
+    // for other two clips")
+    const clip = clipOf(moment), askedM = asked.current ? momentById(asked.current) : null;
+    const m = askedM && askedM.clip === clip ? askedM : OPEN.find((x) => x.clip === clip);
     asked.current = null;
     if (m && m.clip === clip && OPEN.includes(m) && wiNow.get().id !== m.id) start(m, data);
   }, [data, moment, mode, start]);
@@ -191,28 +198,34 @@ export function useWhatIf(h: WhatIfHost) {
     // the pass what-if ends in a shot (shot.ts): a pass a teammate receives is played on first to see what shot he has
     // (as it comes, or a touch first), then the branch runs to that moment: the touch, or where he is ready to shoot
     const toShot = L.kind === 'pass', o = outs[i];
-    let shot: LandState['shot'] = null, after = 15;
+    let shot: LandState['shot'] = null, after = 15, finish: { how: 'first' | 'touch'; kind: 'header' | 'volley' | 'drive'; z: number } | null = null;
     if (toShot && S.xg && o.kind === 'kept' && o.who >= 0) {
-      const probe = playOutcome(S.M, S.c, P, o), k = Math.max(0, Math.round(o.t / 0.1) - 1), ev = shotOnPaths(S.xg, S.M.tov, probe.paths, k, o.who, S.c.gk, probe.ball[k]?.[2] ?? 0.11);
+      const probe = playOutcome(S.M, S.c, P, o), k = Math.max(0, Math.round(o.t / 0.1) - 1), bz = probe.ball[k]?.[2] ?? 0.11, ev = shotOnPaths(S.xg, S.M.tov, probe.paths, k, o.who, S.c.gk, bz);
       after = ev.best?.how === 'touch' ? Math.round(ev.best.adjust / 0.1) + 1 : 1;
       const b = ev.best, at = fromModel(S.c, [...(b ? b.at : probe.paths[o.who][k])] as [number, number]);
       shot = { who: S.c.toPkg[o.who], at, xg: b?.xg ?? 0, header: b?.kind === 'header', no: ev.no, eval: ev };
+      // the finish the branch shows (branch.ts): a header, volley or drive as the ball comes, or the touch as before
+      finish = b ? { how: b.how, kind: b.kind, z: bz } : null;
+      // (window.__wiFinish = { how, kind }: a finish forced on the branch, for looking at the animation; checks only)
+      const forced = (globalThis as { __wiFinish?: { how: 'first' | 'touch'; kind: 'header' | 'volley' | 'drive' } }).__wiFinish;
+      if (forced && finish) { finish = { ...finish, ...forced }; if (forced.how === 'first') after = 1; }
     }
-    const pl = playOutcome(S.M, S.c, P, o, toShot ? after : 15), { data: br, info } = buildBranch(base, S.clips, L.t0, S.c, pl, target, o, P, alt ? { drag: !ANIM } : { real: S.real, drag: !ANIM });
+    const bodies = { drag: DRAG, gait: GAIT ? mods.current?.gait ?? null : null, finish };
+    const pl = playOutcome(S.M, S.c, P, o, toShot ? after : 15), { data: br, info } = buildBranch(base, S.clips, L.t0, S.c, pl, target, o, P, alt ? bodies : { real: S.real, ...bodies });
     (window as unknown as { __wiBranch?: unknown }).__wiBranch = { pkg: br.pkg, joints: br.joints, info, toPkg: S.c.toPkg };   // for checks
     if (!real.current) real.current = base;
     show(br); clock.t = info.t0; setT(info.t0);
     st.current.playing = true; setPlaying(true);
     land.set({ ...L, phase: 'sim', outcomes: alt ? L.outcomes : outs, shown: alt ? -1 : i, alt, info, toPkg: S.c.toPkg, shot,
       realShot: L.realShot !== undefined ? L.realShot : S.xg ? (() => { const r = realShotOf(S.xg, base.pkg as never, L.t0); return r ? { who: r.who, xg: r.xg, opta: r.opta, goal: r.goal } : null; })() : null });
-  }, [clock, st, show, setPlaying, setT]);
+  }, [clock, st, show, setPlaying, setT, DRAG, GAIT]);
   useEffect(() => {
     if (ld.phase !== 'computing' || !data || !(ld.kind === 'run' ? ld.runner !== null && ld.runEnd : ld.target)) return;
     let live = true;
     const base = stepBase.current ?? real.current ?? handed.current ?? data, L = ld;
-    Promise.all([loadModels(), loadClips([...MOTION_CLIPS, ...ACT_CLIPS]), loadXgModel()]).then(([M, clipsAnim, xg]) => {
+    Promise.all([loadModels(), loadClips([...MOTION_CLIPS, ...ACT_CLIPS]), loadXgModel(), loadGait(), loadAerial()]).then(([M, clipsAnim, xg, gait]) => {
       if (!live) return;
-      mods.current = { M, clips: clipsAnim, xg };
+      mods.current = { M, clips: clipsAnim, xg, gait };
       // (on a simulated clip his pose is dragged, not his own: he faces the way he moves)
       const c = sceneAt(base.pkg as never, L.t0, L.carrier, isBranch(base) ? null : base.joints), ghost = realAfter(base.pkg as never, L.t0, L.carrier);
       if (L.kind === 'pass') {
@@ -313,7 +326,7 @@ export function useWhatIf(h: WhatIfHost) {
     if (L.phase !== 'pick' || !base) return;
     if (L.atShot) { land.set({ ...L, phase: 'computing', target: [0, 0], toWho: L.carrier, hoverWho: null }); return; }
     land.set({ ...L, shootHere: null });
-    Promise.all([loadModels(), loadClips([...MOTION_CLIPS, ...ACT_CLIPS]), loadXgModel()]).then(([M, clipsAnim, xg]) => {
+    Promise.all([loadModels(), loadClips([...MOTION_CLIPS, ...ACT_CLIPS]), loadXgModel(), loadGait(), loadAerial()]).then(([M, clipsAnim, xg, gait]) => {
       const cur = land.get();
       if (cur.phase !== 'pick' || cur.t0 !== L.t0 || !xg) return;
       const facing = base.joints && !isBranch(base) ? facingOf(base.joints, Math.round(L.t0 * base.joints.fps), L.carrier) : null;
@@ -323,7 +336,7 @@ export function useWhatIf(h: WhatIfHost) {
       // a shot, as the branch sees it: the passer "kicks", nobody receives; the stop is the strike (shootFromHere)
       const o: Outcome = { who: -1, p: 1, t: sh.played.ball.length * 0.1, kind: 'none' };
       const pass: Pass = { ball: [], plan: null, kp: [], turn: sh.turn, hold: sh.hold, dir: [1, 0] };
-      const { data: br, info } = buildBranch(base, clipsAnim, L.t0, c, sh.played, target, o, pass, { drag: !ANIM });
+      const { data: br, info } = buildBranch(base, clipsAnim, L.t0, c, sh.played, target, o, pass, { drag: DRAG, gait: GAIT ? gait : null });
       // (the same way the options are worked out: his best way from here, with the turn it costs him)
       const way = ev.best!, at: [number, number] = (() => { const f = base.pkg.frames[Math.min(base.pkg.frames.length - 1, Math.round(L.t0 * base.pkg.meta.fps))], nA = f.att.length, q = L.carrier < nA ? f.att[L.carrier] : f.def[L.carrier - nA]; return [q[0], q[1]]; })();
       // the real choice, shown beside it as data: his real receiver's xG as he took it
@@ -354,13 +367,17 @@ export function useWhatIf(h: WhatIfHost) {
     if (ld.phase !== 'pick' || ld.kind !== 'pass' || ld.options !== null || !data) return;
     let live = true;
     const base = stepBase.current ?? real.current ?? handed.current ?? data, L = ld, key = `${L.t0}|${L.carrier}`;
-    Promise.all([loadModels(), loadXgModel(), CHANCE === 'opta' ? loadPassModel() : null]).then(([M, xg, PM]) => {
+    // (the aerial model too: without it the options were worked out on the turnover model alone, and a man's best way
+    // to meet a lofted ball could differ from the one his branch then played, 2026-10-27 night)
+    Promise.all([loadModels(), loadXgModel(), CHANCE === 'opta' ? loadPassModel() : null, loadAerial()]).then(([M, xg, PM]) => {
       if (!live) return;
-      const c = sceneAt(base.pkg as never, L.t0, L.carrier, isBranch(base) ? null : base.joints), list = candidates(c), found: NonNullable<LandState['options']> = [];
+      const c = sceneAt(base.pkg as never, L.t0, L.carrier, isBranch(base) ? null : base.joints), list = candidates(c), found: NonNullable<LandState['options']> = [], dropped: unknown[] = [];
       const rp = isBranch(base) ? null : realPass(base.pkg as never, L.t0, L.carrier);
       // (CHANCE opta: the distilled model's chance by package index, null for a man it has offside)
       const opta = PM ? new Map(passOptions(PM, base.pkg as never, L.t0, L.carrier).map((o) => [o.p, o.offside ? null : o.prob])) : null;
-      const chanceOf = (who: number, p: number): number | null => (CHANCE === 'opta' ? opta?.get(who) ?? null : p);
+      // (the keeper's claim of a ball into his goal area comes off whichever ruler gives the chance: Opta's pass model
+      // does not see him, 2026-10-28)
+      const chanceOf = (who: number, p: number, claim = 0): number | null => { const q = CHANCE === 'opta' ? opta?.get(who) ?? null : p; return q === null ? null : q * (1 - claim); };
       const ruled = CHANCE !== 'model';
       // a shooting moment: no pass of his, his shot next (within 4 s)
       const rs = !isBranch(base) && xg ? realShotOf(xg, base.pkg as never, L.t0) : null, atShot = !rp && !!rs && rs.who === L.carrier && rs.t - L.t0 < 4;
@@ -374,7 +391,7 @@ export function useWhatIf(h: WhatIfHost) {
       // (his chance by the models, as for the others; none when the pass was offside)
       const realOpt = (r: RealPass, x: XgFreezeModel) => {
         const { at, ev } = realTake(base, M, x, r), i = c.toPkg.indexOf(r.receiver);
-        const chance = r.offside || i < 0 ? null : chanceOf(r.receiver, tryPass(M, c, x, i).p);
+        const tr = r.offside || i < 0 ? null : tryPass(M, c, x, i), chance = tr ? chanceOf(r.receiver, tr.p, tr.claim) : null;
         return { who: r.receiver, at, loft: r.loft, p: 1, xg: ev.best?.xg ?? 0, worth: (ev.best?.value ?? 0) * (ruled && chance !== null ? chance : 1), real: true, no: ev.no, chance };
       };
       // worked out one at a time, then (under pressure, only those worth it: options.ts) lit one after another
@@ -393,13 +410,17 @@ export function useWhatIf(h: WhatIfHost) {
           // (the chance by his name is the one that gates him, options.ts OPTION_MIN_P, whichever ruler gives it; the
           // real receiver is always offered)
           const shown = found.filter((o) => o.real || o.chance === null || o.chance >= OPTION_MIN_P);
-          const keep = keepWorth(shown, pressed(c)); reveal(shown.filter((o) => o.real || keep.includes(o)), 1); return;
+          const keep = keepWorth(shown, pressed(c));
+          (window as unknown as { __wiOptions?: unknown }).__wiOptions = { candidates: list.map((i) => c.toPkg[i]), found, shown: shown.map((o) => o.who), pressed: pressed(c), kept: keep.map((o) => o.who), dropped };   // for checks
+          reveal(shown.filter((o) => o.real || keep.includes(o)), 1); return;
         }
         const who = c.toPkg[list[k]];
         if (rp && who === rp.receiver && xg) found.push(realOpt(rp, xg));
         else {
           const t = optionFor(M, c, xg, list[k]);
-          if (t) { const chance = chanceOf(who, t.p); optCache.current.tried.set(who, t); found.push({ who, at: fromModel(c, t.Q), loft: t.loft, p: t.p, xg: t.xg, worth: ruled && chance !== null ? (t.value / t.p) * chance : t.value, no: t.no, chance }); }
+          if (t) { const chance = chanceOf(who, t.p, t.claim); optCache.current.tried.set(who, t); found.push({ who, at: fromModel(c, t.Q), loft: t.loft, p: t.p, xg: t.xg, worth: ruled && chance !== null ? (t.value / t.p) * chance : t.value, no: t.no, chance }); }
+          // (window.__wiDebug: why a man was left out, for checks; the pass tried again for him)
+          else if ((globalThis as { __wiDebug?: boolean }).__wiDebug) { const tt = tryPass(M, c, xg, list[k]); dropped.push({ who, p: +tt.p.toFixed(2), loft: tt.loft, meet: tt.meet, xg: +tt.xg.toFixed(3), value: +tt.value.toFixed(3), no: tt.no, offsideAtStrike: offsideAtStrike(c, tt.pass), chance: chanceOf(who, tt.p) }); }
         }
         setTimeout(() => next(k + 1), 0);
       };
@@ -408,13 +429,15 @@ export function useWhatIf(h: WhatIfHost) {
     });
     return () => { live = false; };
   }, [ld.phase, ld.t0, ld.carrier]);   // eslint-disable-line react-hooks/exhaustive-deps
-  // the player style follows the phase: still ghosts while he picks and at the touch, ghosts with their trail while it
-  // plays, his own style back on the real play
+  // the player style follows the phase: still ghosts while he picks and at the stop, ghosts with their trail while it
+  // plays and while a play runs back, his own style back on the real play. The ghosts stay now that the bodies are
+  // animated (Yi, 2026-10-27: "we want still the ghost style, even we add the animation")
   useEffect(() => {
-    if (ANIM) return;
     if (mode !== 'whatif' || ld.phase === 'off') ghostAs(null);
     else ghostAs(ld.phase === 'sim' || rw ? 'ghost' : 'ghost-still');
-  }, [mode, ld.phase, rw]);   // eslint-disable-line react-hooks/exhaustive-deps
+  }, [mode, ld.phase, rw]);
+  // the stride library (28 MB) is fetched as the mode opens, while the moment plays in, not at the first pick
+  useEffect(() => { if (mode === 'whatif') void loadGait(); }, [mode]);
   useEffect(() => {
     guardLeave({ from: 'whatif', hold: (next) => {
       const L = land.get(), to = L.steps[0]?.t0 ?? L.t0, go = () => { leaveRef.current(false, true); setSettings({ mode: next }, true); };
