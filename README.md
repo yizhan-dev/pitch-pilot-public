@@ -164,5 +164,5 @@ open data; pitch-control methods draw on Fernández and Bornn and Spearman. Mixa
 assets. React, three.js, React Three Fiber, drei, Framer Motion and the credited fonts support the application.
 The synthetic source preview uses hand-authored poses, not Mixamo motion files.
 
-See [third-party notices](THIRD_PARTY_NOTICES.md). Copyright © 2026 Yizhan. All rights reserved; public visibility
+See [third-party notices](THIRD_PARTY_NOTICES.md). Copyright © 2026 the Pitch Pilot team. All rights reserved; public visibility
 does not grant an open-source licence. See [LICENSE](LICENSE).
