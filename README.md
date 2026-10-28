@@ -13,7 +13,7 @@ cinematic broadcast.
 
 Built for Microsoft's **Inside the Game: Developer Hackathon**, presented with the Premier League.
 
-![Pitch Pilot broadcast view](docs/images/watch.jpg)
+[![Watch the Pitch Pilot demo video](https://github.com/user-attachments/assets/16c0b7b8-342f-4fbc-abd9-91febb3c0422)](https://www.youtube.com/watch?v=Uj26v33SzVM)
 
 ## Four ways to explore a moment
 
