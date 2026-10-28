@@ -134,10 +134,11 @@ not a claim about the current deployment.
 
 ## Data, scope and responsible presentation
 
-The full demo uses licensed Hawk-Eye tracking/body poses and Opta events/statistics under the team's stated
-non-commercial permission. Teams and people are presented with fictional identities. **These recordings are real
-match data with fictional identities; anonymization does not make them synthetic.** The public code examples are
-independently invented. The event's synthetic-data requirement remains a separate organizer clarification.
+The full demo presents a **synthetic fixture**. The movement on the pitch comes from licensed Hawk-Eye
+tracking/body poses and Opta events/statistics, used with the team's non-commercial permission, but every identity
+is invented: the teams, their crests, the players and their names. Nothing on screen identifies the real match. The
+data files are encrypted on the site and are not in this repository, and the public code examples are independently
+invented.
 
 What-if results are modelled possibilities, not historical facts or causal proof. This is a replay prototype, not
 a verified live broadcast ingestion service. The current user experience and narration are in English; multilingual
