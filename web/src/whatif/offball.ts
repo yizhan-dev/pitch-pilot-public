@@ -1,7 +1,7 @@
-// The off-ball what-if (Yi, 2026-10-24: "a teammate's run. The viewer marks a running direction; we simulate until the
-// next moment: the ball received, or space created for a teammate"; his answer the same day, kept for the prototype:
-// the man on the ball plays his real pass, unchanged; we report the real receiver's chance and space, and the chance
-// had the pass gone to the runner). At a moment the viewer picks a teammate and where he runs instead; the real pass is
+// The off-ball what-if: a teammate's run. The viewer marks a running direction and the simulation runs to the next
+// moment, the ball received or space created for a teammate; in this prototype the man on the ball plays his real pass,
+// unchanged, and the report is the real receiver's chance and space, and the chance had the pass gone to the runner.
+// At a moment the viewer picks a teammate and where he runs instead; the real pass is
 // played as it really was (the tracked ball, struck when it really was, to where it was really received, the receiver
 // on his real way to it), the runner is held to the new run, and the response model moves everyone else, so the
 // defenders who would follow him do. The comparison is with the same simulation with the runner on his real run: only

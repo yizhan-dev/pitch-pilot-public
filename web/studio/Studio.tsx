@@ -23,8 +23,8 @@ const SECTION_CLIP = [new THREE.Plane(new THREE.Vector3(-1, 0, 0), 0)];
 /** state version written into the URL; bump it with an entry here whenever a crystal default changes on purpose */
 const STATE_VERSION = 3;
 const CHANGED_DEFAULTS: [number, string[]][] = [
-  [2, ['signSymbolPanel']],          // 2026-10-21: the goal-end symbols lose their black panel
-  [3, ['archMain', 'mainRise', 'mainLean']],   // 2026-10-21: v1, symmetric north and south
+  [2, ['signSymbolPanel']],          // the goal-end symbols lose their black panel
+  [3, ['archMain', 'mainRise', 'mainLean']],   // v1, symmetric north and south
 ];
 
 function readHash(): StudioState {

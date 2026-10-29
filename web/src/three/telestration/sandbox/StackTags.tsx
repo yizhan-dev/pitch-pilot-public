@@ -1,14 +1,14 @@
-// The head's stack, for one standard (Yi, 2026-10-25: name and stamina for the MVP; how far from the player; what to do
-// with the floating triangle). A copy of the Show layer's tag (chat 5's three/layers/ShowLayer.tsx and app.css .gm-tag:
+// The head's stack, for one standard (name and stamina for the MVP; how far from the player; what to do
+// with the floating triangle). A copy of the Show layer's tag (three/layers/ShowLayer.tsx and app.css .gm-tag:
 // the shirt number in the team's colour and the shirt name, the stamina bar under it, DOM over the canvas at one pixel
 // size), for the sandbox only, with the layouts to compare:
 //   &stack=v1  the tag still over the head; the triangle on top of it, without a name of its own (the tag has it)
 //   &stack=v2  the triangle at the head as if untagged; the tag over it, rising while he is hovered or selected
 //   &stack=v3  no triangle over a tagged player; a small triangle before his number, in the cue's colour
 //   &stack=v4  eFootball's: the triangle just over the head, the tag (name over the bar) just over it, in pixels
-//   &anchor=m  the tag's foot 0.42 m over the neck (today) | px: the top of the head (0.28 m over the neck) and 6 px
+//   &anchor=m  the tag's foot 0.42 m over the neck (the first anchor) | px: the top of the head (0.28 m over the neck) and 6 px
 //   &tags=7,20 the players tagged
-// With `chances` (the pass chances, Yi 2026-10-25: "write it on top of each player, like their name tag"): each team-mate's
+// With `chances` (the pass chances, over each player like his name tag): each team-mate's
 // chance in chanceColour, to the right of his name, else of his stamina bar, else alone over his head (`show`), hung off
 // the row so the tag stays centred on him
 import { useEffect, useMemo } from 'react';

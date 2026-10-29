@@ -1,4 +1,10 @@
-import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { Fragment, memo, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { PerfProbe } from './PerfProbe';
+import { AdaptiveQuality, ApplyScale } from './AdaptiveQuality';
+import { AA_OFF_AT_LOAD, applied, calib, calibrated, frameSkips, lowHas, useQuality, wantsCalibration, xOn } from './quality';
+import { GpuMeter } from './gpuMeter';
+import { varActive } from '../game/varReplay';
+import { store, useStore } from '../hud/draft';
 import * as THREE from 'three';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
@@ -124,7 +130,79 @@ function TacticalFlip({ data, clock, mode }: { data: Loaded; clock: Clock; mode:
  *  keep it */
 /** overlay: what the HUD lays on the pitch inside this canvas with the director (hud/PitchOverlay3D.tsx), given the pitch's
  *  grass-to-board change so its 战术 layers wait for the board */
-export function Stage({ data, clock, phase, layers, selected, onTick, marker = null, director = false, onPortraits, overlay, clipKey = '' }: { data: Loaded; clock: Clock; phase: Phase; layers: LayerFlags; selected: number | null; onTick: (dt: number) => void; marker?: number | null; director?: boolean; onPortraits?: (urls: (string | null)[]) => void; overlay?: (mode: PitchMode) => ReactNode; clipKey?: string }) {
+/** the frame drawn less often while nothing on the stage moves (three/quality.ts xOn 'idlerender'): in Watch or Tactics,
+ *  the clock and the camera still for half a second, nobody selected or under the pointer, no pointer, wheel or key for a
+ *  second, no VAR check or clip change: 20 frames a second instead of every frame, so what runs on its own (the corner
+ *  flags, the big screen) still moves smoothly (at 13 it stepped); anything that moves the camera, the clock or the
+ *  board draws at once. Measured: paused and still, 60 renders a second down to 13 at 15 Hz (Watch and Tactics), 60 in
+ *  play, the orbit, with a player selected, and as soon as the pointer moves */
+const IDLE_MS = 1000 / 20 - 1;   // (every third frame at 60 Hz: 20 a second)
+function RenderGate({ clock, mode, hover, covered }: { clock: Clock; mode: PitchMode; hover: HideRef; covered: boolean }) {
+  const gl0 = useThree((s) => s.gl);
+  const st = useMemo(() => ({ sig: new Float64Array(28), still: 0, last: 0, input: 0, warm: 0, meter: new GpuMeter(gl0), samples: [] as (number | null)[] }), [gl0]);
+  useEffect(() => {
+    const on = () => { st.input = performance.now(); };
+    const evs = ['pointermove', 'pointerdown', 'wheel', 'keydown'] as const;
+    for (const e of evs) window.addEventListener(e, on, { passive: true });
+    return () => { for (const e of evs) window.removeEventListener(e, on); };
+  }, [st]);
+  useFrame((state) => {
+    const { gl, scene, camera } = state, now = performance.now(), sg = st.sig;
+    // covered by the line-up show: nothing drawn but two warm frames (the textures up, the first programs), the frame's
+    // callbacks still run (the ticks, the portraits' own renders)
+    st.meter.poll();
+    if (covered) {
+      // two warm frames, and with the calibration two more, timed: the GPU's time for this view at full scale
+      const timing = wantsCalibration() && st.meter.available && calib.game === null;
+      if (st.warm >= (timing ? 4 : 2)) { frameSkips.n++; return; }
+      st.warm++;
+      if (timing && st.warm >= 3) {
+        const at = gl.getPixelRatio();
+        void st.meter.time(() => gl.render(scene, camera)).then((ms) => {
+          st.samples.push(ms);
+          if (st.samples.length < 2) return;
+          const ok = st.samples.filter((x): x is number => x !== null);
+          if (ok.length) calibrated('game', Math.min(...ok), at);
+        });
+        return;
+      }
+    }
+    const vals = [camera.position.x, camera.position.y, camera.position.z, camera.quaternion.x, camera.quaternion.y, camera.quaternion.z, camera.quaternion.w,
+      clock.t, mode.current, mode.pulse ?? 0, mode.pulseT ?? 0, gl.domElement.width];
+    let changed = false;
+    for (let i = 0; i < vals.length; i++) if (sg[i] !== vals[i]) { changed = true; sg[i] = vals[i]; }
+    const pe = camera.projectionMatrix.elements;
+    for (let i = 0; i < 16; i++) if (sg[12 + i] !== pe[i]) { changed = true; sg[12 + i] = pe[i]; }
+    if (changed) st.still = now;
+    const s = getSettings();
+    const idle = !changed && now - st.still > 500 && now - st.input > 1000 && (s.mode === 'watch' || s.mode === 'tactics') && s.selected === null
+      && hover.current < 0 && !varActive() && clipSwap.get() === 'off' && !document.hidden;
+    if (idle && now - st.last < IDLE_MS) { frameSkips.n++; return; }
+    st.last = now;
+    gl.render(scene, camera);
+  }, 1);
+  return null;
+}
+
+/** the overlay drawn in the stage (the game's 3D overlays and the What-if's scene), handed in through a store instead
+ *  of a prop, so the stage need not render again with the page's clock (three/quality.ts xOn 'stagememo') */
+export const stageOverlay = store<{ draw: (mode: PitchMode) => ReactNode } | null>(null);   // (wrapped: the store takes a bare function as an updater)
+function OverlayHost({ mode }: { mode: PitchMode }) {
+  const f = useStore(stageOverlay);
+  return f ? <>{f.draw(mode)}</> : null;
+}
+
+/** covered: the stage is out of sight under the line-up show, warmed up already; it draws only when asked (a resize),
+ *  so the show has the machine to itself, and carries on as the show hands over (GameApp, three/quality.ts xOn
+ *  'holdbehind'; Yi, 2026-10-29: "the hexagon fan out and the center circle enlarging before kick off still slightly
+ *  lagging", with both canvases drawing at full size) */
+/** covered (Stage covered): the stage draws its first two frames at once, with the line-up show's own first frames,
+ *  under the loader (index.html hides it at the show's second frame): every program linked and every texture up in
+ *  those two, about a second on the iGPU, where nobody sees it; then nothing until the show hands over. A compile ahead
+ *  of them (compileAsync) was tried: its programs differed from the render's (the shadow pass's, the clipping's), so
+ *  the first draws linked again, in the title, in sight */
+function StageImpl({ data, clock, phase, layers, selected, onTick, marker = null, director = false, onPortraits, overlay, clipKey = '', covered = false, held = false }: { data: Loaded; clock: Clock; phase: Phase; layers: LayerFlags; selected: number | null; onTick: (dt: number) => void; marker?: number | null; director?: boolean; onPortraits?: (urls: (string | null)[]) => void; overlay?: (mode: PitchMode) => ReactNode; clipKey?: string; covered?: boolean; held?: boolean }) {
+  const lowLight = useQuality().tier === 'low' && lowHas('light');
   const pkg = data.pkg, atDecision = phase === 'decision';
   // which team the package's attackers (players 0..nAtt-1) are: each team wears its own kit in every clip (Yi, 2026-10-23)
   const attacking = attackingOf(pkg.meta);
@@ -166,20 +244,28 @@ export function Stage({ data, clock, phase, layers, selected, onTick, marker = n
     return L;
   }, [data, pkg, roster]);
   return (
-    <Canvas shadows dpr={[1, 1.5]} camera={{ fov: 30, position: [0, 30, 60], near: 0.5, far: 2000 }} gl={{ antialias: true, localClippingEnabled: true, stencil: true }} onCreated={({ camera, gl }) => { camera.lookAt(0, 0, 3); gl.localClippingEnabled = true; }}>
+    <Canvas shadows frameloop={held ? 'demand' : 'always'} dpr={applied.scale} camera={{ fov: 30, position: [0, 30, 60], near: 0.5, far: 2000 }} gl={{ antialias: new URLSearchParams(location.search).get('aa') !== '0' && !(AA_OFF_AT_LOAD && lowHas('aa')), localClippingEnabled: true, stencil: true }} onCreated={({ camera, gl }) => { camera.lookAt(0, 0, 3); gl.localClippingEnabled = true; }}>
       <color attach="background" args={['#05070b']} />
       <fog attach="fog" args={['#05070b', 160, 420]} />
       {/* floodlit night, as on the workbench: a high key light for short player shadows, three fills from the other roof corners */}
       <group rotation-y={orient < 0 ? Math.PI : 0}>
-      <hemisphereLight name="night-amb" args={['#c9d6ff', '#0b120d', 0.55]} />
-      <directionalLight name="night-key" position={[-20, 90, 30]} intensity={1.8} castShadow shadow-mapSize={[2048, 2048]} shadow-camera-left={-60} shadow-camera-right={60} shadow-camera-top={40} shadow-camera-bottom={-40} />
-      <directionalLight name="night-fill" position={[40, 60, -35]} intensity={0.7} />
-      <directionalLight name="night-fill" position={[40, 60, 35]} intensity={0.5} />
-      <directionalLight name="night-fill" position={[-40, 60, -35]} intensity={0.5} />
+      {/* (the low graphics tier, three/quality.ts: no shadows, and the three fills as one from their mean direction, as
+          bright on the grass, the sky light a little up for the sides they lit) */}
+      <hemisphereLight key={lowLight ? 'amb-low' : 'amb'} name="night-amb" args={['#c9d6ff', '#0b120d', lowLight ? 0.65 : 0.55]} />
+      <directionalLight name="night-key" position={[-20, 90, 30]} intensity={1.8} castShadow={!lowLight} shadow-mapSize={[2048, 2048]} shadow-camera-left={-60} shadow-camera-right={60} shadow-camera-top={40} shadow-camera-bottom={-40} />
+      {lowLight ? <directionalLight name="night-fill" position={[13, 60, -12]} intensity={1.33} /> : <>
+        <directionalLight name="night-fill" position={[40, 60, -35]} intensity={0.7} />
+        <directionalLight name="night-fill" position={[40, 60, 35]} intensity={0.5} />
+        <directionalLight name="night-fill" position={[-40, 60, -35]} intensity={0.5} />
+      </>}
       <SkyDome />
       </group>
       <FrameCounter />
-      <BootFrame />
+      <PerfProbe />
+      <ApplyScale />
+      <AdaptiveQuality />
+      {director && xOn('idlerender') && <RenderGate clock={clock} mode={pitchMode} hover={hover} covered={covered} />}
+      <BootFrame off={covered} />
       <Pitch glow={0.22} ground={director} mode={director ? pitchMode : undefined} />
       {director && <TacticalFlip data={data} clock={clock} mode={pitchMode} />}
       <group rotation-y={orient < 0 ? Math.PI : 0}>
@@ -200,14 +286,14 @@ export function Stage({ data, clock, phase, layers, selected, onTick, marker = n
       {director && <HoverPointer data={data} clock={clock} hover={hover} />}
       {director && <MateShotLayer data={data} clock={clock} />}
       {director && <TargetPicker data={data} />}
-      {director && data.joints && looks && onPortraits && <PortraitStudio J={data.joints} looks={looks} attacking={attacking} onDone={onPortraits} />}
+      {director && data.joints && looks && onPortraits && <PortraitStudio J={data.joints} looks={looks} attacking={attacking} onDone={onPortraits} delayS={covered ? 4.5 : 0} />}
       {director && data.officials?.joints && <OffBoard mode={pitchMode}><Players J={data.officials.joints} clock={clock} style="toon" looks={officialLooks} hide={hideOfficial} kit="official" /></OffBoard>}
       {director && <GameLayers data={data} clock={clock} looks={looks} hide={hide} mode={pitchMode} />}
       {/* the Show menu's tags and speed rings, in every mode (Yi, 2026-10-24) */}
       {director && <ShowLayer data={data} clock={clock} looks={looks} hide={hide} hover={hover} />}
-      {director && overlay?.(pitchMode)}
+      {director && (overlay ? overlay(pitchMode) : <OverlayHost mode={pitchMode} />)}
       {pkg.meta.goal && <Celebration clock={clock} goalT={pkg.meta.goal.t} goalX={pkg.meta.goal.x} />}
-      <SwapHide mode={pitchMode}><StyledBall pkg={pkg} clock={clock} style="modern" /></SwapHide>
+      {<SwapHide mode={pitchMode}><StyledBall pkg={pkg} clock={clock} style="modern" /></SwapHide>}
       {atDecision && layers.pc && <PitchControl pkg={pkg} />}
       {atDecision && layers.vis && <Vision pkg={pkg} />}
       {atDecision && layers.opt && <Options pkg={pkg} selected={selected} showTags />}
@@ -225,3 +311,7 @@ export function Stage({ data, clock, phase, layers, selected, onTick, marker = n
     </Canvas>
   );
 }
+
+/** the stage, again only when its own props change (three/quality.ts xOn 'stagememo'): the game's page renders with its
+ *  clock fifteen times a second, and every one went through the whole 3D tree */
+export const Stage = xOn('stagememo') ? memo(StageImpl) : StageImpl;

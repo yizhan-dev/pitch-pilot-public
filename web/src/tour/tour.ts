@@ -1,7 +1,8 @@
-// The judges' tour (Yi, 2026-10-28; design docs/plans/tutorial.md, compressed that day): a guided walk through the
+// The judges' tour (design docs/plans/tutorial.md, compressed): a guided walk through the
 // four modes, one action a card. The step lives here, kept in sessionStorage, so a reload (or a mode that reloads the
 // page) resumes it. ?tour=1 starts it; the top bar's Tutorial button starts it again at any time.
 import { store } from '../hud/draft';
+import { hook } from '../dev';
 
 const KEY = 'pp-tour-step';
 const read = (): number => {
@@ -53,5 +54,5 @@ if (typeof window !== 'undefined') {
   };
   for (const t of ['pointerdown', 'mousedown', 'click']) document.addEventListener(t, click, true);
   // for the headless checks: go to a step, read it
-  (window as unknown as { __tour?: unknown }).__tour = { go: (n: number) => tourStep.set(n), step: () => tourStep.get() };
+  hook('tour', { go: (n: number) => tourStep.set(n), step: () => tourStep.get() });
 }

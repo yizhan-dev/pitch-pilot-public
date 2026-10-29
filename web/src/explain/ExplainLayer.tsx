@@ -3,6 +3,7 @@
 // pointer whose text is the tag), and the offside close-up's camera. The player on the ball and the player the voice names
 // wear the Show layer's tags, as in the Watch mode (director.ts fills showNamed). Nothing shows unless a script runs the clip (explain/director.ts).
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { hook, hooked } from '../dev';
 import * as THREE from 'three';
 import { useFrame, useThree } from '@react-three/fiber';
 import type { Loaded } from '../data';
@@ -23,17 +24,17 @@ export function ExplainLayer({ data, clock, surface }: { data: Loaded; clock: Cl
   const { camera, size } = useThree();
   useEffect(() => {
     const F = data.pkg.frames, fps = data.pkg.meta.fps, nAtt = F[0].att.length;
-    (window as unknown as { __screenOf?: (p: number) => number[] | null }).__screenOf = (p) => {
+    hook('screenOf', (p: number): number[] | null => {
       const f = F[Math.max(0, Math.min(F.length - 1, Math.round(clock.t * fps)))], q = p < nAtt ? f.att[p] : f.def[p - nAtt];
       if (!q) return null;
       const v3 = new THREE.Vector3(q[0], 1.0, q[1]).project(camera);
       return [Math.round(((v3.x + 1) / 2) * size.width), Math.round(((1 - v3.y) / 2) * size.height)];
-    };
+    });
   }, [data, clock, camera, size]);
   const tags = useMemo(() => v.items.filter((it) => (it as { kind: string }).kind === 'tag') as unknown as { id: string; player: number; text: string }[], [v.items]);
   const tagRefs = useMemo(() => tags.map((g) => ({ id: g.id, ref: { current: g.player }, name: (p: number) => (p === g.player ? g.text : null) })), [tags]);
   const items = useMemo(() => v.items.filter((it) => (it as { kind: string }).kind !== 'tag') as Item[], [v.items]);
-  // leaving the mode (Yi, 2026-10-26: no jump either way): the layer stays a moment with its items emptied, so each
+  // leaving the mode (no jump either way): the layer stays a moment with its items emptied, so each
   // drawing plays its exit instead of vanishing
   const [linger, setLinger] = useState(false), wasOn = useRef(false);
   useEffect(() => {
@@ -44,7 +45,7 @@ export function ExplainLayer({ data, clock, surface }: { data: Loaded; clock: Cl
     return () => window.clearTimeout(id);
   }, [v.active]);
   if (!v.active && !linger) return null;
-  // the player on the ball and the player the voice names wear the Watch mode's tags (the Show layer's; Yi, 2026-10-25),
+  // the player on the ball and the player the voice names wear the Watch mode's tags (the Show layer's),
   // not pointers of their own
   return (
     <>
@@ -64,7 +65,7 @@ const VAR_LIFT = 1.0;
 function VarCam() {
   const st = useMemo(() => ({ lastAge: Infinity }), []);
   useFrame(() => {
-    const set = (window as unknown as { __camSet?: (...a: number[]) => void }).__camSet, F = VAR_FACTS, V = TELE.offside.var;
+    const set = hooked<(...a: number[]) => void>('camSet'), F = VAR_FACTS, V = TELE.offside.var;
     const w = scriptPose();
     if (!F.on || F.exit !== null || !set || !w) return;
     const restart = F.age < st.lastAge - 0.05;
@@ -72,7 +73,7 @@ function VarCam() {
     const c0 = varCamera(F, w[3], V.turnDeg);
     if (!c0) return;
     // the close-up's centre a little lower than var.ts sets it, so the attacker and his verdict stand above the game's
-    // subtitles and minimap (2026-10-26: they sat in the subtitle's band; the speed read-out under the verdict too)
+    // subtitles and minimap (otherwise they sat in the subtitle's band; the speed read-out under the verdict too)
     const c = [c0[0], c0[1] - VAR_LIFT, c0[2], c0[3], c0[4], c0[5]];
     // the free view keeps its orbit centre at least 0.3 m up (Director.tsx): under that, the same camera about a centre
     // slid towards it along the line of sight

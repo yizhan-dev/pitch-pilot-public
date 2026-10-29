@@ -51,7 +51,7 @@ void main() {
   vec2 gv = inverse(transpose(J)) * vec2(dFdx(v), dFdy(v));
   float dl = abs(v - 0.5) / max(length(gv), 1e-4);
   // the wash: the controlling side's colour, deeper the surer its control (|v - 0.5| x 2), faint where it is contested,
-  // over the whole pitch (Yi, 2026-10-23: a player cannot stand on ground nobody controls; an earlier version showed only
+  // over the whole pitch (a player cannot stand on ground nobody controls; an earlier version showed only
   // the contested ground and left each side's own territory blank)
   vec3 tc = v > 0.5 ? uAtt : uDef;
   float wa = uWashA * pow(m, uBand) * inPitch * rv;

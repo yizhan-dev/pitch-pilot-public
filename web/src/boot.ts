@@ -1,13 +1,14 @@
-// The loader's progress from the app (index.html's window.__boot; Yi, 2026-10-27: "a percentage thing, so we know it is
-// responding"). Imported first in main.tsx, before the release's data shim, so the shim's fetches pass through here and
+// The loader's progress from the app (index.html's window.__boot): a percentage, so the viewer knows the page is
+// responding. Imported first in main.tsx, before the release's data shim, so the shim's fetches pass through here and
 // their bytes count as they arrive (the encrypted bytes, before the shim opens them). 0.6 once the bundle runs; the match
 // data from 0.6 to 0.9 by its bytes, against what the release measured the landing page to need (window.__bootMain.data,
 // scripts/release.mjs) or, past that, what has been asked for; 0.9 when the data is in and the 3D build starts (GameApp);
 // done at a view's first frames (three/BootFrame.tsx). After that nothing is counted.
 
+import { hooked } from './dev';
+
 interface Boot { at(p: number, words?: string): void; done(): void; fail(words?: string): void }
-const W = (typeof window !== 'undefined' ? window : undefined) as unknown as { __boot?: Boot; __bootMain?: { data?: number } } | undefined;
-const B = W?.__boot ?? null;
+const B = hooked<Boot>('boot') ?? null;
 let over = false, building = false;
 
 export const boot = {
@@ -16,7 +17,7 @@ export const boot = {
 };
 
 if (B) {
-  const expected = W?.__bootMain?.data ?? 0;
+  const expected = hooked<{ data?: number }>('bootMain')?.data ?? 0;
   B.at(0.6, 'Decrypting match data');
   const files: { got: number; of: number; in: boolean }[] = [];
   const report = () => {

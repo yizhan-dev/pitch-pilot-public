@@ -14,7 +14,6 @@ change those terms or grant permission to redistribute separately licensed match
 | Inter, Barlow Condensed, Jost | SIL Open Font License 1.1 |
 | flag-icons | MIT |
 | SVG Repo football-ball and soccer-shoe icons | CC0 1.0 |
-| Simple Icons | CC0 1.0; depicted brands remain their owners' trademarks |
 
 Pinned versions and transitive dependencies are recorded in the npm and uv lockfiles. Licence files accompany
 installed packages. The Jost font licence is included beside the font.

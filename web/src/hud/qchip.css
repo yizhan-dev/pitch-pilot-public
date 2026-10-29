@@ -1,0 +1,12 @@
+/* the graphics level chip (hud/QualityChip.tsx): a small glass pill, the tier in bold, the scale beside it */
+.hud-qchip { display: inline-flex; align-items: center; gap: 6px; height: var(--hud-h, 40px); padding: 0 12px; border-radius: 8px;
+  font: 600 13px/1 var(--hud-font, 'Inter', system-ui, sans-serif); letter-spacing: .02em; color: var(--ink-2, #c9d2dc); pointer-events: auto; cursor: default; }
+.hud-qchip b { font-weight: 700; color: var(--ink, #f2f5f8); }
+.hud-qchip i { font-style: normal; color: var(--ink-3, #8d98a5); font-variant-numeric: tabular-nums; }
+.hud-qchip.low b { color: #f6c453; }
+/* a What-if question card open (whatif.css .wi-ask, centred at the top, up to 520px wide): the chip, the right group's
+   first item, is the one thing it can cover below about 2060px of width, so it steps out while the card is up; the
+   group is right-aligned, so nothing else moves */
+body:has(.wi-ask) .hud-qchip:not(.lu-qchip) { display: none; }
+/* in the line-up show: top right, under the away team's plate (lineup.css .lu-team: top 24px, 50px tall, right 28px) */
+.lu-qchip { position: fixed; right: 28px; top: 84px; z-index: 3; }

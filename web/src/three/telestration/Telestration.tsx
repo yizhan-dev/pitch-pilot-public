@@ -1,4 +1,5 @@
 import { MATCH } from '../../data/paths';
+import { hook, hooked } from '../../dev';
 // <Telestration data clock items surface />: tactical drawings on the pitch, declared as a list of items keyed by id.
 // A new id plays its entrance, a removed id plays its exit; changing an item (moving its anchor) never replays its
 // entrance (pitch_prism's rule: only the newly born element animates). Design: docs/research/telestration.md.
@@ -57,18 +58,18 @@ export interface MarkerItem extends Base { kind: 'marker'; at: Anchor; style?: P
 /** a side's units: back line, midfield, front line (tier-2 rings joined by lines in the team colour), with the gaps
  *  between them in metres on the pitch. `at` pins them to a clip time (the kick of a line-breaking pass) */
 export interface UnitsItem extends Base { kind: 'units'; side: 'att' | 'def'; at?: number; labels?: boolean; players?: number[] }
-/** the passing network at a pause, from where the players are now. 'chemistry' (the default, Yi): the focus player's
+/** the passing network at a pause, from where the players are now. 'chemistry' (the default): the focus player's
  *  five teammates he has exchanged the most passes with since kick-off, white lines weighted by the count; 'options':
  *  the carrier's five best passes by the first-touch model's chance (for the pause window). `focus`: the player (the
  *  selected one); without it, the carrier. `at` pins it to a clip time (the pause); without it, it follows the clock */
 export interface NetworkItem extends Base { kind: 'network'; mode?: 'chemistry' | 'options'; focus?: number | null; at?: number }
-/** the pass chances from the player on the ball (chat 3's request, 2026-10-25; their hud/passProb.ts gives them): a link
+/** the pass chances from the player on the ball (hud/passProb.ts gives them): a link
  *  to every team-mate `to` with the chance `p` a pass to him is completed, in TELE.passProb.look (or `look`); an offside
  *  team-mate an amber ring, no link, no number. `at` pins it to a clip time; it follows the clock otherwise (send new
  *  edges as they change: nothing replays while the id stays) */
 export interface PassProbItem extends Base { kind: 'passprob'; carrier: number; edges: { to: number; p: number; offside?: boolean }[]; at?: number; look?: 'width' | 'mid' | 'feet' | 'ramp' }
 export type LaneName = 'left-wide' | 'left-half' | 'centre' | 'right-half' | 'right-wide';
-/** a zone (Yi, 2026-10-22: a zone drawing tool, any zone, decided by the orchestrator): any shape of 3 to 8 corners
+/** a zone (a drawing tool for any zone, decided by the orchestrator): any shape of 3 to 8 corners
  *  (two sides need not be parallel), the matte zebra inside and a glowing outline all round. Give it as `poly`, its
  *  corners in order in pitch metres (data frame: x along, +x the attack, +y the attack's right); as `rect` [x0, y0,
  *  x1, y1], turned by `angle` radians about its centre; or as a template: `lane` (one of the five vertical lanes,
@@ -85,18 +86,18 @@ export interface ZoneItem extends Base {
   lane?: LaneName; from?: number; to?: number;
   pocket?: { side: 'att' | 'def'; lane: LaneName; between?: 'back-mid' | 'mid-front' };
   /** the pocket between two lines the pen linked (players in click order, up to four each): the first line's players,
-   *  then the second's back, in the pocket's look (Yi, 2026-10-25: the same as closing a link round them; not used) */
+   *  then the second's back, in the pocket's look (the same as closing a link round them; not used) */
   lines?: [number[], number[]];
-  /** a round zone (the Tactics pen's circle, Yi 2026-10-25): centre x, y and radius, pitch metres; the zones' look */
+  /** a round zone (the Tactics pen's circle): centre x, y and radius, pitch metres; the zones' look */
   circle?: [number, number, number];
   at?: number; ink?: Ink | 'att' | 'def'; fill?: 'zebra' | 'none';
 }
-/** marking links (Yi, 2026-10-22: who is tracking whom): each marker of `side` (the defending side by default) joined
+/** marking links (who is tracking whom): each marker of `side` (the defending side by default) joined
  *  to the man he marks by a dashed line in his team colour, drawn out from him; `rule` as TELE.mark.rule by default.
  *  `focus`: only the links of that player (an unmarked one still shows his nearest opponent, fainter), with the gap in
  *  metres. `at` pins it to a clip time (the pause); without it, it follows the clock */
 export interface MarkingItem extends Base { kind: 'marking'; side?: 'att' | 'def'; rule?: MarkRule; focus?: number | null; at?: number; labels?: boolean; pair?: [number, number] }
-/** the shot cone (Yi, 2026-10-22): the goal as the shooter sees it, the light from his feet to the posts with every
+/** the shot cone: the goal as the shooter sees it, the light from his feet to the posts with every
  *  opponent's shadow, the goal mouth lit where open, and his xG (the defender-aware model, src/response/xg.ts), the
  *  distance and the angle. `shooter`: a player (default: the attacker nearest the ball); `at` pins it to a clip time */
 export interface ShotItem extends Base { kind: 'shot'; shooter?: number; at?: number; labels?: boolean; xg?: number; header?: boolean }
@@ -104,7 +105,7 @@ export interface ShotItem extends Base { kind: 'shot'; shooter?: number; at?: nu
  *  inside a team-colour outline, with its area in m² (of the hull through the players, Opta's measure). `at` pins it
  *  to a clip time */
 export interface HullItem extends Base { kind: 'hull'; side?: 'att' | 'def'; at?: number; labels?: boolean; players?: number[] }
-/** players linked by the Tactics pen (Yi, 2026-10-25, §22: click players in order), drawn by who they are: two
+/** players linked by the Tactics pen (§22: click players in order), drawn by who they are: two
  *  opponents as a marking pair (the hoops), teammates as one line in the units' look through them in click order,
  *  `closed` (back to the first) as an area in the hull's look with its m², a single player as his ring so far. `at`
  *  pins it to a clip time (the pause); it follows the clock otherwise. The pocket between two such lines is a zone's
@@ -121,10 +122,10 @@ export interface SpotlightItem extends Base { kind: 'spotlight'; at: Anchor }
  *  if that is nearer their goal, and never inside the attackers' own half. The defender who sets it gets the ring; the
  *  `focus` attacker (default: the clip's pass receiver) gets his margin to the line in metres */
 export interface OffsideItem extends Base { kind: 'offside'; side?: 'att' | 'def'; focus?: number | null; at?: number; close?: boolean; highlight?: 'all' }
-/** a pass arrow (pitch_prism's, solid white: the ball), in the form the orchestrator and narration sessions drafted
+/** a pass arrow (pitch_prism's, solid white: the ball), in the form the orchestrator and the narration share
  *  (src/orchestrate/draw.ts PassArrow): `from` and `to` as anchors; `t` the clip times of the kick and the reception;
  *  `loft` the arc's apex in metres, or 'track' for the ball's real flight (the 3D arc comes in the next batch; drawn
- *  flat until then); `whatif` a pass that did not happen (drawn fainter for now, its look for Yi to settle) */
+ *  flat until then); `whatif` a pass that did not happen (drawn fainter for now, its look not final) */
 export interface PassArrowItem extends Base { kind: 'pass'; from: Anchor; to: Anchor; t?: [number, number]; loft?: number | 'track' | boolean; whatif?: boolean }
 /** a run arrow (pitch_prism's, amber octagon dashes: a player), along the player's tracked path between two clip
  *  times, curved as he ran (draw.ts RunArrow) */
@@ -133,9 +134,9 @@ export interface RunArrowItem extends Base { kind: 'run'; path: { player: number
  *  smooth team-coloured wash and the 0.5 frontier as a line of light; `at` pins it to a clip time, else it follows the
  *  clock (recomputed three times a second while playing) */
 export interface ControlItem extends Base { kind: 'control'; at?: number }
-/** a player's running direction at a moment (Yi, 2026-10-22): ripples from his feet that fade out, then the run arrow
+/** a player's running direction at a moment: ripples from his feet that fade out, then the run arrow
  *  from his feet along where he goes over the next `ahead` s (TELE.heading.aheadS by default); `to`: a run to that
- *  point instead, all the way (the Tactics pen's drag, Yi 2026-10-25) */
+ *  point instead, all the way (the Tactics pen's drag) */
 export interface HeadingItem extends Base { kind: 'heading'; player: number; at?: number; ahead?: number; to?: Anchor }
 /** a player's speed trail (pitch_prism's): the last 1.5 s of his path as a comet tail on the grass coloured by his
  *  speed, and his speed in km/h upright beside him (`label`, default on) */
@@ -143,24 +144,24 @@ export interface TrailItem extends Base { kind: 'trail'; player: number; label?:
 /** a line-breaking pass (a pass clip's own, from meta.pass: Opta's count of lines broken and the deepest one): the
  *  defending units pinned at the kick, the broken ones flashing and cracking open as the ball crosses them (clip
  *  time), the count on the pitch by the receiver. `kick` and `reception` override the clip's own times; `lines`,
- *  `last` and `receiver` its pass (any pass in any clip: chat 4, Yi 2026-10-26, 22:54's #17 in a shot clip) */
+ *  `last` and `receiver` its pass (any pass in any clip, such as 22:54's #17 in a shot clip) */
 export interface LineBreakItem extends Base { kind: 'linebreak'; kick?: number; reception?: number; lines?: number; last?: 'last' | 'secondToLast'; receiver?: number }
 /** a player's vision: where his head points, the edges of his central view on the grass, and everything outside his
  *  view darkened (the whole scene: grass, players, stands) */
 export interface VisionItem extends Base { kind: 'vision'; player: number | number[]; at?: number }
-/** a number on the pitch (the Explain chat's request, 2026-10-26): at the pitch point `at` (data frame metres), the
+/** a number on the pitch (for the narration): at the pitch point `at` (data frame metres), the
  *  share `value` 0..1, or a series over clip time `[t, v][]` (it follows the clock). Entering (render time, from when
  *  the item appears): after `delayS` the arc grows to `from` and holds there `holdS` s, then grows on to the value over
  *  `countS` (the other timings TELE.gauge's); without `from`, straight to the value. `text` replaces the number ("{v}" is the percentage);
  *  `side` the team whose share it is ('att' default; its colour at all, the other's at none); `look` and `r` as
  *  TELE.gauge. Leaves shrinking and fading */
 export interface GaugeItem extends Base { kind: 'gauge'; at: XY; value: number | [number, number][]; from?: number; delayS?: number; holdS?: number; countS?: number; text?: string; side?: 'att' | 'def'; look?: 'ring' | 'target' | 'pie'; r?: number }
-/** a stroke of the Tactics pen (chat 3's request, 2026-10-24; chat 3 keeps the pointer, the strokes' storage, undo and
- *  the freeze frames in hud/draft.ts): `pts` in pitch metres (data frame); pass a straight arrow from the first point to
+/** a stroke of the Tactics pen (the pointer, the strokes' storage, undo and
+ *  the freeze frames live in hud/draft.ts): `pts` in pitch metres (data frame); pass a straight arrow from the first point to
  *  the last, run a dashed arrow along the path, dribble a wavy arrow from the first to the last, circle a plain ring
  *  round `player` (following him) or the first point, zone the rectangle of the first and the last point, pen the free
  *  line, measure a line with end dots and its metres. `pts` may change every frame while the pointer moves: the stroke
- *  follows at once, nothing replays. `alpha` (default 1) is chat 3's fade (play resumed, a saved frame passed);
+ *  follows at once, nothing replays. `alpha` (default 1) is hud/draft.ts's fade (play resumed, a saved frame passed);
  *  removing the item fades it out over TELE.stroke.exitS (undo, clear) */
 export interface StrokeItem extends Base { kind: 'stroke'; tool: StrokeTool; ink: StrokeInk; pts: XY[]; player?: number; alpha?: number }
 export type Item = MarkerItem | UnitsItem | NetworkItem | ZoneItem | MarkingItem | ShotItem | HullItem | PressureItem | SpotlightItem | OffsideItem | PassArrowItem | RunArrowItem | ControlItem | HeadingItem | TrailItem | LineBreakItem | VisionItem | StrokeItem | LinkItem | PassProbItem | GaugeItem;
@@ -269,7 +270,7 @@ export function Telestration({ data, clock, items, surface, focus }: { data: Loa
   const sideOf = (p: number): 'att' | 'def' => (p >= nAtt ? 'def' : 'att');
   const hashId = (id: string) => { let h = 7; for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) | 0; return h; };
 
-  /** one side's units (Yi, 2026-10-22: every member carries the selected player's own double ring, joined by lines;
+  /** one side's units (every member carries the selected player's own double ring, joined by lines;
    *  no second ring design): pushes the lines now, returns the rings for the second pass, adds the gaps' labels */
   /** `pAge`: each linked player's own age (the pen adds them one click at a time: each pops in, and its line draws, as
    *  he is clicked) */
@@ -340,7 +341,7 @@ export function Telestration({ data, clock, items, surface, focus }: { data: Loa
   };
 
   /** the entrance effect of one line drawing in from rings A and B (radii rA, rB) towards the middle, `a` seconds into
-   *  its draw, in TELE.spark.style (Yi, 2026-10-22, choosing among directions): 'burst' sparks thrown off the growing
+   *  its draw, in TELE.spark.style: 'burst' sparks thrown off the growing
    *  tips; 'weld' welding sparks, fast short streaks that bounce once; 'dust' star dust drifting up and twinkling; 'flow'
    *  light streaming along the drawn line into the tip, a star flare on the tip; 'ripple' rings spreading on the grass
    *  from the tips. Stateless: every particle comes from its emission time and seed, so pausing and recording agree */
@@ -475,7 +476,7 @@ export function Telestration({ data, clock, items, surface, focus }: { data: Loa
     surfaceColour(TELE.color.white, k, st.w);
     const white = [...st.w, 1], at = (p: number, out: XY) => anchors.player(p, tt, TELE.smoothS, out);
     const A: XY = [0, 0], B: XY = [0, 0];
-    // the carrier's best options (Yi: five), best first, each drawn from the carrier out to the teammate like a pass
+    // the carrier's best options (five), best first, each drawn from the carrier out to the teammate like a pass
     const shown = net.star.filter((e) => (mode === 'options' ? e.p >= N.minP : true)).slice(0, N.top);
     shown.forEach((e, rank) => {
       if (e.p < N.minP || !at(e.a, A) || !at(e.b, B)) return;
@@ -559,7 +560,7 @@ export function Telestration({ data, clock, items, surface, focus }: { data: Loa
       const scD = seD * sx * gain, scA = seA * sx * gain, al = (q.loose ? M.looseA : 1) * ax;
       let off = M.labelOff * gain;
       if (M.style === 'dumbbell' || M.style === 'guard' || M.style === 'pool' || M.style === 'line' || M.style === 'hoops') {
-        // round three (Yi, 2026-10-24: more options than the capsule; ground kind 13): fading in as the capsule does,
+        // the plainer styles (ground kind 13): fading in as the capsule does,
         // backwards to leave
         const t0 = age - i * M.stagger - 0.05, tp = ex === null ? Math.min(1, Math.max(0, t0 / M.durS.fade)) : Math.max(0, 1 - ex / exitS(it));
         const look = ['dumbbell', 'guard', 'pool', 'line', 'hoops'].indexOf(M.style), m = Math.max(M.capR, M.dotR, M.hoopR, M.guardR + M.guardHW) * gain + 0.6;
@@ -713,7 +714,7 @@ export function Telestration({ data, clock, items, surface, focus }: { data: Loa
     return 0;
   };
   /** a lofted pass (LoftArrows.tsx): the arrow along the ball's path in the air, and on the grass the shadow of its flat
-   *  track, drawn with the reveal and not fading with the tail (Yi, 2026-10-25: no ring where it lands) */
+   *  track, drawn with the reveal and not fading with the tail (no ring where it lands) */
   const pushLoft = (A: XY, B: XY, H: number, td: number, alpha: number, k: number, gain: number) => {
     const Ar = TELE.arrow, Pa = TELE.passArrow, w = Ar.w * gain;
     surfaceColour(TELE.color.white, k, st.w);
@@ -724,8 +725,8 @@ export function Telestration({ data, clock, items, surface, focus }: { data: Loa
     const track = Array.from({ length: n + 1 }, (_, i) => ({ x: A[0] + (ux * shown * i) / n, y: 0, z: A[1] + (uz * shown * i) / n, half: sh, r: sc[0], g: sc[1], b: sc[2], a: Pa.shadowA * alpha, soft: true }));
     trails.line(track, () => sh);
   };
-  /** a pass arrow from A to B (scene x, z), in TELE.passArrow.look (Yi, 2026-10-25: the pen's pass, in the run's
-   *  family; 'barbed' is §13's arrow, pitch_prism's, Yi's choice), along the ground or lofted to `loft` m */
+  /** a pass arrow from A to B (scene x, z), in TELE.passArrow.look (the pen's pass, in the run's
+   *  family; 'barbed' is §13's arrow, pitch_prism's, the default), along the ground or lofted to `loft` m */
   const drawPass = (A: XY, B: XY, age: number, ex: number | null, alpha: number, k: number, gain: number, loft = 0) => {
     const Pa = TELE.passArrow, Pr = TELE.press, look = Pa.look, td = arrowT(age, ex);
     if (loft > 0.05) { pushLoft(A, B, loft, td, alpha, k, gain); return; }
@@ -775,12 +776,12 @@ export function Telestration({ data, clock, items, surface, focus }: { data: Loa
       if (Lh < 0.5 || f <= 0) return;
       const p = Math.min(0.99, Math.max(0, e.p));
       if (look === 'width') {
-        // the passing network's own look (Yi, 2026-10-25: "make it just like the passing network visualization"):
+        // the passing network's own look, so the two marks read as one family:
         // TELE.net's width and brightness by the chance, welded to the inner rings at both ends, drawn out best first,
         // each team-mate wearing the double ring as it reaches him
         const N = TELE.net, hw = (N.minHW + (N.maxHW - N.minHW) * p) * gain, al = (N.minA + (1 - N.minA) * p) * ax, m = hw + 3 * TELE.glow.sigma * gain + 0.6;
-        // in the carrier's team colour as the other team marks (Yi, 2026-10-26: "maybe make the connecting line in the team
-        // color?"; TELE.passProb.ink), or white as the network's
+        // in the carrier's team colour as the other team marks (TELE.passProb.ink),
+        // or white as the network's
         const ew = age - CASCADE.edgeDelay - rank * N.stagger, fw = edgeDraw(ew) * left;
         if (S.ink === 'team') inkColour('team', side, k, c); else c.splice(0, 3, ...st.w);
         const lc = [...c, 1];
@@ -934,7 +935,7 @@ export function Telestration({ data, clock, items, surface, focus }: { data: Loa
   };
   const drawVision = (it: VisionItem, age: number, ex: number | null, k: number, gain: number) => {
     const Vs = TELE.vision, tt = it.at ?? clock.t, q: XY = [0, 0], d: [number, number] = [1, 0];
-    // several players (Yi, 2026-10-23): each one's view; what none of them sees is dark. The edges below: the first's
+    // several players: each one's view; what none of them sees is dark. The edges below: the first's
     const who = (Array.isArray(it.player) ? it.player : [it.player]).slice(0, VIS_MAX), J = data.joints, nose = J ? J.names.indexOf('nose') : -1;
     let n = 0;
     for (const p of who) if (anchors.player(p, tt, TELE.smoothS, q) && headDir(p, tt, d)) {
@@ -1113,7 +1114,7 @@ export function Telestration({ data, clock, items, surface, focus }: { data: Loa
     }
   };
 
-  /** a player's running direction (Yi, 2026-10-22: the pressure's first animation, exactly: ripples, then its stack of
+  /** a player's running direction (the pressure's first animation, exactly: ripples, then its stack of
    *  chevrons): ripples in his team colour spreading from his feet and fading out, then the chevrons drawn from his feet
    *  towards where he is `ahead` s later, flowing that way at half his speed */
   const drawHeading = (it: HeadingItem, age: number, ex: number | null, k: number, gain: number) => {
@@ -1132,7 +1133,7 @@ export function Telestration({ data, clock, items, surface, focus }: { data: Loa
     if (!(it.to ? anchors.resolve(it.to, tt, TELE.smoothS, B) : anchors.player(it.player, tt + ahead, TELE.smoothS, B))) return;
     const dx0 = B[0] - A[0], dz0 = B[1] - A[1], d0 = Math.hypot(dx0, dz0);
     if (d0 < 0.6) return;
-    // his direction, the length capped (Yi: shorter); the speed for the flow is his own. A chosen point: all the way
+    // his direction, the length capped (kept short); the speed for the flow is his own. A chosen point: all the way
     const d = it.to ? d0 : Math.min(Hd.lenM * gain, Math.max(2.5 * gain, d0)), dx = (dx0 / d0) * d, dz = (dz0 / d0) * d;
     B[0] = A[0] + dx; B[1] = A[1] + dz;
     const f = edgeDraw(age - Hd.arrowDelayS) * left;
@@ -1194,8 +1195,8 @@ export function Telestration({ data, clock, items, surface, focus }: { data: Loa
     // the line-setter's ring
     if (setter && anchors.player(setter.p, tt, 0, q)) { const [se, ae] = ringEnter(age); rings.push({ xy: [q[0], q[1]], side, sc: se * sx * gain, al: ae * ax * keepWide, player: setter.p, style: R }); }
     const defPt: [number, number, number] | null = setter && front(setter.p) !== null ? [at3[0], at3[1], at3[2]] : null;
-    // every attacker in an offside position (chat 3's request; Yi: "when user click that, we will automatically highlight
-    // those who are offside"): his deciding part beyond the line, by the same measure, gets a plain amber ring (amber as
+    // every attacker in an offside position (the Tactics one-click line highlights them all
+    // at once): his deciding part beyond the line, by the same measure, gets a plain amber ring (amber as
     // the margin's offside colour). A position, not an offence; keepers left out
     if (it.highlight === 'all') {
       const amb: [number, number, number] = [0, 0, 0]; surfaceColour(TELE.color.amber, k, amb);
@@ -1221,7 +1222,7 @@ export function Telestration({ data, clock, items, surface, focus }: { data: Loa
       if (f > 0 && Math.abs(margin) > 0.05) {
         const A: XY = [q[0], q[1]], Bp: XY = [lx, q[1]], L2 = Math.abs(Bp[0] - A[0]), dirx = Math.sign(Bp[0] - A[0]);
         const rA = R.innerR * gain, hw = O.marginHW * gain, m = hw + 3 * TELE.glow.sigma * gain + 0.6;
-        // a plain line, no glow (Yi, 2026-10-24: "clean and simple"): the halo's width goes to nothing
+        // a plain line, no glow, clean and simple: the halo's width goes to nothing
         if (L2 > rA + 0.05) layer.push([(A[0] + Bp[0]) / 2, A[1], dirx, 0], [L2 / 2 + m, hw + m, KIND.edge, ax], [L2 / 2, hw, rA, 0], [f, 1, 0, closeOn ? 1e-3 : gain], mc ?? blue, mc ?? blue);
         surfaceColour(TELE.color.white, k, st.w);
         // the metres beside him, clear of his ring, on the side of the wall he stands on (the close-up's verdict tag carries
@@ -1247,7 +1248,7 @@ export function Telestration({ data, clock, items, surface, focus }: { data: Loa
         }
         const others: [number, number][] = [];
         for (let p = 0; p < P; p++) if (p !== focus && p !== setter?.p && anchors.player(p, tt, 0, q)) others.push([q[0], q[1]]);
-        // the verdict shows from the wide view on (Yi, 2026-10-24: the metres were only seen in the close-up)
+        // the verdict shows from the wide view on (in the close-up alone the metres were easily missed)
         const tag = edgeDraw(age - 0.6) * left;
         Object.assign(VAR_FACTS, { on: true, age, exit: ex, lx, sg, def: defPt, att: attPt, margin, close, defRgb: dc, attRgb: ac, others, tag, feet: fq });
         // the ripples: from the line-setter's deciding part, which lies on the wall, and from the attacker's when he is
@@ -1306,7 +1307,7 @@ export function Telestration({ data, clock, items, surface, focus }: { data: Loa
     inkColour('team', opp, k, st.c1);
     const col = [...st.c1, 1], fin = ex === null ? Math.min(1, Math.max(0, age / 0.4)) : left;
     if (fin > 0.01) layer.push([C[0], C[1], 1, 0], [rad + 0.8, rad + 0.8, KIND.band, Pr.circleA * ax * fin], [rad, 2 * Pr.circleHW * gain, 0, 0], [0, 0, 0, gain], col, col);
-    // the carrier: lit by the spotlight (Yi: no rings here)
+    // the carrier: lit by the spotlight (no rings here)
     pushSpot(C[0], C[1], age, ex, gain);
     // the pressers: every opponent inside the circle, his closing speed over the last 0.3 s
     for (let p = side === 'att' ? nAtt : 0; p < (side === 'att' ? P : nAtt); p++) {
@@ -1328,7 +1329,7 @@ export function Telestration({ data, clock, items, surface, focus }: { data: Loa
     }
   };
 
-  /** a side's block (Yi, 2026-10-22): every outfield player with the rotating double ring, the ones on its hull joined
+  /** a side's block: every outfield player with the rotating double ring, the ones on its hull joined
    *  by welded lines (the units' rule: cut at the inner ring, the ring painted over the seam), pitch_prism's zebra
    *  inside the hull minus the rings, and the hull's area in m² (Opta's measure, through the players) painted at its
    *  middle. Enters in pitch_prism's group cascade: the rings, the lines welding towards each other with sparks, then
@@ -1413,7 +1414,7 @@ export function Telestration({ data, clock, items, surface, focus }: { data: Loa
     const SHOTS = ['SavedShot', 'MissedShots', 'Goal', 'ShotOnPost'];
     const evs = (data.pkg as { events?: { t: number; type: string; player?: number; tags?: string[] }[] }).events ?? [];
     const shotEv = evs.find((e) => SHOTS.includes(e.type) && e.player === shooter && Math.abs(e.t - tt) < 1.5);
-    // (the What-if hands in its own value and kind: its shot-type model, whatif/shot.ts; 2026-10-25)
+    // (the What-if hands in its own value and kind: its shot-type model, whatif/shot.ts)
     const header = it.header ?? !!shotEv?.tags?.includes('Head');
     const xg = it.xg ?? xgFreeze(xs, turn(S), header, opp.map(turn), keeper ? turn(keeper) : null);
     if (focus) focus.current = shooter;
@@ -1444,7 +1445,7 @@ export function Telestration({ data, clock, items, surface, focus }: { data: Loa
       [tp, mixPair(Sh.wash, k), Sh.edgeHW * gain, gain], [...st.w, shown.length], [tint.r, tint.g, tint.b, Sh.shadowA], X);
     // the shooter's ring
     if (Sh.ring) { const [se, ae] = ringEnter(age), [sx, ax] = ex === null ? [1, 1] : ringExit(ex); rings.push({ xy: [S[0], S[1]], side, sc: se * sx * gain, al: ae * ax, player: shooter, style: TELE.ring }); }
-    // the numbers, arriving with the beam (Yi, 2026-10-22): xG on a widget beside his head that rolls to its value
+    // the numbers, arriving with the beam: xG on a widget beside his head that rolls to its value
     // with a glitch; the distance lying along the cone's edge, outside it; the angle lying tangent to the apex arc
     if ((it.labels ?? Sh.labels) && tp > 0) {
       const vx = -uz, vz = ux, al = TELE.unit.labelAlpha * Math.min(1, Math.max(0, (tp - 0.15) / 0.3)), rgb = [...st.w] as [number, number, number];
@@ -1467,9 +1468,9 @@ export function Telestration({ data, clock, items, surface, focus }: { data: Loa
       if (nx * (gx - Pe[0]) + nz * (0 - Pe[1]) > 0) { nx = -nx; nz = -nz; }   // outwards, away from the cone
       const off = Sh.labelM * 0.6 + 0.3 * gain, dpos = 0.55 * el;
       labels.push({ x: S[0] + dxE * dpos + nx * off, z: S[1] + dzE * dpos + nz * off, text: `${Math.round(dist)} m`, alpha: al * Math.min(1, Math.max(0, (tp - 0.4) / 0.3)), sizeM: Sh.labelM * gain, rgb, dir: [dxE, dzE] });
-      // the angle, across the cone 40% of the way out, where a narrow cone is wide enough to hold the number (Yi: no arc),
+      // the angle, across the cone 40% of the way out, where a narrow cone is wide enough to hold the number (no arc),
       // on the bisector of its edges (not the line to the goal's centre, which leans off it from any spot off the
-      // middle; Yi: centred between the edges), the digits centred and the degree sign hanging after them
+      // middle; centred between the edges), the digits centred and the degree sign hanging after them
       const Ra = Math.min(6, Math.max(2.4, 0.4 * L)), rr = Ra + 0.25 * gain + 0.5 * Sh.labelM * 0.85 * gain, mid = (lo + hi) / 2;
       const bx = ux * Math.cos(mid) + vx * Math.sin(mid), bz = uz * Math.cos(mid) + vz * Math.sin(mid);
       labels.push({ x: S[0] + bx * rr, z: S[1] + bz * rr, text: `${Math.round(((hi - lo) * 180) / Math.PI)}°`, alpha: al * 0.9, sizeM: Sh.labelM * 0.85 * gain, rgb, dir: [-bz, bx], nudge: 0.13 });
@@ -1570,7 +1571,7 @@ export function Telestration({ data, clock, items, surface, focus }: { data: Loa
       surfaceColour(TELE.color.white, k, st.w);
       if (fin > 0.01) labels.push({ x: ca.c[0], z: ca.c[1], text: it.label, alpha: TELE.unit.labelAlpha * fin, sizeM: Z.labelM * gain, rgb: [...st.w] as [number, number, number] });
     }
-    // a zone the pitch defines (drawn, a template; not a pocket, which the players' lines define): Yi, 2026-10-23, the
+    // a zone the pitch defines (drawn, a template; not a pocket, which the players' lines define): the
     // rings say "a player" and its corners are none: the same zoom and stripes, its edges a solid line of the units'
     // width meeting cleanly at the corners (one polygon, kind 6, shown whole)
     let zoomA = 1, wholeHW = 0;
@@ -1583,8 +1584,8 @@ export function Telestration({ data, clock, items, surface, focus }: { data: Loa
       wholeHW = (TELE.unit.lineW / 2) * gain;
     }
     if (Z.look === 'rings' && !it.pocket && !it.lines) {
-      // the hull's look on a drawn zone (Yi, 2026-10-22: card 06, the free zone; a zone made by players, the pocket
-      // between their lines, keeps its outline and its unfold along the lines, which he liked): a double ring on every corner (its inner band in the zone's colour), welded lines
+      // the hull's look on a drawn zone (card 06, the free zone; a zone made by players, the pocket
+      // between their lines, keeps its outline and its unfold along the lines): a double ring on every corner (its inner band in the zone's colour), welded lines
       // along the edges, the zebra inside with the rings cut out; the whole zone zooms in from its centroid on the
       // ring's own entrance (a zoom through 106%), and zooms out to leave
       const R0 = TELE.ring, ink = it.ink ?? 'att', side: 'att' | 'def' = ink === 'def' ? 'def' : 'att';
@@ -1652,17 +1653,16 @@ export function Telestration({ data, clock, items, surface, focus }: { data: Loa
   };
 
   useFrame((state) => {
-    const W = window as unknown as { __capture?: boolean; __teleNow?: number };
     // the animation clock: render time; clip time when recording; or set outright by a recording script (__teleNow)
-    const now = W.__teleNow ?? (W.__capture ? clock.t : state.clock.elapsedTime), t = clock.t;
+    const now = hooked<number>('teleNow') ?? (hooked<boolean>('capture') ? clock.t : state.clock.elapsedTime), t = clock.t;
     const s = getSettings(), k = surface ? surface.current : s.tactical ? 1 : 0, gain = TELE.viewGain[s.view] ?? 1;
     // births and exits
     const ids = new Set<string>();
     // design checks: window.__teleExtra adds items (in the frame's first <Telestration>), __teleHide hides ids
-    const W0 = window as unknown as { __teleExtra?: Item[]; __teleHide?: string[] }, extra = W0.__teleExtra && state.gl.info.render.frame !== extraFrame ? W0.__teleExtra : null;
+    const teleExtra = hooked<Item[]>('teleExtra'), teleHide = hooked<string[]>('teleHide'), extra = teleExtra && state.gl.info.render.frame !== extraFrame ? teleExtra : null;
     if (extra) extraFrame = state.gl.info.render.frame;
     for (const it of extra ? [...itemsRef.current, ...extra] : itemsRef.current) {
-      if (W0.__teleHide?.includes(it.id)) continue;
+      if (teleHide?.includes(it.id)) continue;
       const inWin = !it.window || ((it.window.from ?? -Infinity) <= t && t <= (it.window.to ?? Infinity));
       if (!inWin) continue;
       ids.add(it.id);
@@ -1773,7 +1773,7 @@ export function Telestration({ data, clock, items, surface, focus }: { data: Loa
     }
     layer.end(); sparks.end(state.gl.getPixelRatio()); streaks.end(state.gl.getDrawingBufferSize(st.vp)); trails.end();
     st.labels.list = labels;
-    (window as unknown as { __teleState?: unknown }).__teleState = { live: [...st.live.keys()], drawn: layer.count, now, t, layer, trails, nets: st.nets };
+    hook('teleState', { live: [...st.live.keys()], drawn: layer.count, now, t, layer, trails, nets: st.nets });
   });
   return <><primitive object={layer.mesh} /><primitive object={sparks.points} /><primitive object={streaks.mesh} /><GroundLabels store={st.labels} /><XgWidget store={st.xgw} /><XgGroundTag store={st.xgw} /><Spotlights store={st.spots} /><primitive object={trails.mesh} /><SpeedTags store={st.speedTags} /><OffsideWalls store={st.walls} /><VarMarks /><VisionBeam store={st.beams} /><LoftArrows store={st.lofts} /><ControlLayer store={st.ctrl} /></>;
 }

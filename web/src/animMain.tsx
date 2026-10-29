@@ -1,4 +1,5 @@
 import { animFile } from './data/paths';
+import { hook } from './dev';
 import { createRoot } from 'react-dom/client';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
@@ -11,11 +12,11 @@ import { FrameCounter } from './three/FrameCounter';
 import type { Joints } from './data';
 import type { Clock } from './clock';
 
-// A look at the Mixamo animations on our cartoon players (Yi, 2026-10-23, for the pre-match warm-up): /anim.html shows
+// A look at the Mixamo animations on our cartoon players (for the pre-match warm-up): /anim.html shows
 // every converted animation side by side (web/scripts/mixamo_joints.mjs writes them to anim/), each player
 // looping his own; ?a=offensive-idle,victory picks some. window.__setT and __frames for the recording scripts.
 
-// Baseball Walk Out left out (Yi, 2026-10-23); its FBX stays with the others
+// Baseball Walk Out left out; its FBX stays with the others
 const ALL = ['offensive-idle', 'victory', 'warming-up', 'warrior-idle', 'happy-idle', 'orc-idle', 'taunt'];
 interface Anim { name: string; fps: number; frames: number; names: string[]; data: number[] }
 const SPACING = 2.6, FPS = 25, SECONDS = 12;
@@ -60,7 +61,7 @@ function App() {
   const [anims, setAnims] = useState<Anim[] | null>(null);
   useEffect(() => { Promise.all(want.map((n) => fetch(animFile(n)).then((r) => r.json()))).then(setAnims); }, [want]);
   const clock = useMemo<Clock>(() => ({ t: 0, playing: true, rate: 1 }), []);
-  useEffect(() => { (window as unknown as { __setT: (t: number) => void }).__setT = (t: number) => { clock.playing = false; clock.t = t % (SECONDS - 0.1); }; }, [clock]);
+  useEffect(() => { hook('setT', (t: number) => { clock.playing = false; clock.t = t % (SECONDS - 0.1); }); }, [clock]);
   const J = useMemo(() => (anims ? combine(anims) : null), [anims]);
   const looks = useMemo(() => (J ? makeLooks(J.players, J.nAtt, { hair: 1, number: 1, skin: 1 }) : []), [J]);
   const labels = useRef<(HTMLSpanElement | null)[]>([]);

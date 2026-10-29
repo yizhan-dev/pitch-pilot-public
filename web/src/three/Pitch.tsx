@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { useFrame } from '@react-three/fiber';
 import { L, W } from './coords';
 import { GROUND_TONE } from './stadium/night';
+import { lowHas, useQuality } from './quality';
 
 // Grass runs to the front of the stands, 8.5 m beyond the touchlines and goal lines.
 const MARGIN = 8.5;
@@ -12,14 +13,14 @@ const MARGIN = 8.5;
 const GRASS_GLSL = /* glsl */ `
 varying vec2 vPitch; varying vec3 vGrassWorld;
 uniform vec3 uLight, uDark, uWear, uLine; uniform float uGlow;
-// The tactical mode's board (2026-10-22): plain dark grey with the markings in light grey, no hexagons once there
-// (Yi). The change from the grass to the board and back (Yi's pick after six hexagon designs, their refinements and a
-// particle version, 2026-10-22: "edge in", 5 m tiles): a wave runs out from uOrigin (under the ball when the mode
+// The tactical mode's board: plain dark grey with the markings in light grey, no hexagons once there.
+// The change from the grass to the board and back (chosen from six hexagon designs, their refinements and a
+// particle version: "edge in", 5 m tiles): a wave runs out from uOrigin (under the ball when the mode
 // changed); as it reaches a tile, the tile's border lights and the board closes in from the edge to the centre like an
 // iris, a light ring riding the closing edge. uMode is the progress, uReach how far the wave runs.
 uniform float uMode, uReach; uniform vec2 uOrigin;
-// the loading pulse on the board (a clip change in place, game/clipSwap.ts; Yi, 2026-10-26: "I like the earlier hexagon
-// loading style"): the tiles' borders light in rings running out from the centre spot, one every PULSE_S s, while the
+// the loading pulse on the board (a clip change in place, game/clipSwap.ts; the earlier hexagon
+// loading style): the tiles' borders light in rings running out from the centre spot, one every PULSE_S s, while the
 // next clip loads; uPulse its strength 0..1, uPulseT its clock in seconds
 uniform float uPulse, uPulseT;
 
@@ -44,7 +45,7 @@ float gSeg(vec2 p, vec2 a, vec2 b) { vec2 pa = p - a, ba = b - a; float h = clam
 // The antialiasing width of a line is the pixel's footprint on the grass across that line: the screen derivatives of
 // the pitch position projected on the line's normal. At grazing angles a pixel spans metres along the view and
 // centimetres across it; the old width (the pixel's largest footprint, either way) smeared every line running along
-// the view, the touchline an assistant referee looks down (2026-10-22). fwidth of the distance itself fails at the
+// the view, the touchline an assistant referee looks down. fwidth of the distance itself fails at the
 // line's centre, where the distance folds, and broke far lines into dashes.
 float gAA(vec2 n, vec2 dx, vec2 dy) { return max(length(vec2(dot(n, dx), dot(n, dy))), 1e-5); }
 
@@ -58,9 +59,20 @@ float gMarkings(vec2 p) {
   c = max(c, gLine(gSeg(q, vec2(0.0, 34.0), vec2(52.5, 34.0)), HW, ay));     // touchlines
   c = max(c, gLine(gSeg(q, vec2(52.5, 0.0), vec2(52.5, 34.0)), HW, ax));     // goal lines
   c = max(c, gLine(gSeg(q, vec2(0.0, 0.0), vec2(0.0, 34.0)), HW, ax));       // halfway line
+#ifdef GRASS_FAST
+  // (the rest only where it can show: a line's coverage is exactly 0 beyond its half width plus 1.1 of its AA width,
+  // and that width is at most the pixel's footprint, |dx| + |dy|; so a group farther than mg is skipped with no change
+  // to a single pixel, the derivatives taken above, outside the branches)
+  float mg = 0.13 + 2.0 * (length(dx) + length(dy));
+  if (length(p) < 9.15 + mg) {
+#endif
   vec2 nc = p / max(length(p), 1e-4);
   c = max(c, gLine(abs(length(p) - 9.15), HW, gAA(nc, dx, dy)));            // centre circle
   c = max(c, gLine(length(p), 0.13, gAA(nc, dx, dy)));                      // centre spot
+#ifdef GRASS_FAST
+  }
+  if (q.x < 32.35 - mg) return c;                                           // the penalty area's side starts at 32.35 (the arc)
+#endif
   c = max(c, gLine(gSeg(q, vec2(36.0, 20.16), vec2(52.5, 20.16)), HW, ay));  // penalty area
   c = max(c, gLine(gSeg(q, vec2(36.0, 0.0), vec2(36.0, 20.16)), HW, ax));
   c = max(c, gLine(gSeg(q, vec2(47.0, 9.16), vec2(52.5, 9.16)), HW, ay));    // goal area
@@ -83,6 +95,29 @@ vec3 grass(vec2 p, vec3 wp) {
   vec2 fw2 = fwidth(p);
   float fw = max(max(fw2.x, fw2.y), 1e-5);    // metres per pixel
   vec3 V = normalize(cameraPosition - wp);
+#ifdef GRASS_FAST
+  // (the board first: where the hexagons have closed, the grass under it is not worked out at all, the board taking the
+  // markings only, so it comes out the same to the bit. The tactical board, the clip change's board and most of the
+  // pitch while the hexagons turn are such pixels; the hexagon intro alone lagged, the whole
+  // grass being worked out under a closed board. Every derivative is taken here, before any pixel returns)
+  float mk = gMarkings(p);
+  vec3 board = mix(vec3(0.034, 0.037, 0.043), vec3(0.42, 0.46, 0.52), mk * 0.8);   // dark grey; light grey markings
+  const float S = 5.0;
+  float wave = max(18.0, 0.4 * uReach);
+  vec4 hx = vec4(0.0); float phiRaw = 0.0, hd = 0.0, aw = 1e-4;
+  if (uMode > 0.001) {
+    hx = hexTile(p / S);
+    phiRaw = (uMode * (uReach + wave) - length(hx.zw * S - uOrigin)) / wave + (gHash(hx.zw * 7.0 + 3.0) - 0.5) * 0.25;
+    hd = hexDist(hx.xy); aw = max(fwidth(hd), 1e-4);
+    if (phiRaw >= 1.0) {
+      if (uPulse <= 0.001) return board;
+      float dC = length(hx.zw * S), run = 16.0, period = 1.15, ring = mod(uPulseT, period) / period * (uReach + run) - dC;
+      float tile = exp(-pow(ring / run * 2.6, 2.0)) * step(-run, ring);
+      float pw = 0.05 / S, pseam = 1.0 - smoothstep(pw, pw + aw, 0.5 - hd);
+      return board + vec3(0.5, 0.8, 0.85) * uPulse * tile * (pseam * 0.55 + 0.03);
+    }
+  }
+#endif
 
   // Mowing: 14 bands across the length, each mown towards +y or -y (pitch y is world -z).
   // A band looks light when the viewer looks along the lay of the blades and dark when the tips point at him,
@@ -90,7 +125,11 @@ vec3 grass(vec2 p, vec3 wp) {
   // Mowing as a groundsman marks it: 5.5 m bands measured out from each goal line, so the goal area is one band and
   // the penalty area three; the remainder makes one 6 m band centred on the halfway line. The two halves mirror.
   const float BW = 5.5, HALF = 52.5, EDGE = 49.5;           // 9 bands of 5.5 m from each goal line, then the middle band
+#ifdef GRASS_LOW
+  float px = p.x + HALF, d = min(px, 2.0 * HALF - px);
+#else
   float px = p.x + HALF + (gNoise(p * vec2(0.5, 0.12)) - 0.5) * 0.12, d = min(px, 2.0 * HALF - px);
+#endif
   float band = d < EDGE ? sin(3.14159 * d / BW) : -sin(0.5 * 3.14159 * clamp((d - EDGE) / (HALF - EDGE), 0.0, 1.0));
   float k = max(0.11, 3.14159 * fw / BW);
   float dir = mix(-1.0, 1.0, smoothstep(-k, k, band));
@@ -112,16 +151,34 @@ vec3 grass(vec2 p, vec3 wp) {
   float big = 0.6 * gNoise(p / 11.0) + 0.4 * gNoise(p / 3.4 + 17.0) - 0.5;
   col *= 1.0 + big * 0.16;
   col = mix(col, col * vec3(1.07, 1.05, 0.82), smoothstep(0.12, 0.45, big) * 0.45);
-  col *= 1.0 + (gNoise(p / 0.85 + 5.0) - 0.5) * 0.08 * gFade(0.85, fw);
-  float clump = gNoise(p / 0.16 + 11.0) - 0.5;
-  col *= 1.0 + clump * 0.12 * gFade(0.16, fw);
-  col *= 1.0 + (gNoise(p * vec2(1.0 / 0.016, 1.0 / 0.06) + 3.0) - 0.5) * 0.26 * gFade(0.016, fw);
-
-  // Light wear in the goalmouths and on the spots.
+  // Light wear in the goalmouths and on the spots (its shape here, its noise below).
   vec2 q = abs(p);
   float wear = max(0.85 * (1.0 - smoothstep(0.25, 1.0, length((q - vec2(49.6, 0.0)) / vec2(5.5, 4.2)))),
                0.6 * (1.0 - smoothstep(0.2, 1.0, min(length(q - vec2(41.5, 0.0)) / 1.3, length(p) / 1.5))));
+#ifdef GRASS_FAST
+  // (a layer whose weight is 0 here, faded out with distance or outside the worn patches, is not worked out: the result
+  // is the same to the bit, as multiplying by 1.0 or mixing by 0.0 leaves the colour as it was)
+  float f85 = gFade(0.85, fw), f16 = gFade(0.16, fw), f016 = gFade(0.016, fw);
+#ifndef GRASS_LOW
+  if (f85 > 0.0) col *= 1.0 + (gNoise(p / 0.85 + 5.0) - 0.5) * 0.08 * f85;
+#endif
+  float clump = f16 > 0.0 || wear > 0.0 ? gNoise(p / 0.16 + 11.0) - 0.5 : 0.0;
+  col *= 1.0 + clump * 0.12 * f16;
+#ifndef GRASS_LOW
+  if (f016 > 0.0) col *= 1.0 + (gNoise(p * vec2(1.0 / 0.016, 1.0 / 0.06) + 3.0) - 0.5) * 0.26 * f016;
+#endif
+  if (wear > 0.0) wear *= smoothstep(0.4, 0.85, 0.55 * gNoise(p / 0.55 + 31.0) + 0.55 * gNoise(p / 2.1 + 7.0));
+#else
+#ifndef GRASS_LOW
+  col *= 1.0 + (gNoise(p / 0.85 + 5.0) - 0.5) * 0.08 * gFade(0.85, fw);
+#endif
+  float clump = gNoise(p / 0.16 + 11.0) - 0.5;
+  col *= 1.0 + clump * 0.12 * gFade(0.16, fw);
+#ifndef GRASS_LOW
+  col *= 1.0 + (gNoise(p * vec2(1.0 / 0.016, 1.0 / 0.06) + 3.0) - 0.5) * 0.26 * gFade(0.016, fw);
+#endif
   wear *= smoothstep(0.4, 0.85, 0.55 * gNoise(p / 0.55 + 31.0) + 0.55 * gNoise(p / 2.1 + 7.0));
+#endif
   col = mix(col, uWear * (0.9 + 0.2 * clump), wear * 0.3);
 
   // Grass sheen at grazing angles: lighter and a little less saturated far away.
@@ -130,22 +187,35 @@ vec3 grass(vec2 p, vec3 wp) {
   col = mix(col, mix(vec3(lum), col, 0.7) * 1.25, gr * 0.45);
 
   // Paint, slightly uneven.
-  float paint = 0.9 + 0.1 * gNoise(p / 0.05 + 23.0) * gFade(0.05, fw) + 0.05 * (1.0 - gFade(0.05, fw));
+#ifndef GRASS_FAST
   float mk = gMarkings(p);
+#endif
+#ifdef GRASS_LOW
+  float paint = 0.95;
+#elif defined(GRASS_FAST)
+  float paint = 0.95;   // (only where there is paint)
+  if (mk > 0.0) paint = 0.9 + 0.1 * gNoise(p / 0.05 + 23.0) * gFade(0.05, fw) + 0.05 * (1.0 - gFade(0.05, fw));
+#else
+  float paint = 0.9 + 0.1 * gNoise(p / 0.05 + 23.0) * gFade(0.05, fw) + 0.05 * (1.0 - gFade(0.05, fw));
+#endif
   vec3 face = mix(col, uLine * paint, mk * 0.92);
+#ifndef GRASS_FAST
   vec3 board = mix(vec3(0.034, 0.037, 0.043), vec3(0.42, 0.46, 0.52), mk * 0.8);   // dark grey; light grey markings
+#endif
 
   if (uMode <= 0.001) return face;
   // hexagons: S across the flats; each tile's progress phi from its centre's distance behind the wave, a little
-  // jitter per tile; line widths fixed in metres. The derivative is taken before the branches. Smoothness (Yi: too
-  // stiff with 5 m tiles): the wave runs only as far as this change's farthest corner (uReach), and its band is wide,
+  // jitter per tile; line widths fixed in metres. The derivative is taken before the branches. Smoothness (too
+  // stiff with 5 m tiles otherwise): the wave runs only as far as this change's farthest corner (uReach), and its band is wide,
   // so several rings of tiles close at once, each over about half a second, easing in and out; the border fades in and
   // out, a soft light rides the closing edge, and the grass left inside dims as it closes, so the last of it fades
+#ifndef GRASS_FAST
   const float S = 5.0;
   float wave = max(18.0, 0.4 * uReach);
   vec4 hx = hexTile(p / S);
   float phiRaw = (uMode * (uReach + wave) - length(hx.zw * S - uOrigin)) / wave + (gHash(hx.zw * 7.0 + 3.0) - 0.5) * 0.25;
   float hd = hexDist(hx.xy), aw = max(fwidth(hd), 1e-4);
+#endif
   if (phiRaw <= 0.0) return face;
   if (phiRaw >= 1.0) {
     if (uPulse <= 0.001) return board;
@@ -166,8 +236,11 @@ vec3 grass(vec2 p, vec3 wp) {
 }
 `;
 
-function grassMaterial(glow: number) {
-  const m = new THREE.MeshStandardMaterial({ roughness: 0.93, metalness: 0 });
+/** low: the low graphics tier's grass (three/quality.ts): Lambert lighting, and half the layers of noise (the jitter of
+ *  the mowing bands, the 85 cm patches, the blades and the paint's unevenness left out; the stripes, the patches, the
+ *  clumps, the wear and the markings as they are) */
+function grassMaterial(glow: number, low = false) {
+  const m: THREE.MeshStandardMaterial | THREE.MeshLambertMaterial = low ? new THREE.MeshLambertMaterial() : new THREE.MeshStandardMaterial({ roughness: 0.93, metalness: 0 });
   const uniforms = {
     uLight: { value: new THREE.Color('#3d7036') }, uDark: { value: new THREE.Color('#30602d') },
     uWear: { value: new THREE.Color('#6f7353') }, uLine: { value: new THREE.Color('#eef1ea') }, uGlow: { value: glow },
@@ -180,11 +253,13 @@ function grassMaterial(glow: number) {
       .replace('#include <common>', '#include <common>\nvarying vec2 vPitch; varying vec3 vGrassWorld;')
       .replace('#include <begin_vertex>', '#include <begin_vertex>\nvPitch = position.xy; vGrassWorld = (modelMatrix * vec4(position, 1.0)).xyz;');
     sh.fragmentShader = sh.fragmentShader
-      .replace('#include <common>', '#include <common>\n' + GRASS_GLSL)
-      .replace('#include <map_fragment>', 'vec3 grassCol = grass(vPitch, vGrassWorld); diffuseColor.rgb = grassCol;')
+      .replace('#include <common>', '#include <common>\n' + (low ? '#define GRASS_LOW\n' : '') + '#define GRASS_FAST\n' + GRASS_GLSL)
+      // (the low tier: the standard material's faint grey sheen, which Lambert lacks, as a lift of the colour, the grass
+      // and the board alike: about 0.02 of linear light under the night's lights, measured from the broadcast view)
+      .replace('#include <map_fragment>', `vec3 grassCol = grass(vPitch, vGrassWorld); diffuseColor.rgb = grassCol${low ? ' + vec3(0.015)' : ''};`)
       .replace('#include <emissivemap_fragment>', 'totalEmissiveRadiance = grassCol * uGlow;');
   };
-  m.customProgramCacheKey = () => 'grass-v20';
+  m.customProgramCacheKey = () => `grass-v21${low ? '-low' : ''}-fast`;
   return m;
 }
 
@@ -205,7 +280,7 @@ function landGeometry() {
 
 /** glow: emissive share of the grass colour, standing in for even floodlighting (0 = lit only by scene lights) */
 /** surround: a dark ground plane all round, for scenes that have no ground of their own */
-/** ground: instead, the stadium's ground carried on to the horizon (the game, for 近景 and 远景; Yi 2026-10-22: the
+/** ground: instead, the stadium's ground carried on to the horizon (the game, for aerialNear and aerialFar: the
  *  light grey octagon ended in a black void, the stadium out of nowhere): the octagon's own grey and finish from its
  *  edge, then darker and darker, the night by about 380 m */
 /** mode: the tactical mode's change of pitch, driven by the caller every frame: current, the hexagons' progress 0
@@ -214,7 +289,9 @@ function landGeometry() {
 /** pulse, pulseT: the loading pulse's strength (0..1) and clock (s), on the board while a clip changes in place */
 export interface PitchMode { current: number; origin: THREE.Vector2; reach: number; pulse?: number; pulseT?: number }
 export function Pitch({ glow = 0, surround = true, ground = false, mode }: { glow?: number; surround?: boolean; ground?: boolean; mode?: PitchMode }) {
-  const mat = useMemo(() => grassMaterial(glow), [glow]);
+  const low = useQuality().tier === 'low' && lowHas('pitch');
+  const mat = useMemo(() => grassMaterial(glow, low), [glow, low]);
+  useEffect(() => () => mat.dispose(), [mat]);
   const land = useMemo(() => (ground ? landGeometry() : null), [ground]);
   useEffect(() => () => land?.dispose(), [land]);
   useFrame(() => {
@@ -229,7 +306,10 @@ export function Pitch({ glow = 0, surround = true, ground = false, mode }: { glo
       </mesh>
       {land ? (
         // well below the grass and the stadium's ground, so they never fight for depth at a distance
-        <mesh rotation-x={-Math.PI / 2} position-y={-0.3} geometry={land}>
+        // (drawn after everything opaque, three/quality.ts xOn 'latefill': under the grass and behind the stands it was
+        // shaded and then covered, about a sixth of the frame; drawn last, the depth test turns those pixels away first.
+        // Opaque, so the picture is the same)
+        <mesh rotation-x={-Math.PI / 2} position-y={-0.3} geometry={land} renderOrder={10}>
           <meshStandardMaterial vertexColors roughness={0.9} metalness={0} />
         </mesh>
       ) : surround && (

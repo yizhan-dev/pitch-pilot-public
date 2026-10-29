@@ -3,8 +3,8 @@
 // draft.ts's railMenu), for the headless screenshots.
 import { useSyncExternalStore } from 'react';
 
-export type PanelKey = 'levels' | 'mode' | 'view' | 'presets' | 'style' | 'rail' | 'display' | 'games' | 'show' | 'credits';
-const KEYS: PanelKey[] = ['levels', 'mode', 'view', 'presets', 'style', 'rail', 'display', 'games', 'show', 'credits'];
+export type PanelKey = 'levels' | 'mode' | 'view' | 'presets' | 'style' | 'rail' | 'display' | 'games' | 'show';
+const KEYS: PanelKey[] = ['levels', 'mode', 'view', 'presets', 'style', 'rail', 'display', 'games', 'show'];
 
 let open: PanelKey | null = (() => {
   if (typeof location === 'undefined') return null;

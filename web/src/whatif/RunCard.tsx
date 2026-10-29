@@ -4,8 +4,8 @@ import { namer } from './names';
 import { useLand } from './state';
 import type { Outcome } from './onball';
 
-// The off-ball what-if's result (step 3, 2026-10-25; Yi's answer of 2026-10-24: the man on the ball keeps his real pass;
-// report the real receiver's chance and space, and the chance had the pass gone to the runner): what can become of the
+// The off-ball what-if's result (step 3; the man on the ball keeps his real pass, and the card reports the real
+// receiver's chance and space, and the chance had the pass gone to the runner): what can become of the
 // real pass with the new run, a click plays another; the real receiver's chance of receiving and keeping it and the
 // nearest defender at his touch, with the runner's real run and with this one (the same simulation, only the run
 // differs); the defender the run moved most; had the pass gone into the run, his chance of receiving it, which plays

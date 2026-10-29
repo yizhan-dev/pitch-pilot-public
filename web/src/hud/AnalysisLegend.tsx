@@ -11,17 +11,17 @@ import { XT_RANGE } from './analysis';
 import { XT_FLOOR } from './space';
 import { tr } from '../i18n';
 
-// The legend of the 战术 mode's layers (the HUD preview's draft, Yi 2026-10-23): above the minimap, a row for the base map
+// The legend of the 战术 mode's layers (the HUD preview's draft): above the minimap, a row for the base map
 // (its colour scale and what it shows) and one for the annotation (what the marks mean, and the moment's figure: who is
 // on the ball for the passing options). Placeholders carry 示例. The threat, shot and chance-creation figures went with
-// their marks (Yi, 2026-10-25; code before: <private-workspace>).
+// their marks (code before: <private-workspace>).
 
 const BASE_LINE: Record<string, { line: React.ReactNode; example: boolean }> = {
-  // Yi, 2026-10-25: "make Fernandez & Bornn one line itself on second line"
+  // the model's name, Fernández & Bornn, on a second line of its own
   pc: { line: <>Who controls each area first<br />Fernández &amp; Bornn</>, example: false },
   lanes: { line: <>Wing, half-space, centre, half-space, wing; cut at the boxes and halfway<br />Positional play’s 20 zones</>, example: false },
   zones: { line: <>Six bands along, three across; zone 14 is central, just outside the box<br />The 18-zone grid</>, example: false },
-  // Yi, 2026-10-27: the xT map; the notebook iterates to convergence, so the figure is the chance of a goal from a possession here
+  // the xT map; the notebook iterates to convergence, so the figure is the chance of a goal from a possession here
   xt: { line: <>Chance the side on the ball goes on to score from here, passing, carrying or shooting<br />Karun Singh’s xT, fitted on 2,000 matches of regular play</>, example: false },
 };
 const ANNOT_LINE: Record<string, { line: string; example: boolean }> = {
@@ -52,7 +52,7 @@ export function AnalysisLegend({ pkg, clock, looks }: { pkg: ClipPkg; clock: Clo
   const bar = b === 'pc' ? pcLegendBar(attTeam, defTeam) : b === 'xt' ? xtLegendBar() : null;
   const ends = b === 'pc' ? [TEAM_LABEL[att], TEAM_LABEL[att === 'home' ? 'away' : 'home']] : b === 'xt' ? [`under ${pct(XT_FLOOR)}`, pct(XT_RANGE.max)] : null;
   return (
-    <div className="hud-legend hud-glass low" aria-label={tr('图例', 'Legend')}>   {/* bottom centre: no radar in Tactics (the Shell chat, 2026-10-25) */}
+    <div className="hud-legend hud-glass low" aria-label={tr('图例', 'Legend')}>   {/* bottom centre: no radar in Tactics */}
       {bm && bl && (
         <div className="hud-legend-row">
           <p className="hud-legend-h"><b>{bm.label}</b>{bm.abbr && <span>{bm.abbr}</span>}{bl.example && <i className="hud-tag">{tr('示例', 'Example')}</i>}</p>

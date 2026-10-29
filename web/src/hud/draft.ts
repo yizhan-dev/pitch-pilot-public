@@ -1,6 +1,6 @@
-// HUD-local state for the designs Yi is judging in the HUD preview (2026-10-23): the 画板 mode, 观赛's display options, the
-// 战术 mode's base map and annotation, and the drawings. None of it is in src/game/settings.ts yet; once Yi accepts a
-// design, the fields move there for the 3D side (docs/plans/hud-notes.md). Each store is read with `useStore(store)` in
+// HUD-local state for the designs on trial in the HUD preview: the 画板 mode, 观赛's display options, the
+// 战术 mode's base map and annotation, and the drawings. None of it is in src/game/settings.ts yet; once a
+// design is accepted, the fields move there for the 3D side (docs/plans/hud-notes.md). Each store is read with `useStore(store)` in
 // React (a name the hooks linter recognises), or `store.get()` outside it; addresses open them for screenshots (?draw=1, ?base=pc|v|q, ?annot=run|threat|shot|create|pass,
 // ?sub=<sub-option>).
 import { useEffect, useRef, useSyncExternalStore } from 'react';
@@ -37,29 +37,29 @@ const Q = typeof location === 'undefined' ? new URLSearchParams() : new URLSearc
 // ---- 画板, the fourth mode (draft): a HUD flag over the settings' mode, which stays 观赛 underneath (grass, no layers)
 export const drawMode = store<boolean>(Q.get('draw') === '1');
 
-// (观赛's display options moved to the Shell chat's Show menu, settings.ts `show`, 2026-10-25)
+// (观赛's display options moved to the Show menu, settings.ts `show`)
 
 // ---- 战术: one base map and one annotation, each optional
-// Retired by Yi (2026-10-24): space value V as a map of its own (it is the network's output from the ball's position
+// Retired: space value V as a map of its own (it is the network's output from the ball's position
 // alone; it stays inside Q) and the runs' SOG / SGG (rarely there at a random pause, noise when there; code in
-// <private-workspace>). Retired from the marks by Yi
-// (2026-10-25): threat ΔxT (it may come back as a showing option of the pen; overlayShapes.tsx keeps threatShapes),
+// <private-workspace>). Retired from the marks:
+// threat ΔxT (it may come back as a showing option of the pen; overlayShapes.tsx keeps threatShapes),
 // shots xG / xGOT and chance creation xA / potential xA (code before: <private-workspace>).
-// Space quality Q left the menu too (Yi, 2026-10-26: "for this MVP let's just delete space quality"; BaseMap3D still draws it
-// for an Explain script's board). In its place two fixed grids a commentator can talk over (Yi, the same day: "the overlay of
-// guardiola's zonal soccer concept, or the traditional dividing rule that has zone 14"): the same for every moment and team.
+// Space quality Q left the menu too (cut for the MVP; BaseMap3D still draws it
+// for an Explain script's board). In its place two fixed grids a commentator can talk over (Guardiola's positional-play
+// lanes, and the traditional division of the pitch that has zone 14): the same for every moment and team.
 export type BaseKey = 'pc' | 'lanes' | 'zones' | 'xt';
 export type AnnotKey = 'pass';
 export const BASES: { key: BaseKey; label: string; abbr?: string }[] = [
   { key: 'pc', label: tr('球场控制', 'Pitch control') },
   { key: 'lanes', label: 'Five lanes' },   // positional play's lanes: wing, half-space, centre
   { key: 'zones', label: 'Zone 14' },      // the classic 18 zones, zone 14 picked out
-  { key: 'xt', label: 'Expected threat', abbr: 'xT' },   // Karun Singh's xT, project_kick's surface (Yi, 2026-10-27)
+  { key: 'xt', label: 'Expected threat', abbr: 'xT' },   // Karun Singh's xT, project_kick's surface
 ];
 /** each annotation's sub-options, as a type: a typo in a sub-option no longer compiles (review F16) */
 export interface AnnotationSubs { pass: 'prob' }
 export const ANNOTS: { key: AnnotKey; label: string; subs: { key: AnnotationSubs[AnnotKey]; label: string }[] }[] = [
-  // Yi, 2026-10-25: only the pass probability stays (line breaks, option value and better team-mates removed): a plain switch
+  // only the pass probability stays (line breaks, option value and better team-mates removed): a plain switch
   { key: 'pass', label: tr('传球', 'Passing'), subs: [] },
 ];
 const isBase = (k: string | null): k is BaseKey => BASES.some((b) => b.key === k);
@@ -74,12 +74,12 @@ export const annotSub = store<AnnotationSubs>((() => {
   if (isAnnot(annotation) && offered) (chosen as Record<AnnotKey, string>)[annotation] = offered.key;
   return chosen;
 })());
-/** the offside line (Yi, 2026-10-25: one click, universal; the players in an offside position lit), a switch of its own
- *  beside the annotation, so it can be on with the passing mark (Yi: "yes, we can, but we will make that offside path
- *  not available"); chat 1's offside item draws it (TacticsItems.tsx). ?offside=1 (or the older ?annot=offside) */
+/** the offside line (one click, universal; the players in an offside position lit), a switch of its own
+ *  beside the annotation, so it can be on with the passing mark (the pass to an offside man then not offered); the
+ *  telestration offside item draws it (TacticsItems.tsx). ?offside=1 (or the older ?annot=offside) */
 export const offsideMark = store<boolean>(Q.get('offside') === '1' || Q.get('annot') === 'offside');
-/** the shot chance (Yi, 2026-10-26: "at any on ball moment, we can draw passing probability and we can draw xG"; "it
- *  should be in the MARK section"): the player on the ball's xG if he shot now, chat 1's shot cone; a switch of its own,
+/** the shot chance (at any on-ball moment, beside the passing probability; in the MARK section): the player on the
+ *  ball's xG if he shot now, the telestration shot cone; a switch of its own,
  *  greyed with nobody on the ball, combinable with Passing and the offside line. ?xg=1 */
 export const xgMark = store<boolean>(Q.get('xg') === '1');
 /** the clip's on-ball moments, for the Tactics pause's previous / next event (kept by TacticsItems from the package's
@@ -92,8 +92,8 @@ export const annotLabel = (key: AnnotKey, sub: string) => {
 };
 
 // ---- 画板's drawings, in pitch metres (the 3D side would lay them on the grass)
-// The Tactics pen (Yi with chat 1, 2026-10-25, telestration-notes §22): each tool a gesture, each stroke one of chat 1's
-// items (Pen3D.tsx): click players (highlight, vision, speed trail; the passing network left out, Yi 2026-10-26), drag
+// The Tactics pen (telestration-notes §22): each tool a gesture, each stroke one of the telestration
+// items (Pen3D.tsx): click players (highlight, vision, speed trail; the passing network left out), drag
 // from a player (a pass arrow,
 // ground or lofted), drag a player (his run's chevrons), click players in order (a link: the marking pair, a line, or an
 // area when the first is clicked again), a zone (rectangle, circle or polygon), two points (a distance). 'dribble',
@@ -128,7 +128,7 @@ export const TOOLS: { key: Tool; label: string; how: string }[] = [
   { key: 'pass', label: 'Pass', how: 'Drag from a player' },
   { key: 'run', label: 'Run', how: 'Drag a player' },
   { key: 'link', label: 'Link', how: 'Click players in turn' },
-  { key: 'zone', label: 'Zone', how: 'Click corners, then the first' },   // a polygon only (Yi, 2026-10-26: no box or circle)
+  { key: 'zone', label: 'Zone', how: 'Click corners, then the first' },   // a polygon only (no box or circle)
   { key: 'measure', label: 'Distance', how: 'Drag two points' },
 ];
 export const INKS: { key: Ink; label: string; css: string }[] = [
@@ -141,12 +141,12 @@ export const AIDS: { key: Aid; label: string }[] = [
 ];
 export const tool = store<Tool>('pass');
 /** the player under the pointer, as the camera director's hover triangle shows him (-1 for none): the pen draws on the
- *  player the triangle points at (Yi, 2026-10-26: "when we hover on a player, it needs to show the floating triangle to
- *  know what we are trying to draw on"). Set by the Shell chat's Director (hud-notes.md request 14) */
+ *  player the triangle points at, so the viewer sees whom a stroke will be drawn on. Set by the camera Director
+ *  (three/camera/Director.tsx; hud-notes.md request 14) */
 export const hoveredPlayer = store<number>(-1);
 /** a drawn mark under the pointer and the one selected (their strokes' ids), and where the selected one's delete button
- *  goes on the page (Yi, 2026-10-26: "when we hover on the effect ... we can select it, then it can show a delete button,
- *  we can click to delete this element"); Pen3D keeps them */
+ *  goes on the page (a hovered mark can be selected; the selected one shows a delete button that removes it);
+ *  Pen3D keeps them */
 export const hoveredStroke = store<string | null>(null);
 export const selectedStroke = store<string | null>(null);
 export const selectedAt = store<[number, number] | null>(null);
@@ -174,20 +174,20 @@ export const FRAME_VISIBLE_TOLERANCE_SECONDS = 0.15;
 /** after play passes a saved frame, its strokes fade over this long, seconds */
 export const FRAME_FADE_SECONDS = 1.5;
 /** save the strokes being drawn as a freeze frame at clip time t (replacing one saved at the same moment); the replay
- *  plate's save button (every drawing saves itself since 2026-10-26: syncFrame) */
+ *  plate's save button (every drawing also saves itself: syncFrame) */
 export const saveFreezeFrame = (t: number, drawn: Stroke[] = strokes.get()) => {
   if (!drawn.length) return;
   frames.set((saved) => [...saved.filter((f) => Math.abs(f.t - t) > FRAME_MERGE_TOLERANCE_SECONDS), { t, strokes: drawn }].sort((a, b) => a.t - b.t));
 };
 
-// ---- the freeze frames in the Tactics mode (Yi, 2026-10-26): every drawing is one, kept per clip
+// ---- the freeze frames in the Tactics mode: every drawing is one, kept per clip
 // - a drawing on the paused picture saves itself as it is drawn (a tick on the replay plate's timeline and an entry in
 //   its list, where it can be deleted): every change to the strokes writes the frame at their moment, and with the last
 //   stroke gone the frame goes (syncFrame, from the stroke helpers);
-// - play from a drawing: its marks animate out first, then play goes on ("we should first animate out the
-//   visualizations, and then keep playing"; useFreezeFramePlay holds the clock through chat 1's exits);
-// - play reaching a frame pauses on it, its drawing coming back ("will not continue unless player hit play button
-//   again"); a frame paused on (the list, a press near its tick) is opened to draw on (Pen3D: openFrame);
+// - play from a drawing: its marks animate out first, then play goes on (useFreezeFramePlay holds the clock
+//   through the telestration items' exits);
+// - play reaching a frame pauses on it, its drawing coming back, and goes on only when play is pressed
+//   again; a frame paused on (the list, a press near its tick) is opened to draw on (Pen3D: openFrame);
 // - each clip keeps its own frames while the page is open (switchClip).
 /** the clip time of the drawing on the pitch (its frame's), null with none */
 let drawingT: number | null = null;
@@ -209,9 +209,9 @@ export const drawingAt = () => drawingT;
 export const openFrame = (f: Frame) => { strokes.set(f.strokes); undone.set([]); drawingT = f.t; };
 /** the drawing leaves the pitch (play, a glide, another moment or clip); its frame stays saved */
 export const leaveDrawing = () => { strokes.set([]); undone.set([]); drawingT = null; selectedStroke.set(null); hoveredStroke.set(null); };
-/** the drawing's marks are animating out (Pen3D leaves them out of the scene, so chat 1's exits run) */
+/** the drawing's marks are animating out (Pen3D leaves them out of the scene, so the telestration items' exits run) */
 export const drawingExit = store<boolean>(false);
-/** the longest of chat 1's exits (a ring's, 0.34 s) and a little, seconds */
+/** the longest of the telestration items' exits (a ring's, 0.34 s) and a little, seconds */
 export const EXIT_S = 0.4;
 /** the drawing animates out, then `then` (play goes on, a glide starts); at once with none */
 export const exitDrawing = (then?: () => void) => {

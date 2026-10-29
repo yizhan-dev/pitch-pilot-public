@@ -1,11 +1,12 @@
 import { modelFile } from '../data/paths';
-// The on-ball what-if (Yi, 2026-10-24: "indicate an intended passing location, then simulate until the next event"): at a
+import { hooked } from '../dev';
+// The on-ball what-if, an intended passing location simulated to the next event: at a
 // reception the viewer picks where the ball should go; the ball is passed there along the ground, the other players
 // answer it (the response model, web/src/response/engine.ts), and the first touch decides what happens (cut out,
-// received and kept, received and tackled, nobody reaches it, it goes out). Grown from the 2D check page's 改落点
-// (ballTo / landOutcomes / landBranch; that page, responseMain.ts, was removed on 2026-10-26); here the pass moves at a
+// received and kept, received and tackled, nobody reaches it, it goes out). Grown from the 2D check page's landing-point
+// editor (ballTo / landOutcomes / landBranch; that page, responseMain.ts, has been removed); here the pass moves at a
 // real pass's pace and the first touch is looked for over 4 s, not 2, so long passes are reached as they are on the
-// pitch (2026-10-24). Everything is a simulation, not what happened.
+// pitch. Everything is a simulation, not what happened.
 // Frames: the response model works with the team on the ball attacking +x and listed first; a package lists its
 // attacking team first, attacking +x, so when the receiver is on the other team the scene is turned round (x and y
 // negated, the two teams swapped) and turned back after.
@@ -75,11 +76,20 @@ const sub = (a: XY, b: XY): XY => [a[0] - b[0], a[1] - b[1]], len = (a: XY) => M
 /** steps between the reception and the strike for a pass the way he faces (the kick animation's wind-up, 0.42 s to the
  *  foot's contact) */
 export const HOLD = 4;
-/** time on the ball before the strike, by how far he must turn to face the pass (Yi, 2026-10-24: a pass behind him is
+/** a first-time ball: struck the step after the pause (chain.ts, the "first time" way: one touch, with the outside of
+ *  the boot for example) */
+export const FIRST_HOLD = 1;
+/** time on the ball before the strike, by how far he must turn to face the pass (a pass behind him is
  *  not a spin and a strike but a stop, a turn with the ball, then the pass). This match's 84 reception-then-pass pairs:
  *  the median from the touch to the pass 0.6 to 0.9 s turning under 90 degrees, about 1.1 s at 90 to 150, 1.7 s past
  *  150 (thin: 15 pairs over 90). Here: the wind-up alone up to 30 degrees, then linear to 1.3 s at 180. */
-export const holdFor = (turnDeg: number) => Math.round((0.4 + (0.9 * Math.max(0, turnDeg - 30)) / 150) / DT);
+export const holdFor = (turnDeg: number) => {
+  // (window.__wiHold: every pass struck after that many steps whatever the turn, for looking at a first-time ball such
+  // as 17:28's #32 to #13 with the outside of the boot; checks only)
+  const force = hooked<number>('wiHold');
+  if (force !== undefined) return force;
+  return Math.round((0.4 + (0.9 * Math.max(0, turnDeg - 30)) / 150) / DT);
+};
 /** the angle (degrees) between the way he faces and the way to Q */
 export function turnTo(c: Scene0, Q: XY): number {
   const p = c.now[c.kicker], d = sub(Q, p), dl = len(d);
@@ -89,14 +99,14 @@ export function turnTo(c: Scene0, Q: XY): number {
  *  for up to 6 s (the response model's 2 s answers chained, respondN) */
 export const TOUCH_N = 45, SIM_N = 60;
 /** the pass's pace, from this match's completed ground passes (137 in the clips, the 25 Hz ball from the strike to the
- *  touch, measured 2026-10-26: struck at 11.6 / 14.9 / 17.8 / 22.9 m/s for 5-10 / 10-15 / 15-22 / 22-30 m, arriving at
+ *  touch, measured: struck at 11.6 / 14.9 / 17.8 / 22.9 m/s for 5-10 / 10-15 / 15-22 / 22-30 m, arriving at
  *  7-8 m/s, so slowing at 5.3 / 6.6 / 7.0 / 8.3 m/s², the more the harder they are hit, as drag does): they reach their
  *  man at about 8 m/s (softer when short) and slow at 4.5 + 0.15 m/s² a metre on the way, so 12 m takes 1.1 s and 26 m
  *  1.7 s as theirs do (before, 5.5 m/s² for every pass: a 26 m ball struck at 18.7 m/s took 1.95 s, theirs 1.8); past
  *  the point the ball rolls on, slowing at 2 m/s² */
 const ROLL_DEC = 2, arrival = (d: number) => Math.min(8, 4 + 0.35 * d), passDec = (d: number) => 4.5 + 0.15 * d;
 /** a lofted pass, from this match's chipped and long passes (27 with the ball 1.5 m up or more, the 25 Hz ball from the
- *  strike to the landing, measured 2026-10-26: 8-15 m chips 1.3 s in the air and 2.6 m up, 22-32 m 2.8 s and 4.9 m,
+ *  strike to the landing, measured: 8-15 m chips 1.3 s in the air and 2.6 m up, 22-32 m 2.8 s and 4.9 m,
  *  long balls of 32-49 m 2.8 s and 6.5 m, struck at 12 / 22 / 26 m/s): it lands on the point after 0.8 s + 0.05 s a
  *  metre (26 m: 2.1 s; at most 2.9 s), its arc gravity's for a chip (9.81 m/s²), flattening to 7 m/s² by 45 m (long
  *  balls are driven, and drag and backspin flatten them), slowing 1.5 m/s² across the ground; then one bounce (0.45 of
@@ -116,12 +126,11 @@ export const loftApex = (d: number) => (loftG(d) * loftTime(d) ** 2) / 8;
 /** the height the intended receiver takes a lofted ball at: thigh or chest, or if no one can, up to his head (anyone
  *  may still touch it up to 2 m, the first-touch resolver's zOutfield) */
 const REACH_Z = [1.5, 1.9];
-/** a header instead (the what-if's third way of playing a lofted ball, 2026-10-27, Yi: "they are always ground shot,
- *  never header or a volley"): he meets it at head height, 1.3 m (shot.ts HEAD_Z, stooping) up to the resolver's 2.0 m */
+/** a header instead (the what-if's third way of playing a lofted ball, so it does not always end in a ground shot):
+ *  he meets it at head height, 1.3 m (shot.ts HEAD_Z, stooping) up to the resolver's 2.0 m */
 export const HEAD_Z: [number, number] = [1.3, 2.0];
 /** or at his feet: he runs on a step or two and lets it drop to hip height or lower (a volley, or a drive off the
- *  bounce) rather than take a chest-high ball (Yi, 2026-10-27: "he either keep running a few more steps for the ball
- *  to fall lower, or run toward ball earlier, to make it a header") */
+ *  bounce) rather than take a chest-high ball (the other way out is to run towards the ball earlier, for a header) */
 export const FOOT_Z = 1.0;
 /** where the man a lofted pass is meant for meets it: at his chest or thigh (REACH_Z), his head (HEAD_Z), his feet (FOOT_Z) */
 export type Meet = 'chest' | 'head' | 'foot';
@@ -224,7 +233,7 @@ export interface Pass {
   /** other players held to a path of their own whatever comes of the pass (the off-ball what-if's runner, offball.ts) */
   extra?: Held[];
   /** the pass was meant for one man (the viewer clicked him): his teammates let it run for him, so only he and the
-   *  opponents can take the first touch (an assumption, Yi's "pass to #37", 2026-10-25) */
+   *  opponents can take the first touch (an assumption: a pass "to #37" is meant for him alone) */
   leave?: boolean;
 }
 /** a player (model index) held to a path, 10 Hz from the pause */
@@ -275,7 +284,7 @@ export function atFeet(ball: V3[], path: XY[], n: number, carry: XY): V3[] {
   for (let m = n + 1; m <= SIM_N; m++) {
     const v = sub2(path[m - 1], path[Math.max(0, m - 2)]), vl = len(v) / DT;
     if (vl > 0.8) { const w = Math.min(1, (vl - 0.8) / 1.2), nd: XY = [dir[0] * (1 - w) + (v[0] / (vl * DT)) * w, dir[1] * (1 - w) + (v[1] / (vl * DT)) * w], nl = Math.max(len(nd), 1e-6); dir = [nd[0] / nl, nd[1] / nl]; }
-    // a ball taken high (thigh, chest, head) comes down to his feet over 0.3 s, not at once (2026-10-25)
+    // a ball taken high (thigh, chest, head) comes down to his feet over 0.3 s, not at once
     const u = Math.min(1, (m - n) / 3), z = z0 > 0.2 ? 0.11 + (z0 - 0.11) * (1 - u) * (1 - u) : 0.11;
     nb[PAST + m] = [path[m - 1][0] + dir[0] * 0.35, path[m - 1][1] + dir[1] * 0.35, z];
   }
@@ -302,16 +311,16 @@ export function intended(c: Scene0, ball: V3[], Q: XY, hold = HOLD, reach = REAC
   return best ?? (reach < REACH_Z[1] ? intended(c, ball, Q, hold, REACH_Z[1], only) : null);
 }
 
-/** where a pass to a moving teammate goes (Yi, 2026-10-25: a ground pass "to #37", who was running at 5 m/s, went to
+/** where a pass to a moving teammate goes (a ground pass to #37, who was running at 5 m/s, went to
  *  where he had been and a man 24 m back picked it up): into his stride, his run carried on at its pace (at most
  *  7 m/s), the first point on it the pass reaches no later than he does after the turn the passer needs; his own spot if
  *  he is nearly still. Distances only, so it works in the package's frame as in the model's. */
-export function leadPoint(from: XY, facing: XY, p0: XY, v: XY, loft = false): XY {
+export function leadPoint(from: XY, facing: XY, p0: XY, v: XY, loft = false, holdS: number | null = null): XY {
   const vs = len(v), u = vs > 7 ? 7 / vs : 1, w: XY = [v[0] * u, v[1] * u];
   if (vs < 1) return p0;
   let Q = p0;
   for (let it = 0; it < 3; it++) {
-    const d0 = sub(Q, from), dl = Math.max(len(d0), 1e-6), turn = (Math.acos(Math.max(-1, Math.min(1, (d0[0] * facing[0] + d0[1] * facing[1]) / dl))) * 180) / Math.PI, hold = holdFor(turn) * DT;
+    const d0 = sub(Q, from), dl = Math.max(len(d0), 1e-6), turn = (Math.acos(Math.max(-1, Math.min(1, (d0[0] * facing[0] + d0[1] * facing[1]) / dl))) * 180) / Math.PI, hold = holdS ?? holdFor(turn) * DT;
     for (let t = hold + 0.2; t <= 4; t += 0.05) {
       const P: XY = [p0[0] + w[0] * t, p0[1] + w[1] * t];
       if (Math.abs(P[0]) > HX || Math.abs(P[1]) > HY) break;
@@ -322,8 +331,8 @@ export function leadPoint(from: XY, facing: XY, p0: XY, v: XY, loft = false): XY
 }
 
 /** the ball, played to Q along the ground or lofted after the turn it takes, with its intended receiver */
-/** the keeper by rule, not by the response model (Yi, 2026-10-25: "make GK's position not trained, but more math
- *  algorithm governed"): on the line from his goal's centre to the ball, at the depth this match's keepers keep for the
+/** the keeper by rule, not by the response model (his position governed by geometry, not trained): on the
+ *  line from his goal's centre to the ball, at the depth this match's keepers keep for the
  *  ball's distance (1826 frames, medians: 1.7 m with the ball within 11 m, 3.2 at 11-25, 3.0 at 25-35, 4.7 at 35-45;
  *  they stand 0.3-0.45 m off that line within 25 m), the ball taken as where the receiver meets it from 0.4 s before
  *  the touch (the shot comes from there); he reads the pass 0.15 s after the strike and moves at up to 6 m/s, 6 m/s².
@@ -332,6 +341,7 @@ const GK_DEPTH: [number, number][] = [[5, 1.2], [9, 1.7], [14, 3.0], [22, 3.3], 
 /** the keeper's claim zone: the goal area (5.5 m deep, 18.3 m wide) and a step beyond it; his share of a ball there
  *  against the attacker (StatsBomb open data, see outcomes) */
 const CLAIM_DEPTH = 6.5, CLAIM_HALF_W = 10, GK_CLAIM = 0.64;
+export { GK_CLAIM };   // (useWhatIf.tsx prices the real pass by the same rule)
 export const claimZone = (X: XY) => HX - X[0] <= CLAIM_DEPTH && Math.abs(X[1]) <= CLAIM_HALF_W;
 function keeperDepth(dist: number) {
   if (dist <= GK_DEPTH[0][0]) return GK_DEPTH[0][1];
@@ -342,8 +352,8 @@ export function keeperRule(c: Scene0, ball: V3[], hold: number, plan: Plan | nul
   const gk = c.gk.findIndex((g, i) => g && i >= 11);
   if (gk < 0) return null;
   const h = 0.02, per = Math.round(DT / h), path: XY[] = [], X: XY | null = plan ? plan.path[plan.n - 1] : null;
-  // a ball to be taken in his goal area is his to claim (2026-10-28, Yi on 17:28: a chip dropping 3 m in front of the
-  // keeper for a 0.53 chance was "quite irrealistic"; by the depth rule he stepped back onto his line): from the moment
+  // a ball to be taken in his goal area is his to claim (at 17:28 a chip dropping 3 m in front of the keeper for a
+  // 0.53 chance was unrealistic; by the depth rule he stepped back onto his line): from the moment
   // he reads the pass he goes for the point it is taken at, at his full pace, and the first-touch resolver (his reach
   // 2 m, 2.6 m up) decides whether he or the receiver gets there
   const claim = !!X && claimZone(X);
@@ -351,7 +361,7 @@ export function keeperRule(c: Scene0, ball: V3[], hold: number, plan: Plan | nul
   for (let k = 1; k <= SIM_N * per; k++) {
     const t = k * h, step = Math.min(SIM_N, Math.ceil(t / DT)), b = ball[Math.min(ball.length - 1, PAST + step)];
     // the line to where the receiver takes it from the moment he reads the pass (the shot comes from there; a keeper
-    // following the ball in flight was 4.6 m off a man taking it in the six-yard box, 2026-10-25), else to the ball
+    // following the ball in flight was 4.6 m off a man taking it in the six-yard box), else to the ball
     const w = X ? Math.min(1, Math.max(0, (step - 1) / 3)) : 0, bx = b[0] * (1 - w) + (X ? X[0] * w : 0), by = b[1] * (1 - w) + (X ? X[1] * w : 0);
     const d = Math.hypot(HX - bx, by), ux = d > 1e-6 ? (bx - HX) / d : -1, uy = d > 1e-6 ? by / d : 0, dep = Math.min(keeperDepth(d), Math.max(0.5, d - 1));
     let want: XY = v;
@@ -367,8 +377,8 @@ export function keeperRule(c: Scene0, ball: V3[], hold: number, plan: Plan | nul
   return { who: gk, path };
 }
 
-/** the defenders press by danger (Yi, 2026-10-25: "defender still not fierce enough ... especially inside the penalty
- *  box ... like an xG surface, when it is a higher xG area, defenders respond more relentlessly"): the response model
+/** the defenders press by danger, as on an xG surface: the higher the xG where he takes it, the more relentlessly
+ *  they respond, inside the penalty box above all: the response model
  *  answers a new pass mildly (it learnt from passes that were played), so for the pass meant for one man the two
  *  defenders who can get to him soonest are held to a rule: the first goes goal-side of him and closes him down, the
  *  second gets into the line from him to the goal, both tracking him as he moves. How hard is set by the danger where he
@@ -410,8 +420,9 @@ export function pressRule(c: Scene0, plan: Plan, keeperAt: XY | null): Held[] {
 
 /** `to`: the teammate it is meant for (model index), when the viewer clicked a man rather than a spot; he makes the run
  *  onto it if he can, else whoever first can, as for a spot */
-export function passTo(c: Scene0, Q: XY, loft = false, to: number | null = null, meet: Meet = 'chest'): Pass {
-  const turn = turnTo(c, Q), hold = holdFor(turn), kp = kickerPath(c, hold, turn), ball = ballTo(c, Q, loft, hold, kp);
+/** `holdIn`: the steps he holds it, given (a first-time ball, FIRST_HOLD) rather than from his turn */
+export function passTo(c: Scene0, Q: XY, loft = false, to: number | null = null, meet: Meet = 'chest', holdIn: number | null = null): Pass {
+  const turn = turnTo(c, Q), hold = holdIn ?? holdFor(turn), kp = kickerPath(c, hold, turn), ball = ballTo(c, Q, loft, hold, kp);
   const pd = sub(Q, kp[hold - 1]), pl = Math.max(len(pd), 1e-6);
   // (head / foot: the man it is meant for meets it at head height (HEAD_Z) or lets it drop to his feet (FOOT_Z); no
   // plan when he cannot, and the pass reads as any other, which chain.ts tryPass then drops)
@@ -419,7 +430,7 @@ export function passTo(c: Scene0, Q: XY, loft = false, to: number | null = null,
     ? meet === 'head' ? intended(c, ball, Q, hold, HEAD_Z[1], to, HEAD_Z[0]) : meet === 'foot' ? intended(c, ball, Q, hold, FOOT_Z, to) : intended(c, ball, Q, hold, REACH_Z[0], to)
     : null, plan = mine ?? intended(c, ball, Q, hold);
   const gk = keeperRule(c, plan ? plan.ball : ball, hold, plan), extra = gk ? [gk] : [];
-  // the pressing rule only for the what-if's pass to one man (the Tactics chat's pass chances call passTo without one)
+  // the pressing rule only for the what-if's pass to one man (Tactics mode's pass chances call passTo without one)
   if (mine && plan) extra.push(...pressRule(c, plan, gk ? gk.path[Math.min(gk.path.length - 1, plan.n - 1)] : null));
   return { ball, plan, kp, turn, hold, dir: [pd[0] / pl, pd[1] / pl], leave: !!mine, extra };
 }
@@ -460,7 +471,7 @@ export function outcomes(M: Models, c: Scene0, pass: Pass): Outcome[] {
   // the keeper's claim (keeperRule): a ball to be taken in his goal area that he reaches in time is his to take, by
   // StatsBomb's share of such balls between the keeper and the attacker (64%: 381 taken by the keeper against 212 by a
   // teammate of 1,583 open-play high passes into the goal area, 326 matches). The resolver alone, fitted on outfield
-  // touches, gave him one step of hazard under a dropping ball (2026-10-28, Yi on 17:28)
+  // touches, gave him one step of hazard under a dropping ball (17:28)
   const gk = c.gk.findIndex((g, i) => g && i >= 11);
   if (plan && gk >= 0 && claimZone(plan.path[plan.n - 1])) {
     const X = plan.path[plan.n - 1], g = paths0[gk][Math.min(paths0[gk].length - 1, plan.n - 1)], d = len(sub(g, X));
@@ -497,7 +508,7 @@ export function outcomes(M: Models, c: Scene0, pass: Pass): Outcome[] {
 export interface Played { paths: XY[][]; ball: V3[]; carrier: number }
 
 /** play one outcome of a pass whose ball path is `ball`; `after`: how many steps a pass a teammate receives runs on
- *  past his touch (the shot what-if stops on the touch, or where he is ready to shoot: shot.ts, Yi 2026-10-25) */
+ *  past his touch (the shot what-if stops on the touch, or where he is ready to shoot: shot.ts) */
 export function play(M: Models, c: Scene0, pass: Pass, o: Outcome, after = 15): Played {
   const { cm, cp } = noCtrl(), { plan } = pass, ball = pass.ball;
   cm[c.kicker] = true; cp[c.kicker] = pass.kp;
@@ -530,8 +541,8 @@ export function play(M: Models, c: Scene0, pass: Pass, o: Outcome, after = 15): 
   return { paths, ball: b.slice(PAST + 1, PAST + 1 + end), carrier };
 }
 
-/** his shot from here, played (Yi, 2026-10-26: "no need to add '#2 shoots from here: xG 0.06', but we animate it once
- *  the user clicks shoot"): after the turn the shot asks for (as a pass: holdFor), the ball driven low at 22 m/s at the
+/** his shot from here, played once the viewer clicks Shoot (animated, with no line of text such as "#2 shoots from
+ *  here: xG 0.06"): after the turn the shot asks for (as a pass: holdFor), the ball driven low at 22 m/s at the
  *  side of the goal mouth away from the keeper (1.8 m inside the far post), the others answering it through the model,
  *  the keeper on his rule; the clip ends 0.3 s after the ball crosses the line. What becomes of the shot (saved, in,
  *  blocked) is not simulated: the xG says it. */
@@ -539,12 +550,11 @@ const SHOT_V = 22;
 export function shootFromHere(M: Models, c: Scene0): { played: Played; target: XY; hold: number; turn: number } {
   const gk = c.gk.findIndex((g, i) => g && i >= 11), ky = gk >= 0 ? c.now[gk][1] : 0;
   const target: XY = [HX, (ky > 0 ? -1 : 1) * 1.8];
-  // (he stays where he struck it, the follow-through in place: the cone, his tag and the ring then agree; 2026-10-26)
+  // (he stays where he struck it, the follow-through in place: the cone, his tag and the ring then agree)
   const turn = turnTo(c, target), hold = holdFor(turn), kp = kickerPath(c, hold, turn).map((q, n, a) => (n >= hold ? a[hold - 1] : q));
   const pd = sub(target, kp[hold - 1]), pl = Math.max(len(pd), 1e-6), dir: XY = [pd[0] / pl, pd[1] / pl];
   // the ball: at his feet to the strike (as ballTo), then straight and flat to the line (for the keeper's rule); the play
-  // ends on the strike (Yi, 2026-10-26: "we do not animate the ball in the goal, just stay at the moment the player is
-  // kicking the ball, and display xG")
+  // ends on the strike, held there with the xG shown (the ball is not animated into the goal)
   const ball = c.ball.slice(0, PAST + 1).map((q) => [...q] as V3);
   const foot = (n: number): XY => { if (n === 0) return [c.ball[PAST][0], c.ball[PAST][1]]; const f = faceAt(c, dir, hold, n * DT); return [kp[n - 1][0] + f[0] * 0.35, kp[n - 1][1] + f[1] * 0.35]; };
   const b0 = foot(hold), d = len(sub(target, b0)), u: XY = [(target[0] - b0[0]) / Math.max(d, 1e-6), (target[1] - b0[1]) / Math.max(d, 1e-6)];

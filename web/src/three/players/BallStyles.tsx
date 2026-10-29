@@ -18,7 +18,7 @@ export type BallStyle = 'glow' | 'classic' | 'modern' | 'data';
 const R = 0.11;
 const LOGO_ASPECT = 133.2473 / 100;                       // the symbol's viewBox
 // The symbol sits upright at the centre of the oval of graphic on the +z panel (black) and the -z panel (grey). The
-// ovals come from the warp in panelMaterial and lie off the panel axes. Sampling the same formula (2026-10-21) gives
+// ovals come from the warp in panelMaterial and lie off the panel axes. Sampling the same formula gives
 // the centre of each oval's white interior, and the largest upright symbol there with 0.25 H clear, 0.239 rad tall;
 // the symbol is 0.23 rad (2.5 cm tall, 3.4 cm wide).
 const LOGO_H = 0.23;

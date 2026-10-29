@@ -5,9 +5,9 @@ import type { PathPt } from './path';
 import { LOWER_END } from './layout';
 import wordSvg from '../../assets/brand/yizhan-06-horizontal-white.svg?raw';
 
-// The LED ribbon on the upper tier's front (Yi, 2026-10-22: candidate 7 of docs/research/stadium-vivid.md). A black
+// The LED ribbon on the upper tier's front (candidate 7 of docs/research/stadium-vivid.md). A black
 // strip 0.9 m tall set into the tier front's 1.1 m light grey band, so a thin grey line stays above and below it, with
-// the white YIZHAN signature evenly spaced round the loop (Yi chose this over a plain black strip with white edge lines,
+// the white YIZHAN signature evenly spaced round the loop (preferred over a plain black strip with white edge lines,
 // also on the third tier; that version: <private-workspace>). The
 // signatures are a whole number of tiles along the ribbon's own length (its corners run 21 m out from the bowl's edge,
 // so they are much longer than the base path's), a multiple of four, so one sits centred on the halfway line and on

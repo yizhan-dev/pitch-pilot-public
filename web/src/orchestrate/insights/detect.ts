@@ -53,7 +53,7 @@ export function runsIn(c: Ctx): Run[] {
   return out;
 }
 
-// ---- the shape of a run (Yi, 2026-10-23: can we see a 鱼钩跑?): the path from 2.5 s before the run (the check
+// ---- the shape of a run (a hook run among them): the path from 2.5 s before the run (the check
 // before the go is slow) to its end, headings from the displacement over +-0.3 s, the sharpest turn in any 1.5 s
 export interface RunShape { shape: 'double' | 'hook' | 'bent' | 'straight' | 'diagonal' | 'lateral'; maxTurn: number; turnT: number; leg1: number; leg2: number; tot: number; heading: number; total: number; t0: number; a: XY; turn: XY; b: XY; dir1: XY; dir2: XY }
 const wrapR = (a: number) => Math.atan2(Math.sin(a), Math.cos(a));
@@ -141,7 +141,7 @@ export function blindSide(c: Ctx): Insight[] {
     const ran = dist(g.pos(r.p, b0)!, g.pos(r.p, b1)!), gained = gap - gap0;
     const atStart = b0 <= r.from + 0.2;
     const conf = Math.min(1, 0.4 + (peakBehind - 110) / 100 + Math.min(0.3, dt / 3));
-    // whose duty it was (Yi, 2026-10-23: a defender who looks at the ball is often not the one to blame; the cover
+    // whose duty it was (a defender who looks at the ball is often not the one to blame; the cover
     // behind him is). Was he tracking the runner before: his face within 45 degrees of the runner over the 3 s before
     // the blind stretch, or the runner's marker by the engine's rule (mutual nearest opponents)
     let lockN = 0, lockT = 0;

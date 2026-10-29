@@ -1,4 +1,5 @@
 import { animFile } from './data/paths';
+import { hook } from './dev';
 import { createRoot } from 'react-dom/client';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
@@ -14,7 +15,7 @@ import { resize } from './cast/resize';
 import type { Joints } from './data';
 import type { Clock } from './clock';
 
-// The cast (src/cast/cast.ts) on a dark stage, side by side, each looping its animation (Yi, 2026-10-26, option B):
+// The cast (src/cast/cast.ts) on a dark stage, side by side, each looping its animation (option B):
 // /cast.html; ?c=coach,gamer picks some. window.__setT and __frames for the recording scripts (scripts/clip.mjs).
 
 interface Baked { name: string; fps: number; frames: number; names: string[]; data: number[] }
@@ -85,7 +86,7 @@ function App() {
   const anims = useMemo(() => cast.map((r) => (TRY[r.key] ? { name: TRY[r.key] } : r.anim)), [cast]);
   useEffect(() => { Promise.all(anims.map((a) => fetch(animFile(a.name)).then((x) => x.json()))).then(setBaked); }, [anims]);
   const clock = useMemo<Clock>(() => ({ t: 0, playing: true, rate: 1 }), []);
-  useEffect(() => { (window as unknown as { __setT: (t: number) => void }).__setT = (t: number) => { clock.playing = false; clock.t = t % (SECONDS - 0.1); }; }, [clock]);
+  useEffect(() => { hook('setT', (t: number) => { clock.playing = false; clock.t = t % (SECONDS - 0.1); }); }, [clock]);
   const J = useMemo(() => (baked ? combine(baked, anims) : null), [baked, anims]);
   const looks = useMemo(() => cast.map((r) => r.look), [cast]);
   const props = useMemo(() => cast.map((r) => r.props), [cast]);

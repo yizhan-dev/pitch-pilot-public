@@ -1,4 +1,5 @@
 import { useEffect, useMemo } from 'react';
+import { hook } from '../../dev';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { glowTexture, glowMaterial, focalPx } from './glow';
@@ -58,17 +59,17 @@ function withLiner(m: THREE.MeshStandardMaterial) {
 }
 
 /** interior: draw only what a camera inside the bowl can see, the roof (its top from the tactical view overhead) and its
- *  underside; the facade, fins, rim, signs, podium, ground, legs and lights are left out (the game, 2026-10-22, Yi) */
+ *  underside; the facade, fins, rim, signs, podium, ground, legs and lights are left out (used by the game) */
 export interface CrystalProps { hx: number; hy: number; rc: number; back: number; clip: THREE.Plane[]; params?: Partial<CrystalParams>; shadows?: boolean; interior?: boolean; }
 
-/** the floodlight halos' opacity: 0.22 until Yi found the lights too bright (2026-10-22) */
+/** the floodlight halos' opacity: at 0.22 the lights read too bright */
 const HALO = 0.16;
 
 export function Crystal({ hx, hy, rc, back, clip, params, shadows = false, interior = false }: CrystalProps) {
   const P = useMemo(() => ({ ...DEFAULT_CRYSTAL, ...params }), [params]);
   const shapeKey = SHAPE_KEYS.map((k) => P[k]).join(',');
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const G = useMemo(() => { const t0 = performance.now(), g = buildCrystalShell(P, hx, hy, rc, back); (window as unknown as { __buildMs?: number }).__buildMs = +(performance.now() - t0).toFixed(1); return g; }, [hx, hy, rc, back, shapeKey]);
+  const G = useMemo(() => { const t0 = performance.now(), g = buildCrystalShell(P, hx, hy, rc, back); hook('buildMs', +(performance.now() - t0).toFixed(1)); return g; }, [hx, hy, rc, back, shapeKey]);
   const lamps = useMemo(() => evenLamps(G.lampGeo), [G]);   // the floodlights evenly spaced along the opening (lamps.ts)
   useEffect(() => () => lamps.dispose(), [lamps]);
   const lampVis = useMemo(() => lampVisibility(lamps), [lamps]), overOpening = useMemo(() => insideLampRing(lamps), [lamps]);
@@ -138,12 +139,12 @@ export function Crystal({ hx, hy, rc, back, clip, params, shadows = false, inter
     const f = focalPx(size.height, (camera as THREE.PerspectiveCamera).fov);
     for (const m of [mats.lampCore, mats.lampHalo, mats.plazaCore, mats.plazaHalo]) m.uniforms.uFocal.value = f;
     // A halo is the glare round a floodlight, not a thing in the scene. Depth-tested as a flat 9 m sprite at the lamp, it
-    // was cut wherever the roof opening's lip came in front of it: the lip read as corrugated cardboard (Yi, 2026-10-22
-    // and 2026-10-23). The halos are drawn without the depth test, each scaled by whether its lamp can be seen
+    // was cut wherever the roof opening's lip came in front of it: the lip read as corrugated
+    // cardboard. The halos are drawn without the depth test, each scaled by whether its lamp can be seen
     // (lamps.ts lampVisibility); the lamp cores keep the depth test. That holds wherever the camera is inside the stadium
     // or over its opening at any height: under the roof (the broadcast and Decision Lab cameras sit under the near roof
-    // at z = 60) or inside the lamp ring in plan (the lineup show's crane rises to 46 m). The 2026-10-22 fix covered only
-    // the bowl's inner edge below 45 m and missed both. From above the roof or outside the shell the halos are
+    // at z = 60) or inside the lamp ring in plan (the lineup show's crane rises to 46 m). A test of
+    // the bowl's inner edge below 45 m alone would miss both. From above the roof or outside the shell the halos are
     // depth-tested as before, which keeps the approved exterior's glow round the opening exactly as it was.
     const p = camera.position, inside = overOpening(p.x, p.z) || (Math.abs(p.x) < hx + back && Math.abs(p.z) < hy + back && p.y < ceil.at(p.x, p.z) - 0.2);
     lampVis(inside ? p : null);
@@ -181,7 +182,7 @@ export function Crystal({ hx, hy, rc, back, clip, params, shadows = false, inter
         : <mesh geometry={G.apron} material={mats.apron} receiveShadow={shadows} />}
       <primitive object={objs.legs} />
       <primitive object={objs.feet} />
-      {/* the cyan light lines (eave, base edge, folds, roof opening) are retired: Yi, 2026-10-21. Their geometry is kept
+      {/* the cyan light lines (eave, base edge, folds, roof opening) are retired. Their geometry is kept
           for the night-lighting work, but nothing draws them, so an old link carrying ledGain or edgeLed cannot bring them back. */}
       <points geometry={lamps} material={mats.lampHalo} />
       <points geometry={lamps} material={mats.lampCore} />

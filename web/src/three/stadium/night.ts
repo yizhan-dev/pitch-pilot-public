@@ -1,12 +1,11 @@
 import * as THREE from 'three';
 
-// The outside at night (Yi, 2026-10-27: "for the entry intro, and general pitch from drone perspective for example, make
-// the view look more like at night shall we? now it is too white"). k runs from 0 in the bowl to 1 far out (the game's
+// The outside at night (the intro and the drone views read too white as day, so they look like night). k runs from 0 in the bowl to 1 far out (the game's
 // drone views, the line-up show's opening). Out there the night's fog used to be pushed away (700 to 2600 m) so the
 // grounds read, and the floodlit pitch's lights lit the shell and the plaza like day. Now the fog closes in just past
 // the stadium, so the grounds fade into the dark, and the sky light and the fills dim, so the shell and the plaza sit
-// under their own lamps (unlit glows, untouched) while the pitch keeps its floodlit glow. Yi picked B, the darker
-// (2026-10-27: "I like B"); ?night=a the lighter, ?night=0 as before (for comparisons). The lights it dims carry a name: night-amb (the sky light), night-key, night-fill.
+// under their own lamps (unlit glows, untouched) while the pitch keeps its floodlit glow. The default is B, the darker;
+// ?night=a the lighter, ?night=0 as before (for comparisons). The lights it dims carry a name: night-amb (the sky light), night-key, night-fill.
 const Q = typeof location !== 'undefined' ? new URLSearchParams(location.search).get('night') : null;
 /** each level: the share of its light each role keeps far out, the fog's start and end past the camera's distance, and
  *  the grounds' tone (the plaza, its steps, the land round it: they were a light stone grey, linear 0.42, which the

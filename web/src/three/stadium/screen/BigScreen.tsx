@@ -1,11 +1,12 @@
 import { useEffect, useMemo } from 'react';
+import { hooked } from '../../../dev';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import symbolSvg from '../../../assets/brand/yizhan-06-symbol-white.svg?raw';
 import wordSvg from '../../../assets/brand/yizhan-06-horizontal-white.svg?raw';
 import jostUrl from '../../../assets/brand/fonts/jost-latin.woff2?url';
 
-// The big screen, drawn as dots (Yi, 2026-10-22: "I love halftone, since our audience is represented in this way too").
+// The big screen, drawn as dots (halftone, as the crowd itself is drawn).
 // One shader draws every direction under test (ScreenLab.tsx, /screen.html): the screen face is a grid of dots, each
 // dot's size or state read from a content canvas at the dot's centre.
 // - matrix:   a dot-matrix scoreboard; every dot the same size, on or off, the unlit ones faintly visible.
@@ -171,7 +172,7 @@ export function BigScreen({ p, portraitUrl, replayUrl, clip = [] }: { p: ScreenP
     u.uAngle.value = THREE.MathUtils.degToRad(p.angle); u.uMode.value = MODE[p.dir]; u.uGain.value = p.gain;
   }, [p, mat]);
   useEffect(() => () => mat.dispose(), [mat]);
-  useFrame(({ clock }) => { mat.uniforms.uTime.value = (window as unknown as { __screenT?: number }).__screenT ?? clock.elapsedTime; });
+  useFrame(({ clock }) => { mat.uniforms.uTime.value = hooked<number>('screenT') ?? clock.elapsedTime; });
   return (
     <group>
       <mesh position-z={-0.14}><boxGeometry args={[p.w + 0.5, p.h + 0.4, 0.24]} /><meshStandardMaterial color="#16181c" roughness={0.7} clippingPlanes={clip} /></mesh>

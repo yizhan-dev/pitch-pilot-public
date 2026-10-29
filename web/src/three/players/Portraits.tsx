@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef } from 'react';
-import { createPortal, useFrame } from '@react-three/fiber';
+import { createPortal, useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import type { Joints } from '../../data';
 import type { Clock } from '../../clock';
@@ -7,7 +7,7 @@ import type { Look } from './looks';
 import { Players } from './Styles';
 import type { Team } from '../coords';
 
-// Portraits for the HUD's player card (hud-notes, 2026-10-22): each player's toon, front-on, head and shoulders, in a
+// Portraits for the HUD's player card (hud-notes): each player's toon, front-on, head and shoulders, in a
 // neutral standing pose, on a transparent ground (the card lays its team-colour gradient underneath). Drawn once per
 // clip, a few frames after the pitch first renders: the same figure code and looks as the pitch, in a scene of its own
 // (not part of the match scene) with every player standing in a row 4 m apart, one render each into an offscreen
@@ -53,22 +53,31 @@ function toUrl(buf: Uint8Array): Promise<string | null> {
   return new Promise((r) => cv.toBlob((b) => r(b ? URL.createObjectURL(b) : null), 'image/png'));
 }
 
-/** attacking: the team of players 0..nAtt-1, so each portrait wears his team's kit (coords.ts, Yi 2026-10-23) */
-export function PortraitStudio({ J, looks, attacking = 'home', onDone }: { J: Joints; looks: Look[]; attacking?: Team; onDone: (urls: (string | null)[]) => void }) {
+/** attacking: the team of players 0..nAtt-1, so each portrait wears his team's kit (coords.ts) */
+/** delayS: the first portrait this long after the mount (the stage under the line-up show: its title shot is the
+ *  heaviest and the hand-over is 6 s off at the earliest, so the portraits wait for the board, where there is room;
+ *  the title shot dropped frames on the iGPU otherwise). Then one every second frame, and the studio is unmounted once they are
+ *  handed over (GameApp): its figures' frame work ran on for the whole clip before */
+export function PortraitStudio({ J, looks, attacking = 'home', onDone, delayS = 0 }: { J: Joints; looks: Look[]; attacking?: Team; onDone: (urls: (string | null)[]) => void; delayS?: number }) {
   const scene = useMemo(() => new THREE.Scene(), []);
   const SJ = useMemo(() => standing(J), [J]);
   const clock = useMemo<Clock>(() => ({ t: 0, playing: false, rate: 1 }), []);
   // one player a frame, read back without waiting on the GPU and encoded off the main thread: all 22 in one frame, read
-  // and encoded there, held the page for about two seconds at each clip and in the line-up show (a profile, 2026-10-27)
-  const st = useRef({ frames: 0, next: 0, got: 0, gen: 0, urls: [] as (string | null)[], rt: null as THREE.WebGLRenderTarget | null });
+  // and encoded there, held the page for about two seconds at each clip and in the line-up show (profiled)
+  const st = useRef({ frames: 0, next: 0, got: 0, gen: 0, urls: [] as (string | null)[], rt: null as THREE.WebGLRenderTarget | null, startAt: 0 });
+  const invalidate = useThree((s) => s.invalidate);
   useEffect(() => {
-    st.current = { frames: 0, next: 0, got: 0, gen: st.current.gen + 1, urls: [], rt: null };
+    st.current = { frames: 0, next: 0, got: 0, gen: st.current.gen + 1, urls: [], rt: null, startAt: performance.now() + delayS * 1000 };
     return () => { const c = st.current; c.gen++; c.rt?.dispose(); c.rt = null; };   // (reads still on their way are dropped)
-  }, [SJ, looks, attacking]);
+  }, [SJ, looks, attacking, delayS]);
+  // (the delay's end asks for a frame: a loop on demand would sleep through it)
+  useEffect(() => { const id = window.setTimeout(() => invalidate(), delayS * 1000 + 20); return () => window.clearTimeout(id); }, [delayS, invalidate]);
   const cam = useMemo(() => new THREE.PerspectiveCamera(15, PORTRAIT.w / PORTRAIT.h, 0.1, 20), []);
   useFrame(({ gl }) => {
     const s = st.current, gen = s.gen;
-    if (s.next >= J.players || ++s.frames < 4) return;   // the figures place their meshes in their own frame callbacks first
+    // (a loop drawing on demand, the stage under the show: the next frame asked for until the last portrait is made)
+    if (s.next < J.players) invalidate();
+    if (s.next >= J.players || performance.now() < s.startAt || ++s.frames < 4 || s.frames % 3) return;   // the figures place their meshes in their own frame callbacks first; then one every third frame
     if (!s.rt) { s.rt = new THREE.WebGLRenderTarget(PORTRAIT.w, PORTRAIT.h, { samples: 4 }); s.rt.texture.colorSpace = THREE.SRGBColorSpace; }
     const rt = s.rt, p = s.next++, buf = new Uint8Array(PORTRAIT.w * PORTRAIT.h * 4);
     const prevTarget = gl.getRenderTarget(), prevClear = gl.getClearColor(new THREE.Color()), prevAlpha = gl.getClearAlpha();

@@ -1,11 +1,12 @@
-// The judges' tour (Yi, 2026-10-28): one card at a time, each asking for one action in the game, written for someone
-// who sees the product for the first time. The card turns the page only on Next (Yi: "it sounds like in a rush"):
+// The judges' tour: one card at a time, each asking for one action in the game, written for someone
+// who sees the product for the first time. The card turns the page only on Next (turning by itself felt rushed):
 // once the step's action is done, Next pulses. The part of the HUD a step asks for glows until it is clicked. While
 // the tour runs, keys and HUD buttons it does not ask for are held, menus offer only the step's entry, and a held
-// click nudges the card (Yi: "lock other not mentioned key binding and buttons"); the pitch itself (camera, players)
+// click nudges the card (every key and button the step does not mention is locked); the pitch itself (camera, players)
 // stays free. The card's line follows what the viewer has done so far, so a step taken out of order still reads
 // right (a player not picked yet, the voice still locked, each phase of the What-if).
 import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { hook, hooked } from '../dev';
 import { clipAddr } from '../data/paths';
 import { getSettings, setSettings, setMode, useGameSettings, type GameMode, type GameSettings } from '../game/settings';
 import { base, drawMode, railMenu, strokes, useStore, type BaseKey } from '../hud/draft';
@@ -38,7 +39,7 @@ interface Ctx { s: GameSettings; t: number; end: number; base: BaseKey | null; s
 interface Step {
   /** the clip the step plays, changed to as it begins, and its time for the card while it loads */
   clip?: string; at?: string;
-  /** the card's line while the clip loads: what comes next, read as the board turns over (Yi, 2026-10-28) */
+  /** the card's line while the clip loads: what comes next, read as the board turns over */
   lead?: string;
   title: string;
   /** the card's line for the state the viewer is in; **x** is set bold (keys and buttons) */
@@ -65,10 +66,10 @@ interface Step {
   hold?: boolean;
   /** the clip set playing once the step's aim is reached (a view that shows the play moving) */
   playOnAim?: boolean;
-  /** the clip held still until the step's aim is reached (Yi, 2026-10-28: a step that asks for something waits for it, so
+  /** the clip held still until the step's aim is reached (a step that asks for something waits for it, so
    *  the moment is not missed while the card is read) */
   waitAim?: boolean;
-  /** at the clip's end the step plays on from here instead of holding (Yi: the camera step plays until Next) */
+  /** at the clip's end the step plays on from here instead of holding (the camera step plays until Next) */
   loopFrom?: number;
   /** where the clip starts once loaded (the last clip plays only its end; the What-if step stands a tenth before its moment) */
   startAt?: (h: TourHost) => number;
@@ -77,7 +78,7 @@ interface Step {
   /** once the aim is reached: back to the step's moment if the clip has gone past it (a viewer slower than the clip) */
   onAim?: (h: TourHost) => void;
   /** where the card sits when top centre is taken: the What-if's own card is there, and its teammates stand left and right
-   *  of the pitch, so the card goes to the bottom left corner, in the player card's place (Yi, 2026-10-28: mid-left it hid
+   *  of the pitch, so the card goes to the bottom left corner, in the player card's place (mid-left it hid
    *  one of the options) */
   place?: 'corner';
   /** the step that shows the VAR check: its button stays on screen (the tour hides it elsewhere) */
@@ -102,7 +103,7 @@ const GOAL_SHOT = 8.0, CHIP_AT = 13.09, CHIP_LEAD = 3.5;
 /** 26:40's What-if moment (whatif/moments.ts m3), at its exact reception in the clip on screen */
 const chipMoment = (h: TourHost) => { const m = momentById('m3'); return m ? { m, r: resolveMoment(h.pkg, m) } : null; };
 /** the What-if told its moment is already in place, as the mode is picked, so it does not rewind to play it in again: the
- *  clip, standing a tenth before it, plays only into it (Yi, 2026-10-28: "camera no move, just do the hexagon shift") */
+ *  clip, standing a tenth before it, plays only into it (the camera stays put; only the hexagons turn over) */
 function presetChip(h: TourHost) {
   const c = chipMoment(h);
   if (c && Math.abs(h.t - c.r.t) < 0.3) wiNow.set({ id: c.m.id, t: c.r.t, carrier: c.r.player });
@@ -200,12 +201,12 @@ const LAST = STEPS.length - 1;
 // a reload mid-tour resumes at the start of the step's scene: a step without a clip of its own plays on the one before's,
 // which the reload does not bring back (once a page: a hot reload of this file leaves the step alone)
 {
-  const W = window as unknown as { __tourResumed?: boolean }, k = tourStep.get();
-  if (!W.__tourResumed && k > 1 && k <= LAST && !STEPS[k].clip) { let j = k; while (j > 1 && !STEPS[j].clip) j--; tourStep.set(j); }
-  W.__tourResumed = true;
+  const k = tourStep.get();
+  if (!hooked<boolean>('tourResumed') && k > 1 && k <= LAST && !STEPS[k].clip) { let j = k; while (j > 1 && !STEPS[j].clip) j--; tourStep.set(j); }
+  hook('tourResumed', true);
 }
 
-/** back to a moment as a quick visible rewind, not a cut (Yi, 2026-10-28: a jump reads as a fault): the clock runs back
+/** back to a moment as a quick visible rewind, not a cut (a jump reads as a fault): the clock runs back
  *  over about a second, eased, then plays from there */
 function rewindTo(h: TourHost, target: number) {
   const from = h.t, dur = Math.min(1.2, Math.max(0.6, Math.abs(from - target) / 25)) * 1000, t0 = performance.now();
@@ -284,7 +285,7 @@ export function Tour({ host }: { host: TourHost }) {
       const now = performance.now();
       if (hostRef.current.moment === clip || clipSwap.get() !== 'off' || now - asked < 1500 || tries >= 5 || getSettings().mode === 'whatif') return;
       // a VAR check still on owns the camera: it ends first, its camera back on the view it came from, and the clip
-      // changes once it is off (Yi, 2026-10-28: Next during the check reloaded the pitch in the check's close-up)
+      // changes once it is off (else Next during the check reloads the pitch in the check's close-up)
       const vr = varReplay.get();
       if (vr.phase !== 'off') { if (varActive(vr)) endVar(); return; }
       asked = now; tries++; hostRef.current.gotoMoment(clip);
@@ -408,7 +409,7 @@ export function Tour({ host }: { host: TourHost }) {
     return () => { window.clearInterval(id); document.removeEventListener('pointerdown', press, true); clear(); };
   }, [n, latched, loading, aim]);   // eslint-disable-line react-hooks/exhaustive-deps
 
-  // the held parts shown as held (Yi, 2026-10-28: "grey out other options"): every HUD control the step does not let
+  // the held parts shown as held, the other options greyed out: every HUD control the step does not let
   // through is dimmed, each tick (menus open, the rail changes), and all undimmed when the step or the tour ends
   useEffect(() => {
     if (!step) return;

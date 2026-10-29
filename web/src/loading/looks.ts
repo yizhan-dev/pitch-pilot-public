@@ -1,4 +1,4 @@
-// The loading scene's looks (chat 5's request, 2026-10-25: the first thing a judge sees, in the telestration's visual
+// The loading scene's looks (the first thing a judge sees, in the telestration's visual
 // language, handing over to the line-up show's drone shot with the title in the middle). Canvas 2D only, so it paints
 // at once without three.js. Each look draws one frame from: the clock `t` (s since it began), `shown` (the progress on
 // screen, 0..1, never ahead of the real one), the exit `e` (0..1, null before it) and the name (may be empty). The exit

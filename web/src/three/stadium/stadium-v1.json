@@ -1,5 +1,5 @@
 {
- "_comment": "Stadium exterior v1, 2026-10-21: v0 made symmetric north and south (the two long sides) on the lower far-side arch, and a plain light grey octagon ground (Yi). Pending Yi's eye-check; once accepted, add v2 for later changes.",
+ "_comment": "Stadium exterior v1: v0 made symmetric north and south (the two long sides) on the lower far-side arch, and a plain light grey octagon ground. Pending a visual check; once accepted, add v2 for later changes.",
  "crystal": {
   "cornerClear": 3,
   "cutMain": 1,

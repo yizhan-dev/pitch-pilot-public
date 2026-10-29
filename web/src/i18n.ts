@@ -1,4 +1,4 @@
-// The language viewers see (Yi, 2026-10-23: English, the demo is presented to Microsoft). English by default; the
+// The language viewers see (English: the demo is presented to Microsoft). English by default; the
 // Chinese is kept and comes back with ?lang=zh (read once at load: nothing switches it live). Every viewer-facing string
 // is written as tr('中文', 'English'), side by side, so the two stay in step; data files carry *_en fields beside *_zh.
 export type Lang = 'en' | 'zh';

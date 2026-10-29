@@ -1,5 +1,5 @@
 /* the tour's card (tour/Tour.tsx): top centre, under the top bar, in the HUD's glass and type. It sits outside the
-   HUD, so the HUD's own sizes are restated here. Its colour is the Pelicans' cyan (Yi, 2026-10-28: the home side is the
+   HUD, so the HUD's own sizes are restated here. Its colour is the Pelicans' cyan (the home side is the
    perspective the demo takes; white glows read too faintly) */
 .tour {
   --hud-h: 40px; --hud-edge: 20px; --hud-bottom: 20px;

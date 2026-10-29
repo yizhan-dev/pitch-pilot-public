@@ -1,4 +1,4 @@
-// Sparks (Yi, 2026-10-22: particles at the growing edge of each line, so the entrance looks cooler): points the same
+// Sparks (particles at the growing edge of each line, for a livelier entrance): points the same
 // size on screen, added as light, depth tested so players hide them. Stateless: the caller computes every live spark's
 // position from its emission time and seed at the current animation time, so a pause, a scrub and a recording all agree.
 import * as THREE from 'three';

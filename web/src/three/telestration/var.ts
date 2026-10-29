@@ -1,10 +1,10 @@
-// The offside close-up (Yi, 2026-10-23: "we need one 远景, like what we see now, and a follow up close up, like actual
-// VAR"). The wall comes in on the wide view as before; after `TELE.offside.var.holdS` the camera flies to the offside line
+// The offside close-up (a wide view, then a follow-up close-up, as an actual VAR check does). The wall comes in on
+// the wide view as before; after `TELE.offside.var.holdS` the camera flies to the offside line
 // and looks along it at about head height, as the semi-automated offside replays do, and the close-up marks come in:
 // a dot on each man's deciding body part (the part nearest the goal that may play the ball) with a drop line to the
 // grass, the attacker's own line across the pitch beside the wall, and an upright verdict with the margin.
 // drawOffside writes the facts here every frame; VarMarks draws the dots and the verdict from them, and the camera
-// (the sandbox's, or the main session's director) reads varCamera() for where to fly.
+// (the sandbox's, or the game's and the board's directors) reads varCamera() for where to fly.
 
 export interface VarFacts {
   /** an offside item with the close-up is on screen this frame */

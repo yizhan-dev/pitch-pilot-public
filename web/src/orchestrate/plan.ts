@@ -1,7 +1,7 @@
 // The orchestrator: a clip in, a plan of beats out (docs/plans/orchestrator-notes.md). `orchestrate` runs the
 // detection (detect.ts), turns each finding into a candidate beat with its facts, drawings and a salience, keeps the
 // ones that matter within the clip's budget, and checks the clutter budget over the timeline the narration will play.
-// `toCues` compiles the plan to the narration session's cue format (src/explain/script.ts), without text: the
+// `toCues` compiles the plan to the narration's cue format (src/explain/script.ts), without text: the
 // narration writes the lines on these cues (or its own, pinned to touches) and keeps the direction.
 import type { Loaded } from '../data';
 import type { Cue } from '../explain/script';
@@ -22,7 +22,7 @@ export type { Models } from './detect';
 
 /** beats below this salience are dropped (the intro, the shot and the outcome are always kept) */
 const CUT = 0.35;
-/** at most this many beats in a clip, the intro and the outcome included (10 since the insight library, 2026-10-23) */
+/** at most this many beats in a clip, the intro and the outcome included (10 since the insight library) */
 const MAX_BEATS = 10;
 /** a held beat's length: about one line of reading, 2.5 to 3.5 s */
 const HOLD = { shot: 3.0, whatif: 3.6, key: 3.0 };
@@ -47,8 +47,8 @@ const END_ZH: Record<Story['end'], string> = { goal: '进球', saved: '射门被
 
 /** the plan of one clip */
 /** options: `whatIf` adds the "what could have been" beats (the better-placed teammate, the better option to a
- *  low-percentage pass). Off for 讲解 (Yi, 2026-10-23: the what-if belongs to the 战术 mode, not the explanation); the
- *  detection stays for the 战术 tab */
+ *  low-percentage pass). Off for Explain (the what-if belongs to the Tactics mode, not the explanation); the
+ *  detection stays for the Tactics tab */
 export interface PlanOptions { whatIf?: boolean }
 
 export function orchestrate(data: Loaded, models: Models, profile: Profile | null = null, matchPasses: MatchPass[] | null = null, opts: PlanOptions = {}): Plan {
@@ -91,7 +91,7 @@ export function orchestrate(data: Loaded, models: Models, profile: Profile | nul
       facts: [fact('passes', n, 'tracking', '脚'), fact('seconds', bu.t1 - bu.t0, 'tracking', 's'), fact('block_m2', Math.round(area), 'tracking', 'm²', '防守方 10 名场上球员的凸包面积')],
       draw: compact ? [draw.hull('hull-bu', tm, [t0, t1])] : [],
       say: compact ? `对方收得很紧（${Math.round(area)} 平方米），${team} 队来回倒脚找缝` : `${team} 队后场倒脚 ${n} 次，寻找机会`,
-      salience: compact ? 0.45 : 0.36, why: [...why, '正常速度（Yi 2026-10-23：讲解从不变速，只定格；长的组织阶段多讲几句）', compact ? '紧凑：画防守块' : '不紧凑：不画'] }));
+      salience: compact ? 0.45 : 0.36, why: [...why, '正常速度（讲解从不变速，只定格；长的组织阶段多讲几句）', compact ? '紧凑：画防守块' : '不紧凑：不画'] }));
   }
 
   // ---- line-breaking passes
@@ -184,7 +184,7 @@ export function orchestrate(data: Loaded, models: Models, profile: Profile | nul
       why: [`射门定格在触球的那一刻 ${shot.t.toFixed(2)} s（事件流 ${shot.feedT} s）`, `xG：我们 ${shot.xg?.toFixed(3) ?? '—'}，Opta ${shot.opta ?? '—'}`] }));
     const m = shot.mate;
     if (m && whatIf) {
-      // after a goal the what-if is not told (Yi's tone: never second-guess a scorer); a header's what-if is a headed
+      // after a goal the what-if is not told (the tone: never second-guess a scorer); a header's what-if is a headed
       // lay-off, so the ground pass's chance does not apply
       const scored = atk.end === 'goal', head = shot.header;
       const gain = m.xg - xg, ratio = xg > 0 ? m.xg / xg : Infinity, worth = !scored && m.xg >= 0.15 && m.xg >= 2 * xg && gain >= 0.1;
@@ -270,7 +270,7 @@ export function orchestrate(data: Loaded, models: Models, profile: Profile | nul
 
   // ---- choose: always the intro, the shot and the outcome; the rest by salience, within MAX_BEATS; one beat per
   // insight entry (the best), so the clip does not repeat itself
-  // (a build-up with a fast forward was kept whatever its salience; since 2026-10-23 none has one: never change pace)
+  // (a build-up with a fast forward was kept whatever its salience; none has one now: the pace never changes)
   const must = new Set(['intro', 'shot', 'outcome']);
   for (const b of cands) if (b.kind === 'build-up' && b.rate) b.why.push('快进节拍：总是保留（决定整段的节奏）');
   const ranked = [...cands].sort((a, b) => b.salience - a.salience);
@@ -366,7 +366,7 @@ export function enforceBudget(beats: Beat[]): Plan['budget'] {
 
 /** the plan as the narration's cues, without text: a play beat is a cue from t0 until t1 with its drawings, subject,
  *  view and speed (and a held cue at its moment when it holds); a held beat is a held cue carrying its drawings. The
- *  beat's id, kind, facts and line hint ride along in `on` and `beat` for the narration session to write from */
+ *  beat's id, kind, facts and line hint ride along in `on` and `beat` for the narration to write from */
 export function toCues(plan: Plan): (Cue & { beat: { id: string; kind: string; say: string; facts: Fact[] } })[] {
   const out: (Cue & { beat: { id: string; kind: string; say: string; facts: Fact[] } })[] = [];
   for (const b of plan.beats) {

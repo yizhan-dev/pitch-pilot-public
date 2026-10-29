@@ -1,9 +1,9 @@
 import type { ReactNode } from 'react';
 import type { GameMode } from '../game/settings';
 
-// Candidates for the three modes' icons, for Yi to pick from on /hud.html?sheet=mode-icons (2026-10-22), as the view icons
+// Candidates for the three modes' icons, to pick from on /hud.html?sheet=mode-icons, as the view icons
 // were picked. Same grid and strokes as icons.tsx. PICK is what the 模式 button and menu show meanwhile; ?micon=watch:B,
-// explain:C,tactics:D tries others in place. Once Yi picks, the chosen ones move into icons.tsx and this file goes (it
+// explain:C,tactics:D tries others in place. Once they are picked, the chosen ones move into icons.tsx and this file goes (it
 // replaces the 战术模式 switch's candidates, whose switch became the 模式 menu).
 
 const F = { fill: 'currentColor', stroke: 'none' } as const;
@@ -80,7 +80,7 @@ export const MODE_OPTIONS: Record<GameMode, IconOption[]> = {
       <path d="M4.6 7.2 L6.4 4.8 L9.2 5.6 M14.8 5.6 L17.6 4.8 L19.4 7.2" />
     </> },
   ],
-  // the fourth mode (Yi, 2026-10-24 evening: What-if out of 战术 into its own mode): 战术's candidate D, the branching path
+  // the fourth mode (What-if out of 战术 into its own mode): 战术's candidate D, the branching path
   whatif: [
     { id: 'A', name: '分叉路线', node: <>
       <circle cx="12" cy="19.6" r="1.7" {...F} />
@@ -91,9 +91,9 @@ export const MODE_OPTIONS: Record<GameMode, IconOption[]> = {
   ],
 };
 
-/** what the 模式 button and menu show until Yi picks; ?micon=watch:B,explain:C,tactics:D overrides it for a look in place */
+/** what the 模式 button and menu show until the pick is final; ?micon=watch:B,explain:C,tactics:D overrides it for a look in place */
 const PICK: Record<GameMode, string> = (() => {
-  const p: Record<GameMode, string> = { watch: 'C', explain: 'C', tactics: 'A', whatif: 'A' };   // 战术: Yi picked A, 2026-10-22 ("simpler"; D looked bad, E-L tried)
+  const p: Record<GameMode, string> = { watch: 'C', explain: 'C', tactics: 'A', whatif: 'A' };   // 战术: A, the simpler one (D looked bad, E-L tried)
   const q = typeof location === 'undefined' ? null : new URLSearchParams(location.search).get('micon');
   for (const part of (q ?? '').split(',')) {
     const [m, id] = part.split(':') as [GameMode, string];

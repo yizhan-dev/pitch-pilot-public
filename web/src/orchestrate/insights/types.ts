@@ -12,13 +12,13 @@ export interface Insight {
   t: number;
   /** the span of the evidence, for the drawings */
   t0: number; t1: number;
-  /** a short hold at `t` so the viewer sees the detail (Yi, 2026-10-23: brief pauses for animations are allowed) */
+  /** a short hold at `t` so the viewer sees the detail (brief pauses for animations are allowed) */
   hold?: number;
   /** the protagonist first */
   players: Actor[];
   facts: Fact[];
   draw: DrawItem[];
-  /** the gist (neutral), and the same point as praise or as an improvement ("如果……会更好"), with {n:i} names */
+  /** the gist (neutral), and the same point as praise or as an improvement ("it would be better if ..."), with {n:i} names */
   say: { neutral: string; praise?: string; improve?: string };
   /** 0..1: how much it matters to this attack's story */
   salience: number;

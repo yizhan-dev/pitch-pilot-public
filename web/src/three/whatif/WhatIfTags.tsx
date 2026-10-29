@@ -9,17 +9,16 @@ import { land, wiTagged } from '../../whatif/state';
 import { attackingOf, playerTeam } from '../coords';
 import { TELE, inkColour, stackScale, chanceColour } from '../telestration/style';
 
-// The names over the What-if's players (Yi, 2026-10-26: "when we show the player, make sure their name and jersey
-// number are shown too, this style is implemented in Watch mode already"): the Watch mode's Show tag (the Shell chat's
-// three/layers/ShowLayer.tsx, eFootball's way: the shirt number in the team's colour and the shirt name over the head,
-// sized by the Animation chat's TELE.pointer.stack* and stackScale(depth)), drawn here for the What-if's own set: while
+// The names over the What-if's players (a player shown carries his name and shirt number, in the Watch mode's
+// style): the Watch mode's Show tag (three/layers/ShowLayer.tsx, eFootball's way: the shirt number in the team's colour and the shirt name over the head,
+// sized by TELE.pointer.stack* and stackScale(depth)), drawn here for the What-if's own set: while
 // he picks, the man on the ball and his lit options; while a pass plays and at its end, the passer and the receiver.
 // DOM over the canvas, placed after the frame is rendered (addAfterEffect, the frame's own camera), on whole pixels.
 // While he picks, each option's chance of the pass reaching him hangs off the right of his name, as the Tactics mode's
-// pass chance (ShowLayer.tsx: its .gm-tag-chance, chanceColour; Yi, 2026-10-26: "refer to the passing probability
-// display in tactics mode ... add that percentage number to the right of player's name"); offside, no number.
+// pass chance (ShowLayer.tsx: its .gm-tag-chance, chanceColour: the percentage to the right of the player's
+// name); offside, no number.
 // The Show layer skips the men tagged here (state.ts wiTagged), so a name is never printed twice: both stood 0.28 m over
-// the neck, and the Show tag's stamina bar set the two names apart (Yi, 2026-10-26).
+// the neck, and the Show tag's stamina bar set the two names apart.
 
 const UP_M = 0.28;
 type Tag = { el: HTMLDivElement; no: HTMLElement; chance: HTMLSpanElement; cv: string; shown: boolean; s: string; bw: number; bh: number };

@@ -4,10 +4,10 @@ import { HX, HY, RC, ROOF } from './layout';
 import { STADIUM_CURRENT } from './crystalParams';
 import { buildCrystalShell } from './crystalBuild';
 
-// Floodlight haze (Yi, 2026-10-22: candidate 4 of docs/research/stadium-vivid.md). A faint warm curtain hangs from the
+// Floodlight haze (candidate 4 of docs/research/stadium-vivid.md). A faint warm curtain hangs from the
 // floodlight ring under the roof opening and fades out 26 m inwards and 22 m down, so the air under the lights glows a
 // little, as on a misty night. Additive and unlit.
-// Mist only shows where you look into the light, so the curtain fades with the view (Yi, same day: from high up it lay
+// Mist only shows where you look into the light, so the curtain fades with the view (unfaded, from high up it lay
 // over the pitch like a wall with a hard top edge, and tinted the grass): a fragment seen looking down through it fades
 // out (gone by 17 degrees down, so it never tints the pitch), one within 15-40 m of the camera fades too, so flying
 // through it shows no sheet, and so does one where the curtain turns edge-on to the view, where it would end in a hard

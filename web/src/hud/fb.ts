@@ -1,6 +1,6 @@
-// Fernández and Bornn (2018) pitch control and space occupation / generation, ported from Yi's notebook
+// Fernández and Bornn (2018) pitch control and space occupation / generation, ported from the notebook
 // (<private-workspace>, cells 12, 18, 54-56, 62, 70) for the HUD preview's
-// draft of the 战术 mode (Yi, 2026-10-23: the space family uses this model; precalculated at export from the 50 Hz tracking
+// draft of the 战术 mode (the space family uses this model; precalculated at export from the 50 Hz tracking
 // later, computed here from the clip's 10 Hz positions meanwhile). Pitch metres, attackers attacking +x.
 // One placeholder: the notebook's space value V is a network trained on where the defenders stand for a given ball
 // position; here V is that network's training target at this moment (the defenders' summed influence, capped at 1), so

@@ -1,5 +1,5 @@
-// Bodies from the real strides (Yi, 2026-10-27: "distill player's running skeleton nuance, while combining with our
-// downloaded mixamo assets, then when we show the forked version, we can actually animate each player to that spot").
+// Bodies from the real strides: the nuance of the tracked players' running skeletons, with the Mixamo assets beside
+// them, so each player in the forked version is animated to his spot.
 // The library (private/hawkeye/gait_build.py; /data/models/gait.json + gait.bin, sealed in a release like the clips)
 // holds about a second-long runs of the match's tracked players, each frame in the man's body frame (the hips' centre
 // at the origin, his torso facing +y, +x a quarter turn clockwise of it, as motion.ts's clips) with the root he had on
@@ -12,6 +12,7 @@
 // first stride follows it. The Mixamo pack keeps the acts laid over (branch.ts: kick, touch, tackle) and remains the
 // fallback (motion.ts) when the library is not there.
 import { modelFile } from '../data/paths';
+import { hooked } from '../dev';
 import type { Joints } from '../data';
 import type { FacingOpts, Track } from './motion';
 
@@ -54,11 +55,11 @@ const PULL_MOVE = 0.06, PULL_STILL = 0.12;
  *  re-planted when the body has moved LOCK_MAX from it */
 const PLANT_Z = 0.2, PLANT_V = 0.7, LOCK_MAX = 0.35, TAU_LOCK = 0.06, TAU_DRIFT = 0.15;
 type Tuning = { pullMove: number; pullStill: number; lockMax: number; tauLock: number; tauDrift: number };
-const tuning = (): Tuning => ({ pullMove: PULL_MOVE, pullStill: PULL_STILL, lockMax: LOCK_MAX, tauLock: TAU_LOCK, tauDrift: TAU_DRIFT, ...((globalThis as { __gaitOpts?: Partial<Tuning> }).__gaitOpts ?? {}) });
+const tuning = (): Tuning => ({ pullMove: PULL_MOVE, pullStill: PULL_STILL, lockMax: LOCK_MAX, tauLock: TAU_LOCK, tauDrift: TAU_DRIFT, ...(hooked<Partial<Tuning>>('gaitOpts') ?? {}) });
 
 const wrapA = (a: number) => Math.atan2(Math.sin(a), Math.cos(a));
 /** the facing asked of the matcher and of the pull: the run's direction (weight speed²) against the ball's pull,
- *  motion.ts's weights (measured on five clips against the tracked bodies, 2026-10-27: with the pull below the facing
+ *  motion.ts's weights (measured on five clips against the tracked bodies: with the pull below the facing
  *  is 13° off at the median, 31° at the 80th percentile; Mixamo's loops 11° / 27°, the strides with a tenth of the
  *  pull 16° / 38°) */
 export const GAIT_FACING: FacingOpts = { ball: 2.2, keeperBall: 12, ease: 0 };
@@ -99,7 +100,7 @@ export function parseGait(head: GaitHead, buf: ArrayBuffer): GaitLib {
   for (let i = 0; i < n; i++) if (valid[i]) for (let d = 0; d < D; d++) sd[d] += (feat[i * D + d] - mu[d]) ** 2;
   for (let d = 0; d < D; d++) sd[d] = Math.sqrt(sd[d] / Math.max(1, m)) || 1;
   // the facing's change stays on its own scale (a unit vector): players seldom turn within 0.2 s, so its spread is
-  // tiny, and normalised by it a wanted turn outweighed everything else and picked the spinning frames (2026-10-27)
+  // tiny, and normalised by it a wanted turn outweighed everything else and picked the spinning frames
   for (let d = 21; d < D; d++) { mu[d] = 0; sd[d] = 1; }
   for (let i = 0; i < n; i++) if (valid[i]) for (let d = 0; d < D; d++) feat[i * D + d] = ((feat[i * D + d] - mu[d]) / sd[d]) * WEIGHT[d];
   const idx: number[] = [];
@@ -158,9 +159,12 @@ export interface GaitStart { J: Joints; f0: number; pre: number }
 
 /** joints for every track at fps from the library: `pids` names each track's player (the library's own strides come
  *  first for him; null, or a player it lacks, draws on the pool alone); `start` the pose each continues from */
+/** the library fits a clip's joints (the same names in the same order); branch.ts falls back to the Mixamo loops
+ *  when it does not, instead of a throw that left the mode in 'computing' */
+export const gaitFits = (lib: GaitLib, names: string[]) => names.length === lib.nJ && names.every((n, j) => lib.names[j] === n);
 export function synthesizeGait(lib: GaitLib, tracks: Track[], ball: ([number, number] | null)[], fps: number, nAtt: number, names: string[], pids: (string | null)[], start: GaitStart | null, opts: FacingOpts = GAIT_FACING): Joints {
   const nJ = names.length, F = tracks[0]?.pos.length ?? 0, P = tracks.length, dt = 1 / fps, out = new Float32Array(F * P * nJ * 3);
-  if (nJ !== lib.nJ || names.some((n, j) => lib.names[j] !== n)) throw new Error('gait: the joints differ from the library');
+  if (!gaitFits(lib, names)) throw new Error('gait: the joints differ from the library');
   const lA = names.indexOf('lAnkle'), rA = names.indexOf('rAnkle'), hip = names.indexOf('midHip');
   const FOOT = { l: ['lAnkle', 'lHeel', 'lBigToe', 'lSmallToe'].map((n) => names.indexOf(n)), r: ['rAnkle', 'rHeel', 'rBigToe', 'rSmallToe'].map((n) => names.indexOf(n)) }, KNEE = { l: names.indexOf('lKnee'), r: names.indexOf('rKnee') };
   const meanHeight = lib.heights.reduce((a, b) => a + b, 0) / Math.max(1, lib.heights.length);
@@ -176,7 +180,7 @@ export function synthesizeGait(lib: GaitLib, tracks: Track[], ball: ([number, nu
     const lock = { l: { on: false, wait: false, x: 0, y: 0, sx: 0, sy: 0 }, r: { on: false, wait: false, x: 0, y: 0, sx: 0, sy: 0 } };
     const h = 3, vel0 = (i: number): [number, number] => { const a = tr.pos[Math.max(0, i - h)], b = tr.pos[Math.min(F - 1, i + h)], span = (Math.min(F - 1, i + h) - Math.max(0, i - h)) * dt; return span > 0 ? [(b[0] - a[0]) / span, (b[1] - a[1]) / span] : [0, 0]; };
     // past the track's end the path carries on at its last speed: looked at as it was, the end read as a stop 0.6 s
-    // early, and the matcher chose slowing strides while the hips still ran (the receiver slid to the ball, 2026-10-27)
+    // early, and the matcher chose slowing strides while the hips still ran (the receiver slid to the ball)
     const vEnd = vel0(Math.max(0, F - 4));
     const vel = (k: number): [number, number] => (k <= F - 1 ? vel0(k) : vEnd);
     const pos = (k: number): [number, number] => (k <= F - 1 ? tr.pos[k] : [tr.pos[F - 1][0] + vEnd[0] * (k - (F - 1)) * dt, tr.pos[F - 1][1] + vEnd[1] * (k - (F - 1)) * dt]);
@@ -226,7 +230,7 @@ export function synthesizeGait(lib: GaitLib, tracks: Track[], ball: ([number, nu
         // valid frame starts him, rather than a frame -1 and a body of NaNs
         if (best < 0) { best = cont >= 0 ? cont : lib.order[0]; bestC = Infinity; }
         const stay = cont >= 0 && lib.valid[cont] && dist2(cont, Infinity) <= bestC * STAY + 0.05;
-        const dbg = (globalThis as { __gaitLog?: unknown[] }).__gaitLog;
+        const dbg = hooked<unknown[]>('gaitLog');
         if (dbg) dbg.push({ p, i, best, bestC, cont, stay, phi, speed: s, dbSpeed: best >= 0 ? lib.speed[best] : null, dbYaw: best >= 0 ? lib.root[best * 3 + 2] : null, seg: best >= 0 ? [lib.segStart[best], lib.segEnd[best]] : null, q: Array.from(Q), f: best >= 0 ? Array.from(lib.feat.subarray(best * D, best * D + D)) : null });
         if (!stay && best >= 0) {
           // the join: the difference of his present pose and the new frame's, carried and let decay

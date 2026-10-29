@@ -9,6 +9,7 @@ import { poseAt, poseIndex, jointOf, torsoFrame, focalPx } from './pose';
 import { LIMBS, BLOBS, DOTS_TORSO, TORSO_RINGS, TORSO_SEG, TORSO_N, pointOf, headFrame, blobFrame, kitColor, shapeW, bustAt, type Part } from './body';
 import { makeLooks, numberAtlas, nameAtlas, HAIR_PIECES, PIECE_NAMES, STYLE_PIECES, GK_KIT, type Look, type Zone } from './looks';
 import type { Grp } from './body';
+import { xOn } from '../quality';
 
 /** the players' figures' one bound: the stadium's ground round the pitch (see where the figures are made) */
 const FIGURE_BOUND = new THREE.Sphere(new THREE.Vector3(0, 1, 0), 400);
@@ -273,7 +274,10 @@ function Figure({ J, clock, shade, looks, lag = 0, opacity = 1, hide, only, mask
     const torsoLine = outline ? new THREE.Mesh(torsoGeo, outlineMaterial(OUTLINE_PX, false)) : null;
     // a fixed bound for each: the renderer sorts by it, and computing it from the first frame's vertices met a player not
     // yet placed (NaN, "computeBoundingSphere(): Computed radius is NaN" on every cold load); nothing culls or picks by it
-    for (const m of [...limbs, blobs, ...hair, ...lines, torso, ...(torsoLine ? [torsoLine] : [])]) { m.frustumCulled = false; m.geometry.boundingSphere = FIGURE_BOUND.clone(); m.castShadow = shade !== 'ghost'; markFigure(m.material as THREE.Material); }
+    // (the outlines cast no shadow: a shell is the body's own geometry, pushed out in screen space only, and the shadow
+    // pass draws the raw geometry, so its shadow was the body's again, a second time; three/quality.ts xOn)
+    const shells = new Set<THREE.Object3D>(xOn('hullshadow') ? [...lines, ...(torsoLine ? [torsoLine] : [])] : []);
+    for (const m of [...limbs, blobs, ...hair, ...lines, torso, ...(torsoLine ? [torsoLine] : [])]) { m.frustumCulled = false; m.geometry.boundingSphere = FIGURE_BOUND.clone(); m.castShadow = shade !== 'ghost' && !shells.has(m); markFigure(m.material as THREE.Material); }
     const wears = PIECE_NAMES.map((name) => L.map((l) => STYLE_PIECES[l.style].includes(name)));
     // a hair piece nobody here wears is not drawn at all (no draw call for instances all scaled to nothing)
     PIECE_NAMES.forEach((_, k) => { const any = wears[k].some(Boolean); hair[k].visible = any; if (lines.length) lines[LIMBS.length + 1 + k].visible = any; });

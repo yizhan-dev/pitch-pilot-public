@@ -10,7 +10,7 @@ import type { Shape } from './body';
 export type HairStyle = 'bald' | 'buzz' | 'crop' | 'quiff' | 'curly' | 'bun' | 'long' | 'mohawk' | 'ponytail';
 export const HAIR_STYLES: HairStyle[] = ['buzz', 'crop', 'quiff', 'curly', 'bun', 'long', 'mohawk', 'bald'];
 export const HAIR_LABEL: Record<HairStyle, string> = { bald: '光头', buzz: '寸头', crop: '短发', quiff: '飞机头', curly: '卷发', bun: '丸子头', long: '长发', mohawk: '莫西干', ponytail: '马尾' };
-/** how often each style is drawn, relative: the mohawk is rare (Yi 2026-10-21; it was one in eight, now about one in 30) */
+/** how often each style is drawn, relative: the mohawk is rare (about one in 30; at one in eight it was far too common) */
 /** the ponytail is the cast's (src/cast) and never drawn for a player: it is not in HAIR_STYLES */
 export const HAIR_WEIGHT: Record<HairStyle, number> = { buzz: 1, crop: 1, quiff: 1, curly: 1, bun: 1, long: 1, mohawk: 0.25, bald: 1, ponytail: 0 };
 /** a spread of human skin tones, light to dark */
@@ -23,12 +23,12 @@ export const HAIR_COLOURS = ['#15110f', '#2b1d15', '#4a3221', '#7a5434', '#a8794
 export interface HairPiece { off: [number, number, number]; r: [number, number, number]; tilt?: number }
 export const HAIR_PIECES: Record<string, HairPiece> = {
   // short hair over the top and back, the face clear. Tilted 35 degrees so the hairline runs high over the forehead
-  // (7 cm above the head's centre; it was 3.7, Yi 2026-10-21: far too low) and low at the nape (-5 cm), 1.4 cm thick on top
+  // (7 cm above the head's centre; at 3.7 it was far too low) and low at the nape (-5 cm), 1.4 cm thick on top
   cap: { off: [0, 0.035, -0.02], r: [0.108, 0.095, 0.122], tilt: 0.61 },
   buzz: { off: [0, 0.018, -0.008], r: [0.108, 0.119, 0.119] },    // a thin layer, close to the head
   // the front hair swept up: a wide volume over the forehead, 18 cm across, its crest about 4 cm above the scalp and
   // reaching about 4 cm out over the forehead, its back sinking into the cap at the crown (it was a narrow lump on the
-  // crown that read as a bun, Yi 2026-10-21: looks weird)
+  // crown that read as a bun and looked odd)
   quiff: { off: [0, 0.09, 0.04], r: [0.088, 0.06, 0.07], tilt: 0.6 },
   afro: { off: [0, 0.05, -0.03], r: [0.135, 0.125, 0.13] },       // a round mass of curls
   bun: { off: [0, 0.1, -0.09], r: [0.038, 0.038, 0.038] },        // tied up at the back
@@ -59,8 +59,8 @@ export const BOOTS: { color: string; label: string; w: number }[] = [
 ];
 
 /** Goalkeepers wear a kit unlike both teams': long sleeves and gloves, in a colour of their own (Law 4: colours that
- *  distinguish them from the other players and the officials). By team, as the kits (coords.ts, Yi 2026-10-23): the
- *  green was the attacking keeper's and the yellow the defending one's until then. */
+ *  distinguish them from the other players and the officials). By team, as the kits (coords.ts), not by role (the
+ *  attacking keeper green and the defending one yellow), so a keeper keeps his colour from clip to clip. */
 export const GK_KIT = {
   home: { shirt: '#22b36b', shorts: '#16241c', socks: '#22b36b' },    // green against the home side's blue
   away: { shirt: '#e8cf2a', shorts: '#222225', socks: '#e8cf2a' },    // yellow against the away side's orange
@@ -102,7 +102,7 @@ export function keepersOf(pkg: MomentPkg): number[] {
   return [att, f.att.length + def];
 }
 
-/** a shirt number as a squad list hands them out (Yi, 2026-10-21: random, but 1-20 should be the common ones): about
+/** a shirt number as a squad list hands them out (random, but 1-20 the common ones): about
  *  three quarters from 2-20, most of the rest from 21-40, and now and then a high number up to 99 */
 function drawNumber(r: () => number) {
   const u = r();

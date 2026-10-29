@@ -197,7 +197,7 @@ void main() {
   else if (kind == 5) {
     // a zone (pitch_prism's Zone tool, as a rectangle): the matte zebra inside, a glowing outline all round with square
     // corners. vA: half length, half width, stripe width, paint alpha; vB: progress, paint progress (style 0), outline
-    // half-width, scale; vC1: the outline's colour and, in .w, the entrance style (Yi, 2026-10-22: the zone's entrance
+    // half-width, scale; vC1: the outline's colour and, in .w, the entrance style (the zone's entrance
     // must differ from the lines', or the eye tires): 0 corners (each side from its corners to its middle, stripes
     // staggered), 1 scan (a band of light sweeps along, leaving the zone behind it), 2 unfold (a line along the middle
     // stretches out, then opens into the box), 3 trace (a bright pen runs once round the outline, then the stripes
@@ -261,12 +261,12 @@ void main() {
     lightAdd = mix(vC1.rgb, vec3(1.0), 0.45) * lite;           // the entrance's own light, at full strength
   }
   else if (kind == 6) {
-    // a zone of any shape (Yi, 2026-10-22: two sides need not be parallel): a polygon of 3 to 8 corners, the matte zebra
+    // a zone of any shape (two sides need not be parallel): a polygon of 3 to 8 corners, the matte zebra
     // inside a glowing outline. The quad's frame stands on the zone's centroid and runs along its axis (local x along it,
     // y across). It unfolds from its spine, the axis through the centroid: a straight line stretches out along it, then
     // opens across towards both sides at once, each moving edge a fixed share of the way from the spine to the polygon's
     // own side at every point, so the edges swing from the spine's direction onto the sides' (the rectangle's unfold,
-    // Yi's C, is the special case). vA, vD, vE, vF: the corners in local metres, two to a vector; vC1: the outline's colour, the corner count in
+    // variant C, is the special case). vA, vD, vE, vF: the corners in local metres, two to a vector; vC1: the outline's colour, the corner count in
     // .w; vC2: the paint's colour and alpha; vB: progress, stripe width, outline half-width, scale; vG.xy: the stripes'
     // normal in local axes, vG.z their phase at the centre (so they line up with every other zone's on the pitch)
     vec2 V[8];
@@ -322,15 +322,15 @@ void main() {
     lightAdd = mix(vC1.rgb, vec3(1.0), 0.45) * 0.6 * (1.0 - smoothstep(0.6, 1.0, t)) * cO;
   }
   else if (kind == 7) {
-    // a marking pair's capsule (Yi, 2026-10-22): an outline round two players, from A (at -hL along the axis, the
+    // a marking pair's capsule: an outline round two players, from A (at -hL along the axis, the
     // marker) to B (+hL, his man), radius r, a faint wash inside. vA: half-length, radius, outline half-width, wash
     // alpha; vB: the entrance's progress 0..1, its style, the idle pulse's progress (negative: none), the scale. Styles
-    // (Yi asked for a cooler entrance; six to choose from): 0 stretch (opens round the marker, stretches to his man;
+    // (entrances with more life; six to choose from): 0 stretch (opens round the marker, stretches to his man;
     // the caller pops the radius), 1 snap (shoots past his man and springs back, flashing as it locks), 2 merge (a
     // circle under each, liquid tendrils reaching from both meet and fuse into the capsule), 3 lasso (a wide spinning
     // dashed loop round the marker swings over his man and pulls tight, the dashes closing), 4 embrace (two arms from
     // behind the marker wrap round and close in front of his man, then the wash fills), 5 sonar (the caller's ripples
-    // reach his man, the capsule flashes in), 6 fade (round two, Yi: simpler; the whole capsule fades in)
+    // reach his man, the capsule flashes in), 6 fade (the simplest; the whole capsule fades in)
     float hL = vA.x, r = vA.y, hw0 = vA.z, t = clamp(vB.x, 0.0, 1.0);
     int sty = int(vB.y + 0.5);
     vec2 pa = p - vec2(-hL, 0.0), pb = p - vec2(hL, 0.0);
@@ -394,8 +394,8 @@ void main() {
       float wv = exp(-pow((p.x - xw) / 0.8, 2.0));
       liteO += 0.55 * wv; lite += 0.6 * wv;
     }
-    // the colour: the marker's team (vC1), or a gradient from it at his end to his man's team (vC2) at the other
-    // (Yi, 2026-10-23), across the span between the two men; vD.x the blend (0 none, 1 OKLab, 2 round the hue)
+    // the colour: the marker's team (vC1), or a gradient from it at his end to his man's team (vC2) at the other,
+    // across the span between the two men; vD.x the blend (0 none, 1 OKLab, 2 round the hue)
     vec3 cc = gradMix(vC1.rgb, vC2.rgb, smoothstep(-hL, hL, p.x), vD.x);
     // light on the outline; inside, a flash thickens the paint (light added over the grass would turn it yellow-green)
     float cOm = cO * mO, cW = inside * min(0.6, vA.w * mW + 0.35 * lite);
@@ -405,15 +405,15 @@ void main() {
     lightAdd = mix(cc, vec3(1.0), 0.45) * (lite + liteO) * cOm * step(0.0001, t);
   }
   else if (kind == 8) {
-    // the shot cone (Yi, 2026-10-22: a must, top priority): light from the shooter (at the origin, the axis towards the
+    // the shot cone: light from the shooter (at the origin, the axis towards the
     // goal) to the two posts; each defender and the keeper casts a shadow over the directions his body hides (the xG
     // model's own: 0.5 m half-width, cut to the goal mouth), beginning where he stands; thin edges to the posts. It
     // enters as a beam
-    // sweeping out from the shooter, the shadows appearing as it passes each man (Yi: the shadows yes; a lit strip
-    // on the goal line, no). vA: the posts (local metres); vB:
+    // sweeping out from the shooter, the shadows appearing as it passes each man (the shadows, but no lit strip
+    // on the goal line). vA: the posts (local metres); vB:
     // progress, the wash's alpha, the edges' half-width, the scale; vC1: the light's colour, the shadows' count in .w;
     // vC2: the shadows' tint and alpha; vD..vG: up to five shadows as (from angle, to angle, from distance); vG.w: the
-    // radius it starts at, the shooter's inner ring (Yi: the cone must not step into the inner ring; cut at the band's
+    // radius it starts at, the shooter's inner ring (the cone must not step into the inner ring; cut at the band's
     // centreline, so the ring drawn over it buries the seam, the units' rule)
     vec2 P1 = vA.xy, P2 = vA.zw;
     float t = vB.x, wash = vB.y, hw0 = vB.z;
@@ -439,7 +439,7 @@ void main() {
     float lit = wash * mix(0.35, 1.0, clamp(rho / L, 0.0, 1.0)) * cT * (1.0 - sh) * reveal, dark = vC2.w * cT * sh * reveal;
     rgb = vC2.rgb * dark; a = dark;
     rgb = vC1.rgb * lit + rgb * (1.0 - lit); a = lit + a * (1.0 - lit);
-    // the edges to the posts, drawn with the front (no arc at the apex: Yi, 2026-10-22, it looked odd; the angle's number
+    // the edges to the posts, drawn with the front (no arc at the apex: it looked odd; the angle's number
     // lies there alone)
     float aD = max(length(dx) + length(dy), 1e-6) * 0.7071;
     float hw = max(hw0, 0.5 * uMinPx * aD), dE = min(sdSegG(p, vec2(0.0), P1), sdSegG(p, vec2(0.0), P2)) - hw;
@@ -452,7 +452,7 @@ void main() {
     lightAdd = mix(vC1.rgb, vec3(1.0), 0.5) * exp(-pow((rho - R) / 0.9, 2.0)) * cT * (1.0 - sh) * 0.35 * (1.0 - smoothstep(0.6, 0.8, t)) * cut;
   }
   else if (kind == 9) {
-    // a side's block (Yi, 2026-10-22: every player in it with the rotating ring, the ones on its edge joined by lines,
+    // a side's block (every player in it with the rotating ring, the ones on its edge joined by lines,
     // the diagonal stripes inside): pitch_prism's matte zebra clipped to the hull through the players, minus a disc at
     // every player's ring (the rings and the lines are drawn as their own marks). The stripes arrive in pitch_prism's
     // cascade, one after another across the block, each drawn along its length. vA, vD, vE, vF, vG: up to ten players
@@ -489,19 +489,19 @@ void main() {
     float u = mod(s0 - rA - ph, per) - 0.5 * per;
     // one chevron per spacing: its apex ahead (towards B), its arms back at 45 degrees
     float dC = sdSegG(vec2(u, abs(p.y)), vec2(0.5 * cw, 0.0), vec2(-0.5 * cw, cw));
-    // its pixel size from the direction away from the arm (chat 4, Yi 2026-10-26: dFdx(dC) spiked on the cell edges,
+    // its pixel size from the direction away from the arm (dFdx(dC) spiked on the cell edges,
     // where u wraps from one chevron to the next, and the stroke's pixel floor drew faint lines there like guide lines)
     vec2 gC = gSegG(vec2(u, abs(p.y)), vec2(0.5 * cw, 0.0), vec2(-0.5 * cw, cw));
     float aE = aaOf(vec2(gC.x, p.y < 0.0 ? -gC.y : gC.y), dx, dy);
     float sw = max(sw0, 0.5 * uMinPx * aE), dS = dC - sw;
-    // each chevron fades as a whole, by its own centre's place (Yi, 2026-10-23: tick by tick, not cut by a line across):
+    // each chevron fades as a whole, by its own centre's place (tick by tick, not cut by a line across):
     // in near A, out over the last spacing and a half towards B, and drawn on one by one as the reveal passes it
     float sc = s0 - u, fe = min(1.5 * per, 0.4 * Lv);
     float ends = smoothstep(rA, rA + 0.5 * per, sc) * (1.0 - smoothstep(L - rB - fe, L - rB, sc));
     float shown = clamp((rA + f * Lv - sc) / (0.5 * per) + 0.5, 0.0, 1.0);
     ends *= shown;
     float dDraw = -1.0;
-    // the end held (the pen's drag, Yi 2026-10-25): the flowing chevrons gone a spacing short of the still one
+    // the end held (the pen's drag): the flowing chevrons gone a spacing short of the still one
     float scF = L - rB - 0.5 * cw;
     if (vC2.z > 0.5) ends *= 1.0 - smoothstep(scF - 1.3 * per, scF - 0.55 * per, sc);
     float c = cov(dS, aE) * ends * step(0.001, f);
@@ -571,7 +571,7 @@ void main() {
     glow = vC1.rgb * halo(max(d, 0.0), s) * 0.3 / max(uGlow, 1e-3) * fade * (sty == 3 ? 1.0 - vC2.w : 1.0);
   }
   else if (kind == 12) {
-    // a presser's mark (Yi, 2026-10-22: the carrier keeps the light column; the defenders need their own look). Mode 0,
+    // a presser's mark (the carrier keeps the light column; the defenders need their own look). Mode 0,
     // the wedge: from the presser (A at -hL) a beam of his team colour narrowing to a point at the carrier (B at +hL,
     // cut rB short), strongest near the carrier, growing out from the presser as it draws. Mode 1, the threat arc: on a
     // ring of radius R round the carrier (the frame's origin), an arc facing the presser (the axis), its half-angle
@@ -596,7 +596,7 @@ void main() {
     glow = vC1.rgb * halo(max(d, 0.0), s * 1.5) * step(0.001, t) * (0.35 + 0.65 * I) * fill * edge;
   }
   else if (kind == 14) {
-    // a round zone (the Tactics pen's circle, Yi 2026-10-25): the zones' look (kind 6, shown whole) on a disc: the solid
+    // a round zone (the Tactics pen's circle): the zones' look (kind 6, shown whole) on a disc: the solid
     // edge and the matte zebra inside, its stripes in phase with every other zone's. vA: radius, edge half-width, stripe
     // width, paint alpha; vB.w: the scale; vC1: the edge's colour; vC2: the paint's; vD.xy: the stripes' normal, vD.z
     // their phase at the centre
@@ -613,7 +613,7 @@ void main() {
     glow = vC1.rgb * halo(max(dOut, 0.0), s);
   }
   else if (kind == 15) {
-    // a gauge on the pitch (a number for the Explain chat, Yi 2026-10-26): a band (mode 0) or a filled sector (mode 1)
+    // a gauge on the pitch (a number for the narration): a band (mode 0) or a filled sector (mode 1)
     // round the centre, from the local +x axis (the screen's up, the caller sets the frame) turning clockwise on screen
     // (vB.y the sign) over the share vB.x, over a faint track (vC2, its alpha in .w) for the rest. vA: radius, band
     // half-width, the sector's inner radius; vB.z mode; vB.w the scale; vC1 the fill's colour, its alpha in .w
@@ -629,7 +629,7 @@ void main() {
     rgb = vC1.rgb * cF + vC2.rgb * cT; a = cF + cT;
   }
   else if (kind == 13) {
-    // a marking pair, round three (Yi, 2026-10-24: more options than the capsule), from A (the marker, at -hL along the
+    // a marking pair, the plainer styles (more options than the capsule), from A (the marker, at -hL along the
     // axis) to B (his man, +hL); no glow. vA: half-length, the pool's radius, the line's half-width, the pool's core
     // alpha; vB: the fade 0..1, the look (0 dumbbell, 1 guard, 2 pool, 3 line, 4 hoops); vC1, vC2: the marker's and
     // his man's team colours; vD: the gradient's mode, the dots' radius, the cut round the feet, the arc's radius; vE:

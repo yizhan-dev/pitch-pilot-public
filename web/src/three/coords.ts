@@ -5,8 +5,8 @@ import { tr } from '../i18n';
 export const L = 105, W = 68;
 export const v3 = (x: number, y: number, z = 0) => new THREE.Vector3(x, z, y);
 
-// The kits. Each team keeps its colours in every clip (Yi, 2026-10-23): home (Team A) blue, away (Team B) orange. Until
-// then they went by role, the attacking side blue and the defending side orange, so a team changed colour from one clip
+// The kits. Each team keeps its colours in every clip: home (Team A) blue, away (Team B) orange. By role (the
+// attacking side blue and the defending side orange) a team changed colour from one clip
 // to the next. The packages stay in attack order (players 0..nAtt-1 attack, pkg.meta.attacking says which team that
 // is), so anything drawn in a team's colour asks kitOf / roleTeam / playerTeam below which team a role or a player is.
 
@@ -22,7 +22,7 @@ export const TEAM_KIT = {
 };
 export const KIT = {
   skin: '#8d96a3', boot: '#14171c',
-  /** @deprecated the kits by role from before 2026-10-23 (att was always blue, def orange), wrong whenever the away
+  /** @deprecated the old kits by role (att was always blue, def orange), wrong whenever the away
    *  team attacks; use kitOf(role, attacking) or TEAM_KIT. Kept, the same objects, for code not yet converted
    *  (telestration/style.ts, players/v0/); see docs/plans/team-colours.md */
   att: TEAM_KIT.home,
@@ -33,8 +33,8 @@ export const KIT = {
 /** the attacking team of a package (pkg.meta): 'away' only when it says so, so a package without one draws as before */
 export const attackingOf = (meta: { attacking?: string }): Team => (meta.attacking === 'away' ? 'away' : 'home');
 
-/** the match's ends (Yi, 2026-10-24: "first half blue attacks from left to right, red from right to left; and second
- *  half switch"). A package's attackers attack +x, which the broadcast camera shows left to right: +1 when that is how
+/** the match's ends (in the first half the home side attacks left to right and the away side right to left; the
+ *  second half switches). A package's attackers attack +x, which the broadcast camera shows left to right: +1 when that is how
  *  the match reads, -1 when the view turns round (the stadium, the lights and the cameras that keep to one side go to
  *  the other touchline, the radar turns; the players, the ball and every model stay in the package's frame). Only where
  *  a page turns it on (GameApp, the Decision Lab), so the other pages keep their views. */

@@ -13,6 +13,6 @@ The slogan, "Intelligence takes flight.", is set as on yizhan.dev, in Jost (SIL 
 License, `fonts/OFL-Jost.txt`), white on black on the goal-end LED boards.
 
 `kick-mark-white.png` is the Project KICK monogram, the pure icon without the "PROJ. KICK" lettering: white on
-transparent, trimmed from `<private-workspace>` (itself cropped from
-`kick_site/assets/logo_wordmark.png` at the mark's alpha). On the LED boards it stands beside "PROJECT KICK" set in Jost
-(Yi, 2026-10-23), white on black.
+transparent, trimmed from `<private-workspace> (itself cropped from
+`kick_site/assets/logo_wordmark.png` at the mark's alpha). On the LED boards it stands beside "PROJECT KICK" set in Jost,
+white on black.

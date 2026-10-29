@@ -4,7 +4,7 @@ import { makeLooks, type Look, type Seeds } from '../three/players/looks';
 import type { Team } from '../three/coords';
 import { pick } from '../i18n';
 
-// The match roster (Yi, 2026-10-23: "we need to make the names consistent and plausible"): one invented identity per
+// The match roster, so the names are consistent and plausible: one invented identity per
 // player, the same in the line-up show and in every clip. The names are in each nationality's style (a Chinese player
 // gets a realistic Chinese name), written by private/lineup/make_roster.py into <match>/roster.json and checked
 // there against both real squads. The look (face, hair, build, boots, shirt number) comes from one makeLooks over the

@@ -12,11 +12,11 @@ import { SHOT_TYPES } from '../football/events';
 import { useDirectedIds, WHATIF_CLIPS } from './directed';
 import { clipSwap, swapTarget } from '../game/clipSwap';
 
-// The replay plate, bottom right (Yi, 2026-10-22): the player card's nameplate mirrored about the screen's centre line,
+// The replay plate, bottom right: the player card's nameplate mirrored about the screen's centre line,
 // its cut corner on the inner side. In the number's place the clip's team crest (A or B), in the name's the event, the
 // expand button at the right. Under the rule, in the stamina's place: the match clock, then rewind, play and fast forward (no event
-// ticks: over a whole match they would be impossibly dense, Yi), and the speed under the expand button (click for slow
-// motion). Along the bottom edge, in the instant stamina's place, the progress bar itself (Yi): hovering it thickens it and
+// ticks: over a whole match they would be impossibly dense), and the speed under the expand button (click for slow
+// motion). Along the bottom edge, in the instant stamina's place, the progress bar itself: hovering it thickens it and
 // shows a knob to drag; a click or a drag seeks. Expanded, it grows upward with two tabs, 事件 (this clip's events) and
 // 片段 (the exported clips), each a list to click (ReplayTabs). ?replay=open opens it.
 // The clock stays the 3D side's: the HUD only asks through `Playback`.
@@ -37,10 +37,10 @@ export interface Playback {
 
 export interface ReplayPlateProps {
   pkg: ClipPkg; clock: Clock; index: ClipIndex | null; playback: Playback; looks?: { number: number; name: string }[];
-  /** the per-mode players (Yi, 2026-10-23): watch switches clips only; tactics is an ordinary player (Yi, 2026-10-24: no
+  /** the per-mode players: watch switches clips only; tactics is an ordinary player (no
    *  snapping to events) that keeps the freeze frames, and steps a tenth of a second while the pen is on (画板 folded into
-   *  战术); explain offers only the clips that have an Explain script (Yi, 2026-10-25), play and pause and the previous /
-   *  next such clip (the 讲解 chat's narration holds the clock itself). Without it the plate is the general one */
+   *  战术); explain offers only the clips that have an Explain script, play and pause and the previous /
+   *  next such clip (the 讲解 narration holds the clock itself). Without it the plate is the general one */
   variant?: 'watch' | 'tactics' | 'explain' | 'whatif';
 }
 
@@ -54,7 +54,7 @@ const fasterBack = (s: number) => (s > -2 ? -2 : s > -8 ? s * 2 : 1);
 const SLOW = [1, 0.5, 0.25];
 
 /** the clip's title without its leading time and team, nor the trailing Opta xG: 射门被扑出 · 绝佳机会 */
-/** a clip's name, short enough never to be cut off (Yi, 2026-10-24: no "…" anywhere, keep it simple; the badge beside
+/** a clip's name, short enough never to be cut off (no "…" anywhere, kept simple; the badge beside
  *  it says the outcome): a goal its kind (Volley goal, Headed goal), a big chance "Big chance missed" whatever happened,
  *  another shot what happened to it (Header saved, Volley blocked), a pass its kind (Through ball, Chip, Long ball), an
  *  offside "Offside". `what` is the English title's part after the team */
@@ -99,18 +99,18 @@ const LEAD = 0.5;                       // land this many seconds before an even
 /** a clip's title as the list shows it: its time and what happened, without the team, the distance or the figures that
  *  the badges carry (2:20 · 头球偏出; 2:17 · 破后卫线 · 高压下出球) */
 export function clipCaption(c: ClipRow) {
-  // a line-breaking pass is just 破线传球, however many lines it broke (Yi); by the clip's kind, as the titles now say
-  // how in plain words (挑传越过两道防线…, 2026-10-23)
+  // a line-breaking pass is just 破线传球, however many lines it broke; by the clip's kind, as the titles say
+  // how in plain words (挑传越过两道防线…)
   const parts = pick(c.title, c.title_en).split(' · ').filter((x) => !/^(Opta|预期成功率|随后射门|xPass|then a )/.test(x) && !/^\d+ (米|m)$/.test(x)).map((x, i) => (c.kind === 'pass' && i === 1 ? tr('破线传球', 'Line-breaking pass') : x));
-  // the time and the clip's short name, as the plate's title (never cut off; Yi, 2026-10-24)
+  // the time and the clip's short name, as the plate's title (never cut off)
   if (c.category && c.title_en) return `${parts[0].split(' ')[0]} · ${clipName(c.category, c.title_en.split(' · ')[1] ?? '')}`;
   return [parts[0].split(' ')[0], ...parts.slice(1)].join(' · ');
 }
 
 /** a row's tags: categories only (goal, key pass, ...). No numbers such as xG or expected success: the replay is for a
- *  general audience, and those details belong to tactical mode (Yi) */
+ *  general audience, and those details belong to tactical mode */
 type Badge = { text: string; kind?: 'goal' | 'muted' | 'key' | 'explain' | 'whatif' };
-/** a clip's tags: a goal for shots; a shot after it for passes; Explain where the clip has commentary (Yi, 2026-10-26: so
+/** a clip's tags: a goal for shots; a shot after it for passes; Explain where the clip has commentary (so
  *  the viewer knows which clips the Explain mode opens on) */
 function clipBadges(c: ClipRow, explained = false, whatif = true): Badge[] {
   const b: Badge[] = c.kind === 'shot' ? (c.goal ? [{ text: tr('进球', 'Goal'), kind: 'goal' }] : []) : c.shot_after ? [{ text: tr('随后射门', 'Shot follows'), kind: 'key' }] : [];
@@ -128,17 +128,17 @@ function eventBadges(e: ClipEvent, all: ClipEvent[]): Badge[] {
   const assist = e.type === 'Pass' && e.tags.includes('Assist') && all.some((g) => g.type === 'Goal' && g.shooting === e.shooting && g.t > e.t && g.t <= e.t + 20);
   if (assist) b.push({ text: tr('助攻', 'Assist'), kind: 'key' });
   else if (e.type === 'Pass' && (e.tags.includes('KeyPass') || e.tags.includes('Assist'))) b.push({ text: tr('关键传球', 'Key pass'), kind: 'key' });
-  if (e.lb) b.push({ text: tr('破线传球', 'Line-breaking'), kind: 'key' });       // however many lines (Yi)
+  if (e.lb) b.push({ text: tr('破线传球', 'Line-breaking'), kind: 'key' });       // however many lines
   if (e.tags.includes('BigChance')) b.push({ text: tr('绝佳机会', 'Big chance') });
   if (e.outcome === 'Unsuccessful' && !SHOT_TYPES.has(e.type)) b.push({ text: tr('未成功', 'Unsuccessful'), kind: 'muted' });
   return b;
 }
 const Badges = ({ list }: { list: Badge[] }) => <span className="hud-rbadges">{list.map((x, i) => <b key={i} className={x.kind ?? ''}>{x.text}</b>)}</span>;
 
-/** Two tabs in the expanded replay plate (Yi: so the audience can go to the next event or the next clip; it replaced an
+/** Two tabs in the expanded replay plate (so the audience can go to the next event or the next clip; it replaced an
  *  iPod-like wheel, which showed only one step either way). 事件: this clip's synced events in time order, the current one
  *  (the last reached, from 0.5 s before it) highlighted and kept in view; a click lands 0.5 s before the event, paused. 片段: the
- *  exported clips in match time (grouped by kind until Yi, 2026-10-24), the current one highlighted; a click loads it. The arrow keys work while it is open:
+ *  exported clips in match time (not grouped by kind), the current one highlighted; a click loads it. The arrow keys work while it is open:
  *  left and right the previous and next event, up and down the previous and next clip. */
 function ReplayTabs({ pkg, t, index, pb, looks, live, only, keep, explained, whatifList, pulseNext, curId }: { pkg: ClipPkg; t: number; index: ClipIndex | null; pb: Playback; looks?: { number: number; name: string }[]; live: boolean;
   /** the clip shown as the current one: the clip on its way in from the click on, else the one on screen */ curId: string;
@@ -146,23 +146,23 @@ function ReplayTabs({ pkg, t, index, pb, looks, live, only, keep, explained, wha
   /** the clips offered (the explain player: those with a script); all without it */ keep?: (c: ClipRow) => boolean;
   /** the clips with commentary, tagged Explain (not in the explain player, where every clip has it) */ explained?: Set<string>;
   /** the What-if player's list: no What-if tag on its rows */ whatifList?: boolean;
-  /** the clip has played to its end: the next clip's row pulses (Yi, 2026-10-26) */ pulseNext?: boolean }) {
+  /** the clip has played to its end: the next clip's row pulses */ pulseNext?: boolean }) {
   const [tabState, setTab] = useState<'events' | 'clips'>('events');
   const tab = only ?? tabState;
-  // which team's events and clips: everything, then A (home), then B (away), one click per step (Yi)
+  // which team's events and clips: everything, then A (home), then B (away), one click per step
   const [side, setSide] = useState<'all' | 'home' | 'away'>('all');
   const list = useRef<HTMLDivElement>(null);
   const attacking = attackingOf(pkg.meta), other = attacking === 'home' ? 'away' : 'home';
   const evs = [...(pkg.events ?? [])].sort((a, b) => a.t - b.t).filter((e) => side === 'all' || (e.shooting ? attacking : other) === side);
   // the current event: the last one reached, counting from LEAD s before it, so the row clicked is the row lit
   const cur = evs.reduce((k, e, i) => (e.t - LEAD <= t + 0.05 ? i : k), -1);
-  // the clips in match time, not grouped by kind (Yi, 2026-10-24), so up and down step through the match too
+  // the clips in match time, not grouped by kind, so up and down step through the match too
   const clips = [...(index?.clips ?? [])].filter((c) => !keep || keep(c)).sort(byMatchTime), ci = clips.findIndex((c) => c.id === curId);
   const shownClips = clips.filter((c) => side === 'all' || c.team === side);
   const nextSide = () => setSide(side === 'all' ? 'home' : side === 'home' ? 'away' : 'all');
-  // each row's team as a dot in its colour, even with the filter on (Yi, 2026-10-23): the class is the team, home blue
-  // and away orange in every clip, as the kits (coords.ts, Yi 2026-10-23; until then attackers blue, defenders orange).
-  // who: shirt number and name, as fans know players by name more than number (Yi: "7. Ronaldo"), in his team's colour
+  // each row's team as a dot in its colour, even with the filter on: the class is the team, home blue
+  // and away orange in every clip, as the kits (coords.ts; not attackers blue, defenders orange).
+  // who: shirt number and name, as fans know players by name more than number ("7. Ronaldo"), in his team's colour
   const nAtt = pkg.frames[0]?.att.length ?? 11;
   const who = (p: number | null | undefined) => (p == null || !looks?.[p] ? null : <span className={`hud-rwho ${playerTeam(p, nAtt, attacking)}`}>{looks[p].number}. {looks[p].name}</span>);
   const jump = (e: ClipEvent | undefined) => { if (!e) return; pb.setSpeed(1); pb.play(false); pb.seek(Math.max(0, e.t - LEAD)); };
@@ -192,7 +192,7 @@ function ReplayTabs({ pkg, t, index, pb, looks, live, only, keep, explained, wha
       <div className="hud-rtabs-head" role="tablist">
         {only !== 'clips' && <button type="button" role="tab" aria-selected={tab === 'events'} onClick={() => setTab('events')}>{tr('事件', 'Events')}<small>{evs.length}</small></button>}
         {only !== 'events' && <button type="button" role="tab" aria-selected={tab === 'clips'} onClick={() => setTab('clips')}>{tr('片段', 'Clips')}<small>{shownClips.length}</small></button>}
-        {/* no previous / next arrows here (Yi, 2026-10-26: "a bit confusing"); the arrow keys still step through the clips */}
+        {/* no previous / next arrows here (they confused more than they helped); the arrow keys still step through the clips */}
         <button type="button" className={`hud-rside${side === 'all' ? '' : ` ${side}`}`} aria-label={tr(`只看：${side === 'all' ? '全部' : TEAM_LABEL[side]}，点击切换`, `Showing ${side === 'all' ? 'both teams' : TEAM_LABEL[side]}; click to change`)} onClick={nextSide}>
           {side === 'all' ? tr('全部', 'Both') : TEAM_LABEL[side]}<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 9 H18 L14 5 M20 15 H6 L10 19" /></svg>
         </button>
@@ -217,8 +217,7 @@ function ReplayTabs({ pkg, t, index, pb, looks, live, only, keep, explained, wha
   );
 }
 
-/** the clips with an Explain script (hud/directed.ts, probed once per page): the explain player offers only those (Yi,
- *  2026-10-25) */
+/** the clips with an Explain script (hud/directed.ts, probed once per page): the explain player offers only those */
 const useDirected = useDirectedIds;
 
 /** the tactics player's list: the saved freeze frames, a click goes to one (paused), each can be deleted, or all at once */
@@ -296,21 +295,21 @@ export function ReplayPlate({ pkg, clock, index, playback: pb, looks, variant }:
   }, [expanded]);
   // another clip picked (a clip changes in place, game/clipSwap.ts): it is the plate's clip from the click on, its row lit
   // and its title, crest and outcome in the head, and the plate folds back to its compact form a moment later, once the
-  // new row has shown (Yi, 2026-10-26: "show that this new clip is selected, instead of still showing the old clip", and
-  // the fold no longer waits for the load). A clip that comes in otherwise ([ ], the browser's back) folds it as it lands
+  // new row has shown (so the plate shows the new clip as selected, not the old one still, and
+  // the fold does not wait for the load). A clip that comes in otherwise ([ ], the browser's back) folds it as it lands
   const target = useStore(swapTarget), pending = target ? index?.clips.find((c) => c.moment === target) : undefined;
   const curId = pending?.id ?? pkg.meta.id;
   useEffect(() => { if (!pending) return; const k = window.setTimeout(() => setExpanded(false), FOLD_AFTER_MS); return () => window.clearTimeout(k); }, [pending]);
   const lastClip = useRef(curId);
   useEffect(() => { if (curId !== lastClip.current) { lastClip.current = curId; if (!pending) setExpanded(false); } }, [curId, pending]);
   const end = Math.max(1e-6, pb.duration), now = (pkg.clock0 ?? 0) + t;
-  // played to its end: the arrows pulse, to send the viewer on to another clip (Yi, 2026-10-26); the next clip's row when
+  // played to its end: the arrows pulse, to send the viewer on to another clip; the next clip's row when
   // the list is open, else the button that opens it. In Watch only: the other modes send the viewer back to Watch instead
   // (TopBar's Back to Watch)
   const swapping = useStore(clipSwap) !== 'off';
   const finished = variant === 'watch' && !pb.playing && t >= end - 0.1 && !swapping;
-  // the clip's team (the attacking one): its crest, and the plate in its kit colour, home blue or away orange (the plate
-  // was always blue until 2026-10-23, the attacking kit)
+  // the clip's team (the attacking one): its crest, and the plate in its kit colour, home blue or away orange (not
+  // always blue for the attacking kit)
   const team = pending?.team ?? attackingOf(pkg.meta);
   const ff = pb.playing && pb.speed > 1, rw = pb.playing && pb.speed < 0;
   // play: back to normal speed while fast forwarding or rewinding, else play or pause
@@ -326,7 +325,7 @@ export function ReplayPlate({ pkg, clock, index, playback: pb, looks, variant }:
   const ei = explainable.findIndex((c) => c.id === pkg.meta.id);
   const prevEx = ei > 0 ? explainable[ei - 1] : undefined, nextEx = ei < 0 ? explainable[0] : explainable[ei + 1];
   // tactics keeps the freeze frames (yellow ticks, a press near one snaps to it; every drawing saves itself, hud/draft.ts
-  // syncFrame); with the pen on (Yi, 2026-10-25) it steps a tenth of a second at a time instead of rewinding and fast
+  // syncFrame); with the pen on it steps a tenth of a second at a time instead of rewinding and fast
   // forwarding
   const fr = useStore(frames), pen = useStore(drawMode);
   const keepsFrames = variant === 'tactics', stepping = keepsFrames && pen;
@@ -335,7 +334,7 @@ export function ReplayPlate({ pkg, clock, index, playback: pb, looks, variant }:
 
   const marks: Mark[] | undefined = keepsFrames ? fr.map((f) => ({ t: f.t, kind: 'frame' })) : undefined;
   const title = pending ? rowTitle(pending, index) : onFrame ? `Freeze frame at ${fmtClock(now)}` : shortTitle(pkg, index);
-  // the clip's outcome badge, right of its title (Yi, 2026-10-24: set D); only where the title is the clip's own
+  // the clip's outcome badge, right of its title (outcomeIcons.tsx); only where the title is the clip's own
   const outcome = pending ? pending.category : (pkg.meta as { category?: ClipCategory }).category;
   const ownTitle = !!pending || !onFrame;
   const pulseNext = finished && expanded;

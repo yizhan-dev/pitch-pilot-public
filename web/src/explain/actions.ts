@@ -1,4 +1,4 @@
-// Every touch of the ball in a clip, to the 25 Hz sample (Yi, 2026-10-22: the narration has to land on the very moment
+// Every touch of the ball in a clip, to the 25 Hz sample (the narration has to land on the very moment
 // of each action). The event feed is only good to a few tenths (at 15:47 it puts a pass 0.3 s before the kick), so the
 // touches come from the ball's own track: a local peak of its change of velocity, given to the player with a foot,
 // knee, head or (keepers) hand nearest the ball at that sample. A peak with nobody within reach is a bounce. Then each

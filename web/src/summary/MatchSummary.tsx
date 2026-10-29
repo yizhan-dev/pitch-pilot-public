@@ -10,18 +10,18 @@ import './summary.css';
 // The match summary's panel (summary.ts): it drops from the top centre once the camera has risen to the drone, and turns
 // through its pages by itself (PAGE_S each, held while the pointer is over it); the tabs pick a page, × or Esc closes.
 // Pages: the match stats (技术统计), the passing networks, where the attacks went, the teams' heat maps, the player of the
-// match, the running (the work rate went, Yi 2026-10-27: "not that interesting"). Every pitch is drawn with its team attacking left to right, the packages' frame (+y the near
+// match, the running (no work rate page: it told a viewer too little). Every pitch is drawn with its team attacking left to right, the packages' frame (+y the near
 // touchline, at the bottom).
 
 const PAGE_S = 10;
-/** the pages turn by themselves every PAGE_S: off for now (Yi, 2026-10-27: "let's remove the countdown for each page, at
- *  least for now ... so we won't have to keep clicking the same tab"); ?mscycle=1 turns it on */
+/** the pages turn by themselves every PAGE_S: off for now, so a page stays put without its tab being clicked again and
+ *  again; ?mscycle=1 turns it on */
 const AUTO_TURN = new URLSearchParams(location.search).get('mscycle') === '1';
-/** the panel is laid out at BASE_W (its tallest page about BASE_H) and scaled to the window (Yi, 2026-10-26: "the panel
- *  is too small, can we enlarge it?"): as large as fits beside a 32 px edge and under the top bar, at most MAX_SCALE.
- *  ?ms=<scale> tries another largest scale. TOP is summary.css's `top`, BASE_H its fixed height (Yi, 2026-10-27: "the
- *  panel is too high up, make it slightly lower", then "bigger and lower, so when we show for example passing network
- *  in more details": the bottom widgets stand aside while it is open, so it goes down to BOTTOM); with the venue strip
+/** the panel is laid out at BASE_W (its tallest page about BASE_H) and scaled to the window, as the fixed size read too
+ *  small: as large as fits beside a 32 px edge and under the top bar, at most MAX_SCALE.
+ *  ?ms=<scale> tries another largest scale. TOP is summary.css's `top`, BASE_H its fixed height (set a little lower and
+ *  bigger, so a page such as the passing network shows in more detail: the bottom widgets stand aside while it is
+ *  open, so it goes down to BOTTOM); with the venue strip
  *  under the pages (STRIP_H, summary.css .ms-strip) */
 const STRIP_H = 28, BASE_W = 920, BASE_H = 540 + STRIP_H, TOP = 116, BOTTOM = 14, EDGE = 32;
 const MAX_SCALE = (() => { const q = Number(new URLSearchParams(location.search).get('ms')); return q > 0 ? q : 1.5; })();
@@ -32,15 +32,15 @@ const fitScale = () => Math.max(tourOn() ? 0.78 : 1, Math.min((innerWidth - 2 * 
 const L = 105, W = 68;
 const KIT: Record<Side, string> = { home: '#6ab8ff', away: '#ff9560' };     // the radar's lighter kit colours, for dark glass
 const BANDS = ['Walking', 'Jogging', 'Running', 'High speed', 'Sprinting'];
-// (the bands' speeds, 0-6, 6-15, 15-20, 20-25 and 25+ km/h, are left off: Yi, 2026-10-27, "for audience, they won't care")
+// (the bands' speeds, 0-6, 6-15, 15-20, 20-25 and 25+ km/h, are left off: a viewer does not need them)
 const BAND_FILL = ['rgba(255,255,255,.2)', 'rgba(255,255,255,.38)', 'rgba(255,255,255,.62)', '#ffd166', '#ff6b4a'];
 const SIDES: Side[] = ['home', 'away'];
 
 interface Who { name: (pid: string) => string; short: (pid: string) => string; number: (pid: string) => number | null }
 
 /** a pitch in metres, its team attacking right: `under` (the heat maps, a shading) beneath the lines, the children (the
- *  marks: shots, chips, names, arrows) over them (Yi, 2026-10-27: "I want the checkers of shots to be on top of pitch
- *  line"); both in the same metres. `vertical`: stood on end, the team attacking up (the player of the match's), the
+ *  marks: shots, chips, names, arrows) over them, so a shot's chip is never crossed by a pitch line; both in the
+ *  same metres. `vertical`: stood on end, the team attacking up (the player of the match's), the
  *  pitch's (x, y) on the screen at (y, -x) (VERT); `screen`: marks over it all in those screen metres, upright */
 function Pitch({ children, under, screen, pad = 2.5, vertical }: { children?: ReactNode; under?: ReactNode; screen?: ReactNode; pad?: number; vertical?: boolean }) {
   const box = 16.5, boxW = 40.32, six = 5.5, sixW = 18.32;
@@ -71,11 +71,11 @@ function Pitch({ children, under, screen, pad = 2.5, vertical }: { children?: Re
 /** a point of a pitch stood on end (Pitch's `vertical`), on the screen */
 const VERT = ([x, y]: [number, number]): [number, number] => [y, -x];
 
-/** a heat grid over the pitch as layered contours (Yi, 2026-10-27: "more like layered contour line, it looks more
- *  cartoonish", as football_metrics/physical_analysis.ipynb draws it: filled bands from 5% of the peak up; then "do
- *  not add white outline ..., and make it more layers"): the grid interpolated UP times finer, each pixel given its
+/** a heat grid over the pitch as layered contours, which read more cartoon-like than a smooth shading (as
+ *  football_metrics/physical_analysis.ipynb draws it: filled bands from 5% of the peak up; no white outline between
+ *  bands, and more of them): the grid interpolated UP times finer, each pixel given its
  *  band's colour from `ramp` (0..1 to rgba) */
-const BANDS_N = 10, BAND_FROM = 0.05, UP = 6;   // (the grid is 1 m since 2026-10-27)
+const BANDS_N = 10, BAND_FROM = 0.05, UP = 6;   // (the grid is 1 m)
 let clipN = 0;
 function Heat({ src, d, ramp }: { src: string | Uint8Array; d: MatchSummaryData; ramp: (v: number) => [number, number, number, number] }) {
   const clip = useMemo(() => `ms-clip-${++clipN}`, []);
@@ -104,7 +104,7 @@ function Heat({ src, d, ramp }: { src: string | Uint8Array; d: MatchSummaryData;
     return c.toDataURL();
   }, [src, d, ramp]);
   const { x0, y0, cell, nx, ny } = d.heat;
-  // on the pitch only (Yi, 2026-10-27: "these maps are slightly out of pitch")
+  // on the pitch only: unclipped, the maps spilled slightly past the touchlines
   return (
     <g>
       <clipPath id={clip}><rect x={-L / 2} y={-W / 2} width={L} height={W} /></clipPath>
@@ -122,7 +122,7 @@ const teamRamp = (side: Side) => {
   };
 };
 const RAMPS = { home: teamRamp('home'), away: teamRamp('away') };
-/** the player of the match's map in green, as eFootball's old heat maps (Yi, 2026-10-27): deep green, lime, a pale top */
+/** the player of the match's map in green, as eFootball's old heat maps: deep green, lime, a pale top */
 const GREEN = [[18, 92, 48], [46, 160, 72], [132, 214, 84], [226, 250, 190]];
 const greenRamp = (v: number): [number, number, number, number] => {
   const x = Math.min(0.999, v) * (GREEN.length - 1), i = Math.floor(x), f = x - i, a = GREEN[i], b = GREEN[i + 1];
@@ -130,13 +130,13 @@ const greenRamp = (v: number): [number, number, number, number] => {
 };
 
 /** a team's head over its chart; `mirror` for the right-hand end of a chart both teams share (the crest rightmost, the
- *  name to its left: Yi, 2026-10-27, "so they are fully symmetrical") */
+ *  name to its left, so the two heads are fully symmetrical) */
 function TeamHead({ side, children, mirror }: { side: Side; children?: ReactNode; mirror?: boolean }) {
   return <div className={`ms-teamhead ${side}${mirror ? ' mirror' : ''}`}><Crest team={side} size={22} /><b>{TEAM_LABEL[side]}</b>{children && <span>{children}</span>}</div>;
 }
 
 // ---- the pages
-/** the Statistics page's three groups of nine (Yi, 2026-10-27: "we can also put more things in there") */
+/** the Statistics page's three groups of nine, room enough for more than the headline numbers */
 const STAT_GROUPS = [['attack', 'Attack'], ['passing', 'Passing'], ['defence', 'Defence']] as const;
 function StatsPage({ d }: { d: MatchSummaryData }) {
   // whole numbers as they are; xG to two places, anything else (possession, kilometres) to one
@@ -161,12 +161,12 @@ function StatsPage({ d }: { d: MatchSummaryData }) {
 }
 
 // ---- the passing network as project_kick draws it (football_metrics/passing_network.ipynb, football_visuals/kick_style.py
-// kick_checker; Yi, 2026-10-27: "use the exact design of our passing network ipynb, we show it like pie with cracks").
+// kick_checker: the notebook's exact design, each player a pie-like chip with a crack in it).
 // Its sizes in StatsBomb units (120 long) turned into metres
 // (the chips 1.4 times the notebook's, so the notch reads on the panel's smaller pitch)
 const SB = L / 120, CHIP_K = 1.4, CHIP_R = [1.2 * SB * CHIP_K, 3.4 * SB * CHIP_K], EDGE_HALF = [0.15 * SB, 2.6 * SB];
-// the chips in their team's colour, darker to lighter for more threat added (Yi, 2026-10-27: "pick the color
-// corresponding to their team color"; the notebook's warm ramp made the Pelicans orange)
+// the chips in their team's colour, darker to lighter for more threat added (the notebook's warm ramp made the
+// Pelicans orange, against their blue kit)
 const TEAM_STOPS: Record<Side, string[]> = { home: ['#1d4a7a', '#4a9de6', '#c4e4ff'], away: ['#7a3414', '#ee7a3e', '#ffd6bc'] };
 type RGB = [number, number, number];
 const rgbOf = (h: string): RGB => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16) / 255) as RGB;
@@ -207,8 +207,8 @@ function Chip({ x, y, r, base, no, fail, share }: { x: number; y: number; r: num
 // summary.css --ms-ppm)
 const PPM = (BASE_W - 3 * 24) / 2 / (L + 5), PILL_FS = 11 / PPM, PILL_GAP = 0.9, SPREAD_GAP = 0.5;
 interface Foot { id: string; x: number; y: number; r: number; w: number; h: number }
-/** the nodes pushed apart until no chip or name sits over another (Yi, 2026-10-27: "if someone's checker is underneath
- *  another player, we separate them a bit, even that's not exactly accurate"): each footprint a box (as wide as the
+/** the nodes pushed apart until no chip or name sits over another (readability over exact position: a chip hidden
+ *  under a neighbour's tells nothing): each footprint a box (as wide as the
  *  wider of chip and pill, from the chip's top to the pill's foot), two boxes that overlap pushed apart half each along
  *  the axis they overlap least on, again until none do; kept on the pitch */
 function spread(feet: Foot[]): Map<string, [number, number]> {
@@ -229,12 +229,12 @@ function spread(feet: Foot[]): Map<string, [number, number]> {
   }
   return new Map(P.map((q) => [q.id, [q.x, q.y]]));
 }
-/** the network's legend (Yi, 2026-10-27: "make legends at bottom"): the chip's size, its shade, its notch, a link */
+/** the network's legend, at the bottom: the chip's size, its shade, its notch, a link */
 function NetworkLegend() {
   const mid = teamAt('home', 0.45);
   return (
-    // the chips' three keys on the first line, alike as they are, the links' under them (Yi, 2026-10-27: "move the Where
-    // his passes went astray to first line, because all three of them share the same visual traits")
+    // the chips' three keys on the first line, alike as they are (size, shade and notch all belong to the chip), the
+    // links' under them
     <div className="ms-legend ms-icon-legend ms-legend-rows">
       <div>
       <span><svg viewBox="-1.9 -1.1 3.8 2.2" aria-hidden="true"><Chip x={-1} y={0} r={0.5} base={mid} no={null} fail={null} share={0} /><Chip x={0.8} y={0} r={0.95} base={mid} no={null} fail={null} share={0} /></svg>More passes</span>
@@ -254,7 +254,7 @@ function NetworkPage({ d, who }: { d: MatchSummaryData; who: Who }) {
     <div className="ms-stack">
     <div className="ms-pair">
       {SIDES.map((side) => {
-        const net = d.network[side];   // (no line under it: Yi dropped "most passes between", 2026-10-27)
+        const net = d.network[side];   // (no "most passes between" line under it)
         const rOf = (n: { n: number }) => CHIP_R[0] + (CHIP_R[1] - CHIP_R[0]) * (n.n / maxN), pillW = (pid: string) => who.short(pid).length * PILL_FS * 0.56 + 1.6;
         // where each is drawn: his average pass spot, nudged off his neighbours; the links follow the chips
         const at = spread(net.nodes.map((n) => ({ id: n.pid, x: n.at[0], y: n.at[1], r: rOf(n), w: pillW(n.pid), h: PILL_FS * 1.45 })));
@@ -295,8 +295,8 @@ function NetworkPage({ d, who }: { d: MatchSummaryData; who: Who }) {
   );
 }
 
-/** three rings at the map's sizes for xG 0.03, 0.25 and 0.7, side by side on one centre line (Yi, 2026-10-27: "make
- *  these three circle center aligned") */
+/** three rings at the map's sizes for xG 0.03, 0.25 and 0.7, side by side on one centre line (centres aligned, not
+ *  their feet) */
 function XgScale() {
   const rs = [0.03, 0.25, 0.7].map(SHOT_R), gap = 0.9, h = 2 * rs[2] + 0.4;
   let x = 0.2;
@@ -308,29 +308,29 @@ function XgScale() {
   );
 }
 
-// ---- the shots (Yi, 2026-10-27: "maybe we should add a shot map? that is essential for match summary"): one pitch, the
-// home team shooting right, the away team left; each shot as big as its xG, in FotMob's language (Yi: "a soccer ball
-// means a goal, ... a filled circle means on target, and ... a ring, it means not on target"); the ball SVG Repo's
-// (BallMark) (no line under the pitch: Yi dropped the best chance)
-// (sizes kept close, Yi 2026-10-27: "the icons are too big ... normalize them a bit": 1.3 m for a 0.07, 2.7 m for a penalty)
+// ---- the shots (a shot map, essential to a match summary): one pitch, the
+// home team shooting right, the away team left; each shot as big as its xG, in FotMob's language (a ball means a
+// goal, a filled circle on target, a ring not on target); the ball SVG Repo's
+// (BallMark) (no best-chance line under the pitch)
+// (sizes kept close, as the full range made the icons too big: 1.3 m for a 0.07, 2.7 m for a penalty)
 const SHOT_R = (xg: number) => 0.7 + 2.3 * Math.sqrt(Math.min(1, xg));
-/** the goal's ball: SVG Repo's "football-ball" (svgrepo.com/svg/171773, its "Football" collection, CC0; Yi, 2026-10-27,
- *  in place of Font Awesome's futbol, so that the credits need not name it): white, its patches and its ring the dark
- *  grey Yi chose, the ring thickened (BALL_RING, of its 496 box: "make the outline black ring to be thicker"); radius r
+/** the goal's ball: SVG Repo's "football-ball" (svgrepo.com/svg/171773, its "Football" collection, CC0,
+ *  in place of Font Awesome's futbol, so that the credits need not name it): white, its patches and its ring a dark
+ *  grey, the ring thickened (BALL_RING, of its 496 box) so the outline reads; radius r
  *  round (x, y), solid, so what lies under it does not show through */
-/** the shot map's ball as large as the one Yi approved (Font Awesome's, whose circle filled 228 of its 512 box, so it
- *  stood at 0.89 of its xG size); SVG Repo's fills its box, and drawn at the full size it read 12 % larger (Yi,
- *  2026-10-27: "these icons for shotmap is too big for the goals, verify if the size is correct") */
+/** the shot map's ball as large as the Font Awesome one it replaced (whose circle filled 228 of its 512 box, so it
+ *  stood at 0.89 of its xG size); SVG Repo's fills its box, and drawn at the full size it read 12 % larger, too big
+ *  for the goals beside the other shots */
 const BALL_ON_MAP = 228 / 256;
 const SR_BALL = 'M271.942,209.614 L338.425,114.466 L257.523,39.026 L144.542,79.657 L148.303,186.135 Z M228.868,402.407 L289.71,465.777 L395.984,420.409 L413.34,326.511 L307.844,313.522 Z M15.731,336.798l1.343,1.644c36.151,92.23,125.889,157.571,230.934,157.571c136.976,0,248.006-111.029,248.006-248.007 C496.013,111.036,384.983,0,248.007,0C111.036,0,0,111.043,0,248.006c0,30.668,5.604,60.026,15.785,87.145L15.731,336.798z M12.93,248.006c0-31.32,6.209-61.204,17.38-88.564l58.667-72.789l15.206-24.383c39.792-30.883,89.68-49.339,143.833-49.339 c1.302,0,2.583,0.08,3.893,0.094l26.236,9.664l57.827,7.379c37.029,15.002,69.417,39.15,94.312,69.671l-9.63,41.932 l37.994,107.148l24.272,6.148c-3.727,126.418-107.619,228.106-234.905,228.106c-63.375,0-120.926-25.247-163.249-66.159 l45.626-39.192L86.849,265.485l-68.128-23.465l-1.575,50.047C14.42,277.797,12.93,263.077,12.93,248.006z';
 const BALL_RING = 34;
-/** inv: the other way round, the body near black, the patches and the ring white (the shot map's: Yi, 2026-10-27, "the
- *  black ring one is better", "but for that shot map, let's use the reverse one") */
+/** inv: the other way round, the body near black, the patches and the ring white (the shot map's; the black-ringed
+ *  one serves everywhere else) */
 function BallMark({ x, y, r, inv = false }: { x: number; y: number; r: number; inv?: boolean }) {
   return (
     <g className={inv ? 'ms-ballmark inv' : 'ms-ballmark'} transform={`translate(${x - r} ${y - r}) scale(${(2 * r) / 496})`}>
       {/* the white only as far as the ring's middle, so its edge never shows past the ring's (a white fringe round the
-          ball where the two edges' smoothing met: Yi, 2026-10-27) */}
+          ball where the two edges' smoothing met) */}
       <circle cx={248} cy={248} r={248 - BALL_RING / 2} className="ms-ball" />
       <path d={SR_BALL} className="ms-ball-ink" />
       <circle cx={248} cy={248} r={248 - BALL_RING / 2} className="ms-ball-ring" style={{ strokeWidth: BALL_RING }} />
@@ -343,7 +343,7 @@ function ShotsPage({ d }: { d: MatchSummaryData }) {
   return (
     <div className="ms-shots">
       <div className="ms-shots-head">
-        {/* the shots only: the xG and the goals are on the Statistics page (Yi, 2026-10-27) */}
+        {/* the shots only: the xG and the goals are on the Statistics page */}
         {SIDES.map((side) => <TeamHead key={side} side={side} mirror={side === 'away'}>{`${of(side).length} shots`}</TeamHead>)}
       </div>
       <figure className="ms-fig">
@@ -363,18 +363,17 @@ function ShotsPage({ d }: { d: MatchSummaryData }) {
           <span><svg className="ms-key-ball" viewBox="-1.1 -1.1 2.2 2.2" aria-hidden="true"><BallMark x={0} y={0} r={1} inv /></svg>Goal</span>
           <span><i className="ms-key-shot on" />On target</span><span><i className="ms-key-shot off" />Not on target</span>
         </div>
-        {/* the size by xG, three of the map's own sizes (Yi, 2026-10-27: "we do need also the checker size for greater xG
-            notation ... design it elegantly"), the deeper key on the second line ("if it is a more in depth legend,
-            let's make it the second line") */}
+        {/* the size by xG, three of the map's own sizes, so a larger mark reads as a greater xG; the deeper key on the
+            second line, under the plain ones */}
         <div><span className="ms-xg-scale">Low xG<XgScale />High xG</span></div>
       </div>
     </div>
   );
 }
 
-/** the attacking third by channel (Yi, 2026-10-27): each arrow as thick as the team's share of its time on the ball
- *  there, as long as the threat it made there a minute (xT, `lanes.xt_min`; "make the more delta xT lane per minute
- *  having the longer arrow"), on one length for both teams; a legend under them */
+/** the attacking third by channel: each arrow as thick as the team's share of its time on the ball
+ *  there, as long as the threat it made there a minute (xT, `lanes.xt_min`: more xT a minute, a longer arrow), on one
+ *  length for both teams; a legend under them */
 const LANE_X0 = -6, LANE_LEN = [12, 46];
 function LanesPage({ d }: { d: MatchSummaryData }) {
   const rate = d.lanes.xt_min, top = Math.max(1e-6, ...SIDES.flatMap((s) => rate?.[s] ?? [0]));
@@ -387,9 +386,9 @@ function LanesPage({ d }: { d: MatchSummaryData }) {
           const sh = d.lanes[side], best = sh.indexOf(Math.max(...sh));
           return (
             <figure key={side} className="ms-fig">
-              {/* the passes played forward (Yi, 2026-10-27: "find something more related to directions here"; the time
-                  in the final third went to the heat maps); the pitch in its three lanes, no third shaded ("do not
-                  highlight the final third, but divide the pitch just into three lanes") */}
+              {/* the passes played forward, a number about direction to suit the page (the time in the final third
+                  went to the heat maps); the pitch in its three lanes only, no third shaded, so the lanes are the
+                  one division on it */}
               <TeamHead side={side}>{d.lanes.fwd ? `${d.lanes.fwd[side]} forward passes` : null}</TeamHead>
               <Pitch under={<g className="ms-lane-div">{[-1, 1].map((k) => <path key={k} d={`M${-L / 2} ${(k * W) / 6} H${L / 2}`} />)}</g>}>
                 {sh.map((v, i) => {
@@ -414,17 +413,17 @@ function LanesPage({ d }: { d: MatchSummaryData }) {
   );
 }
 
-/** the team heat maps (Yi, 2026-10-27: no line, no note, no caption; "add legend at the end for both team, one at left
- *  one at right"): each map's own bands, Less to More, under it on its outer side */
+/** the team heat maps (no line, no note, no caption; a legend for each team, one at the left, one at the right):
+ *  each map's own bands, Less to More, under it on its outer side */
 function HeatPage({ d }: { d: MatchSummaryData }) {
   return (
     <div className="ms-pair">
       {SIDES.map((side) => (
         <figure key={side} className="ms-fig">
-          {/* (the time in the final third, from the attacks' page: Yi, 2026-10-27) */}
+          {/* (the time in the final third, moved here from the attacks' page) */}
           <TeamHead side={side}>{`${Math.round(d.lanes.third_s[side] / 60)} min on the ball in the final third`}</TeamHead>
           <Pitch under={<Heat src={d.heat.team[side]} d={d} ramp={RAMPS[side]} />} />
-          {/* centred under its map (Yi, 2026-10-27) */}
+          {/* centred under its map */}
           <div className="ms-heat-key">
             <span>Less</span>
             {Array.from({ length: 5 }, (_, i) => { const [r, g, b, a] = RAMPS[side]((2 * i + 1) / 10); return <i key={i} style={{ background: `rgba(${r | 0}, ${g | 0}, ${b | 0}, ${a})` }} />; })}
@@ -436,21 +435,20 @@ function HeatPage({ d }: { d: MatchSummaryData }) {
   );
 }
 
-/** the assist's boot: SVG Repo's "soccer-shoe" (svgrepo.com/svg/165557, its "Playing Football" collection, CC0; Yi,
- *  2026-10-27, in place of game-icons' running-shoe), its toe to the left as Yi had the last one ("the side view of a
- *  player kicking the ball from right to left"), turned 45 degrees counter-clockwise (Yi); its 950 box, the shoe's
- *  middle at (475, 485). Credited in credits/Credits.tsx */
+/** the assist's boot: SVG Repo's "soccer-shoe" (svgrepo.com/svg/165557, its "Playing Football" collection, CC0,
+ *  in place of game-icons' running-shoe), its toe to the left as the last one had it (the side view of a
+ *  player kicking the ball from right to left), turned 45 degrees counter-clockwise; its 950 box, the shoe's
+ *  middle at (475, 485). Credited in THIRD_PARTY_NOTICES.md */
 const SR_SHOE = 'M579.606,310.743c22.431,12.207,53.546,23.819,90.668,25.008c-31.055-35.324-48.619-56.02-48.858-56.302 c-20.445-23.045-38.111-24.443-68.896-1.377c-6.6,4.948-15.673,12.123-26.271,20.882 C541.767,296.824,559.559,299.852,579.606,310.743z M9.94,624.987c14.194,4.4,28.546,8.298,43.007,11.712c0.168,0.04,0.338,0.075,0.506,0.115l10.221,44.917 c1.271,5.584,6.943,10.11,12.669,10.11h37.42c5.726,0,11.398-4.526,12.669-10.11l6.939-30.496 c20.967,2.767,42.033,4.848,63.132,6.414l5.799,24.111c1.339,5.567,7.067,10.081,12.793,10.081h40.73 c5.726,0,11.454-4.514,12.793-10.081l4.887-20.322c22.155,0.617,44.319,0.877,66.482,0.844 c105.966-0.155,211.698-7.297,317.573-10.523l7.215,30.001c1.339,5.567,7.065,10.081,12.793,10.081h40.729 c5.727,0,11.454-4.514,12.794-10.081l7.76-32.27c13.209-0.396,26.771-0.814,40.212-1.238l8.059,33.508 c1.339,5.567,7.067,10.081,12.793,10.081h40.73c5.727,0,11.454-4.514,12.793-10.081l8.712-36.227 c16.755-0.563,30.47-1.034,39.186-1.336c5.724-0.197,11.497-4.86,12.857-10.424c7.498-30.67,32.592-123.771,35.222-171.387 c0.396-7.132,0.584-13.93,0.584-20.425c0-10.64-0.552-20.341-1.493-29.415c-36.024,34.489-104.094,76.611-168.821,101.266 c-79.291,30.215-138.492,54.754-165.224,93.795c-11.795,0.712-23.786,1.446-35.96,2.201l-72.467,4.857 c-2.575,0.179-5.156,0.357-7.736,0.536c13.323-15.3,56.258-57.677,137.811-78.085c96.536-24.131,246.343-75.307,309.882-142.375 c-1.711-9.366-7.045-17.846-9.616-25.594c-28.88,23.297-102.8,74.586-229.001,109.307 c-131.758,36.224-244.775,60.566-302.212,142.772c-35.062,1.978-70.38,3.504-105.877,4.082 c13.512-19.387,80.645-104.656,236.217-134.292c169.358-32.255,307.492-72.341,392.416-142.479 c-8.834-17.855-17.844-30.617-27.702-42.479c-13.469-16.206-36.022-50.783-60.62-47.709c-12.471,1.56-18.627,12.18-24.087,22.188 c-6.247,11.451-13.163,22.193-22.261,31.634c-17.868,18.541-41.451,31.514-65.96,38.957 c-58.327,17.709-126.868-3.122-157.286-20.279c-19.919-11.253-48.055-17.134-68.337-3.721c-6.951,4.597-12.743,10.59-18.894,16.148 c-2.048,1.849-4.198,3.674-6.38,5.492l31.89,40.629c4.354,5.4,3.456,13.344-1.953,17.668c-5.429,4.333-13.355,3.456-17.689-1.974 l-32.243-41.058c-9.397,6.535-73.573,41.547-85.385,46.831l22.272,40.086c3.604,5.89,1.745,13.648-4.176,17.271 c-5.941,3.625-13.667,1.756-17.322-4.188l-24.152-43.144c-22,9.034-44.371,17.011-66.768,24.989 c-9.664,3.441-19.277,7.147-29.145,9.968c-13.074,3.736-26.146,7.476-39.231,11.176c-16.55,4.68-33.087,9.405-49.671,13.964 c-11.055,3.039-22.133,5.842-33.278,8.531c-26.108,6.297-52.498,12.453-77.741,21.742c-16.683,6.14-35.423,14.146-44.43,30.505 C3.439,548.901,0,559.275,0,567.505c0,0.593,0.032,28.36,0.05,43.962C0.057,617.193,4.47,623.292,9.94,624.987z';
 function CleatMark({ x, y, r }: { x: number; y: number; r: number }) {
   const k = (2 * r) / 950;
   return <path d={SR_SHOE} transform={`translate(${x} ${y}) rotate(-45) scale(${k}) translate(-475 -485)`} className="ms-cleat" />;
 }
 /** the goals map's marks, screen metres: the ball's radius, the boot's half width */
-const MARK_BALL = 2.0, MARK_CLEAT = 2.0;   // (smaller, both: Yi 2026-10-27; the boot's half length, as it is long and low)
+const MARK_BALL = 2.0, MARK_CLEAT = 2.0;   // (both kept small; the boot's half length, as it is long and low)
 
-/** the player of the match (Yi, 2026-10-27: "show his assist and goal map ..., so we will have two vertical pitch, and
- *  then player profile (slightly thinner than right now)"): where he played, then his goals and his assists, both
- *  pitches on end with his team attacking up, then his card */
+/** the player of the match: two pitches stood on end and a slim profile card: where he played, then his goals and his
+ *  assists, both pitches on end with his team attacking up, then his card */
 function KeyPage({ d, who, portrait }: { d: MatchSummaryData; who: Who; portrait?: (pid: string) => string | null }) {
   if (!d.key) return null;
   const pid = d.key.pid, p = d.players[pid], b64 = d.heat.player[pid], photo = portrait?.(pid) ?? null;
@@ -471,8 +469,8 @@ function KeyPage({ d, who, portrait }: { d: MatchSummaryData; who: Who; portrait
           vertical
           screen={
             <g>
-              {/* (no line from the boot to where the pass went: Yi, 2026-10-27, "it makes the scene a bit messy") */}
-              {/* (no chances-created arrows: Yi, 2026-10-27, tried and dropped) */}
+              {/* (no line from the boot to where the pass went: it made the map messy) */}
+              {/* (no chances-created arrows: tried and dropped) */}
               {assists.map((a, i) => { const [x, y] = VERT(a.at); return <CleatMark key={`c${i}`} x={x} y={y} r={MARK_CLEAT} />; })}
               {goals.map((s, i) => { const [x, y] = VERT(s.at); return <BallMark key={`g${i}`} x={x} y={y} r={MARK_BALL} />; })}
             </g>
@@ -484,7 +482,7 @@ function KeyPage({ d, who, portrait }: { d: MatchSummaryData; who: Who; portrait
         </div>
       </figure>
       <div className={`ms-key-card ${p.side}`}>
-        {/* his toon portrait, as the player card's (Yi, 2026-10-27: "for POTM, make sure we include his photo") */}
+        {/* his toon portrait, as the player card's: the player of the match is shown with his photo */}
         {photo && <div className="ms-key-photo"><img src={photo} alt="" /></div>}
         <div className="ms-key-name"><Crest team={p.side} size={34} /><span className="ms-key-no">{who.number(pid) ?? ''}</span><b>{who.name(pid)}</b></div>
         <div className="ms-facts">
@@ -502,9 +500,9 @@ function KeyPage({ d, who, portrait }: { d: MatchSummaryData; who: Who; portrait
   );
 }
 
-/** the furthest runners, each as a bar by speed band (the Physicals' right side, the top RUN_N: Yi, 2026-10-27, "we do not
- *  need to show that long list, just make it shorter") */
-const RUN_N = 10;   // (as many as the left side's height holds: Yi, 2026-10-27, "for right side we can show more players")
+/** the furthest runners, each as a bar by speed band (the Physicals' right side, the top RUN_N only, not the whole
+ *  long list) */
+const RUN_N = 10;   // (as many as the left side's height holds)
 function RunRows({ d, who }: { d: MatchSummaryData; who: Who }) {
   const runners = Object.entries(d.players).flatMap(([pid, p]) => (!p.keeper && p.dist && p.bands ? [{ pid, p, dist: p.dist, bands: p.bands }] : []))
     .sort((a, b) => b.dist - a.dist).slice(0, RUN_N);
@@ -513,7 +511,7 @@ function RunRows({ d, who }: { d: MatchSummaryData; who: Who }) {
     <div className="ms-run-rows">
       {runners.map(({ pid, p, dist, bands }) => (
         <div key={pid} className="ms-run-row">
-          {/* his shirt number in his team's colour, as his tag on the pitch has it, in place of a dot (Yi, 2026-10-27) */}
+          {/* his shirt number in his team's colour, as his tag on the pitch has it, in place of a dot */}
           <span className="ms-run-who"><b className={`ms-run-no ${p.side}`}>{who.number(pid) ?? ''}</b>{who.short(pid)}</span>
           <span className="ms-run-bar" style={{ width: `${(100 * dist) / max}%` }}>
             {bands.map((m, i) => <i key={i} style={{ flexGrow: m, background: BAND_FILL[i] }} title={`${BANDS[i]}: ${(m / 1000).toFixed(2)} km`} />)}
@@ -525,9 +523,9 @@ function RunRows({ d, who }: { d: MatchSummaryData; who: Who }) {
   );
 }
 
-// ---- the physicals (Yi, 2026-10-27: "for physical data, it is very important, let's divide it into several sub plots ...
-// from audience's perspective, what do we want to know?"): each team's intensity through the match with the goals on it;
-// where on the pitch it ran and how fast; the furthest runners. One page (the Team | Players switch went, Yi).
+// ---- the physicals, split into small plots, each answering what a viewer wants to know: each team's intensity through
+// the match with the goals on it;
+// where on the pitch it ran and how fast; the furthest runners. One page (no Team | Players switch).
 const SMOOTH_HALF = 2;   // the intensity's rolling mean: 5 minutes, centred, cut at a half's ends
 /** a half's high-speed metres a minute: each minute's metres over its length (a half's last, short minute dropped
  *  under 30 s), then the rolling mean */
@@ -535,10 +533,10 @@ function perMinute(v: number[], secs: number): number[] {
   const out = v.map((m, i) => { const len = Math.min(60, secs - i * 60); return len >= 30 ? (m * 60) / len : NaN; }).filter((x) => !Number.isNaN(x));
   return out.map((_, i) => { const a = Math.max(0, i - SMOOTH_HALF), b = Math.min(out.length, i + SMOOTH_HALF + 1); let s = 0; for (let k = a; k < b; k++) s += out[k]; return s / (b - a); });
 }
-const INT_W = 808, INT_H = 64, INT_GAP = 16, INT_FOOT = 16;   // (lower, as lines: Yi, 2026-10-27)
-/** the intensity: each team's line in its colour over one baseline (Yi, 2026-10-27: "show both team as blue and orange
- *  line, together above the surface"), minute by minute, one scale; the halves apart; a ball where each goal went in,
- *  on its scorer's line ("we can use soccer ball in this graph to suggest the score change point") */
+const INT_W = 808, INT_H = 64, INT_GAP = 16, INT_FOOT = 16;   // (low, as lines)
+/** the intensity: each team's line in its colour (blue and orange), both together over one baseline, minute by minute,
+ *  one scale; the halves apart; a ball where each goal went in,
+ *  on its scorer's line, to mark where the score changed */
 type Physical = NonNullable<MatchSummaryData['physical']>;
 function IntensityChart({ d, P }: { d: MatchSummaryData; P: Physical }) {
   const I = P.intensity;
@@ -577,7 +575,7 @@ function IntensityChart({ d, P }: { d: MatchSummaryData; P: Physical }) {
 }
 const PPM_MINI = 222 / (L + 5);   // (summary.css .ms-thirds: each pitch as wide as its head, the bands' bars under both)
 /** where a team ran: its distance by third of the pitch, attacking right (the arrow), each third as dark as its share
- *  (Yi, 2026-10-27: no thirds' names on the pitch, "simply draw an arrow to show the attacking direction") */
+ *  (no thirds' names on the pitch: an arrow alone shows the attacking direction) */
 function TeamRun({ P, side }: { P: Physical; side: Side }) {
   const t = P.thirds[side], sum = t.reduce((a, b) => a + b, 0) || 1, total = P.bands[side].reduce((x, y) => x + y, 0) || 1;
   // (the head's total is MA45's, as the Statistics page has it; the thirds only share it out)
@@ -592,7 +590,7 @@ function TeamRun({ P, side }: { P: Physical; side: Side }) {
   );
 }
 /** how fast a team ran: its distance by speed band as one bar of shares (MA45), the two teams' one under the other across
- *  both pitches (Yi, 2026-10-27: "two long ones spanning two pitches, and stack them vertically") */
+ *  both pitches (two long bars spanning both pitches, stacked) */
 function BandsRow({ P, side }: { P: Physical; side: Side }) {
   const b = P.bands[side], total = b.reduce((x, y) => x + y, 0) || 1;
   return (
@@ -602,7 +600,7 @@ function BandsRow({ P, side }: { P: Physical; side: Side }) {
     </div>
   );
 }
-/** the physicals on one page (Yi, 2026-10-27: no Team | Players switch, no headings over the plain charts): the
+/** the physicals on one page (no Team | Players switch, no headings over the plain charts): the
  *  intensity across the top; each team's pitch and speed bands, the bands' legend; the furthest runners */
 function PhysicalPage({ d, who }: { d: MatchSummaryData; who: Who }) {
   const P = d.physical;
@@ -626,7 +624,7 @@ function PhysicalPage({ d, who }: { d: MatchSummaryData; who: Who }) {
 }
 
 type Portrait = (pid: string) => string | null;
-// the tabs by their full names (Yi, 2026-10-27: "Statistics, Shot map, Passing Network, Attacking Direction, Heat map, POTM, Physicals")
+// the tabs by their full names, POTM the one short form
 const PAGES: { key: string; label: string; draw: (d: MatchSummaryData, who: Who, portrait?: Portrait) => ReactNode }[] = [
   { key: 'stats', label: 'Statistics', draw: (d) => <StatsPage d={d} /> },
   { key: 'shots', label: 'Shotmap', draw: (d) => <ShotsPage d={d} /> },
@@ -637,7 +635,7 @@ const PAGES: { key: string; label: string; draw: (d: MatchSummaryData, who: Who,
   { key: 'run', label: 'Physicals', draw: (d, w) => <PhysicalPage d={d} who={w} /> },
 ];
 /** each page's one line: what it shows, in plain words (no title: the tab names it) */
-const SUB: Record<string, string> = {};   // (the Physicals' line went with its Team and Players views, Yi 2026-10-27)
+const SUB: Record<string, string> = {};   // (the Physicals' line went with its Team and Players views)
 
 export function MatchSummary({ portrait }: { portrait?: Portrait }) {
   const [d, setD] = useState<MatchSummaryData | null>(null);
@@ -647,7 +645,7 @@ export function MatchSummary({ portrait }: { portrait?: Portrait }) {
   const [scale, setScale] = useState(fitScale);
   useEffect(() => { const on = () => setScale(fitScale()); window.addEventListener('resize', on); const off = tourStep.subscribe(on); return () => { window.removeEventListener('resize', on); off(); }; }, []);
   const hold = useRef(false), bar = useRef<HTMLElement>(null);
-  // nobody selected while it is open (Yi, 2026-10-27: "at this page, any selected players will be deselected")
+  // nobody selected while it is open: opening it deselects any selected player
   const { selected } = useGameSettings();
   useEffect(() => { if (selected !== null) setSettings({ selected: null }); }, [selected]);
   useEffect(() => { loadSummary().then(setD); loadRoster().then(setRoster); }, []);
@@ -703,7 +701,7 @@ export function MatchSummary({ portrait }: { portrait?: Portrait }) {
       {SUB[P.key] && <p className="ms-sub">{SUB[P.key]}</p>}
       <div key={P.key} className={`ms-body ms-body-${P.key}`}>{d ? P.draw(d, who, portrait) : <p className="ms-wait">Loading the match</p>}</div>
       {AUTO_TURN && <i className="ms-progress"><i ref={bar} /></i>}
-      {/* the venue, the time, the weather: a thin strip under the pages, no gap; text only, as "Full time" is (Yi, 2026-10-27) */}
+      {/* the venue, the time, the weather: a thin strip under the pages, no gap; text only, as "Full time" is */}
       <footer className="ms-strip" aria-label="Venue">{`${VENUE.name}  |  Kick-off ${VENUE.kickoff}  |  ${VENUE.weather}, ${VENUE.tempC}°C`}</footer>
     </div>
   );

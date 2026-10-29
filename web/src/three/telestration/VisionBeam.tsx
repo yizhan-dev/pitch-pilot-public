@@ -1,4 +1,4 @@
-// The vision cone's fan of light (Yi, 2026-10-23: as if the view came out of the player's head): a faint surface from
+// The vision cone's fan of light (as if the view came out of the player's head): a faint surface from
 // his eyes sloping down to the grass `land` m out, then lying on it to `len` m, as wide as his central view; additive
 // white, strongest at his eyes and fading with distance and towards its sides, drawn only as far as his sight has
 // spread (`reach`), with a brighter band at that front. One quad grid; the shape is made in the vertex shader.

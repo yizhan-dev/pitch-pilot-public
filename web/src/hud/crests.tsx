@@ -1,10 +1,10 @@
 import { useId } from 'react';
 import { TEAM_KIT, type Team } from '../three/coords';
 
-// The two teams' crests (Yi, 2026-10-23; working names Pelicans and Wildcats): home a pelican in a shield (direction B
+// The two teams' crests (working names Pelicans and Wildcats): home a pelican in a shield (direction B
 // of /review/team-crests/), away a roundel lettered WILDCATS FOOTBALL CLUB round crossed swords (direction D,
-// the swords raised a little, Yi). Drawn by us, in the kit colours. Used as they are at every size, the score bug's
-// 24 px included (Yi: no simplified versions). Both sit in a 100 x 120 box so they line up side by side.
+// the swords raised a little). Drawn by us, in the kit colours. Used as they are at every size, the score bug's
+// 24 px included (no simplified versions). Both sit in a 100 x 120 box so they line up side by side.
 
 const INK = '#f2f4f7', DARK = '#0d131d';
 /** an id for the SVG's own references, from useId without the characters url(#…) and href may trip on */
@@ -45,8 +45,8 @@ const SWORD = [
 ];
 
 /** the roundel: the team colour's ring, the name round the top and FOOTBALL CLUB round the bottom, crossed swords in a
- *  tinted middle. The swords' mass sits 3 below the middle, so they are lifted 4 to sit just above it (Yi: "slightly
- *  upper") */
+ *  tinted middle. The swords' mass sits 3 below the middle, so they are lifted 4 to sit slightly
+ *  above it */
 function Wildcats() {
   const id = useSvgId(), top = `${id}t`, bottom = `${id}b`, c = TEAM_KIT.away.shirt;
   return (

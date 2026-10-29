@@ -1,19 +1,19 @@
 import * as THREE from 'three';
 import { GOAL_FX } from './goalFx';
 
-// The pitch-side LED boards' goal message (Yi, 2026-10-23: chose the team-colour version of seven; page
+// The pitch-side LED boards' goal message (the team-colour version of seven; page
 // review/goal-boards/; all seven: <private-workspace>). After a
 // goal every 10 cm of board is one round LED showing GOOOAAAALLL!!! in a 5 x 7 pixel font, then a block of solid team
-// colour, repeated (Yi, 2026-10-24: the four chevrons <<<< there looked bad; "maybe make that just pure color"):
+// colour, repeated (four chevrons <<<< there looked bad, so plain colour):
 // - blink, 0-1.5 s: it stands still and blinks three times, twice a second (within the 3 flashes a second that WCAG
 //   2.3.1 allows);
 // - ticker, from 1.5 s: it runs right to left round the whole loop of boards, easing up to 14 m/s over 0.6 s, the
 //   letters in the team's colour (home blue, away orange) with a white pixel shadow;
 // - exit, from 5 s: the ticker stops, blinks twice as it began, and YIZHAN pushes up from below the dark board; the
 //   banners then rotate from YIZHAN (they kept turning underneath before, so the first one often arrived half-way
-//   through its hold or its push). Yi chose this of four (2026-10-24; page review/goal-exit/; the others, a push, a
+//   through its hold or its push). This one of four (page review/goal-exit/; the others, a push, a
 //   dissolve and a team-colour wipe: <private-workspace>); the first
-//   version cross-faded dots and banner for a second, and the clips' loop cut it off (Yi: abrupt).
+//   version cross-faded dots and banner for a second, and the clips' loop cut it off abruptly.
 // The YIZHAN marks on the boards stay black and white; the goal message is not a mark.
 const T_END = 5.0;
 const REVEAL = T_END + 1.0;   // when YIZHAN starts showing again, seconds after the goal

@@ -1,4 +1,4 @@
-// The instant a player strikes the ball (Yi, 2026-10-22: a shot freezes exactly when the cleats touch the ball). The
+// The instant a player strikes the ball (a shot freezes exactly when the boot touches the ball). The
 // event feed's time is only good to about a tenth of a second: at 38:19 its frame shows the ball still a metre short of
 // the shooter. The ball's 25 Hz track finds the touch, as the first strong change of its velocity between two steps
 // near the feed's time (a kick, or a header's turn; not a block a few tenths later; the window stops short of a save).
@@ -50,7 +50,7 @@ export function contactTime(data: Loaded, t: number, before = 0.25, after = 0.2)
   return tBest;
 }
 
-/** a low camera for a shot's freeze (Yi, 2026-10-22: for the demo, a lower perspective): behind the shooter and to the
+/** a low camera for a shot's freeze (a lower perspective for the demo): behind the shooter and to the
  *  pitch's middle side of his line to goal, about 9 m off and 2.5 m up, looking a few metres past him towards the goal,
  *  so his head (and the xG widget beside it), the cone and the goal are all in the frame. Returns the free camera's
  *  target (scene metres), yaw and pitch (degrees) and distance, for window.__camSet; null without his position */

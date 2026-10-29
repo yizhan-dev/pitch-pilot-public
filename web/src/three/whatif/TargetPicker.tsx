@@ -6,12 +6,12 @@ import { land, useLand } from '../../whatif/state';
 import { runLook } from '../../whatif/offball';
 import { L, W } from '../coords';
 
-// Picking where the ball should go (the on-ball what-if, Yi 2026-10-24): while the pause window's "Change the target" is
+// Picking where the ball should go (the on-ball what-if): while the pause window's "Change the target" is
 // on, the pitch takes the pointer; a ring follows it with a line from the player on the ball, and a click (not a drag)
 // sets the target and starts the simulation; a lofted pass draws its arc (its real height, onball.ts). An arrow at his
 // feet shows the way he faces, and the pause window says how far he must turn for the point under the pointer and how
 // long that keeps him on the ball (onball.ts holdFor). Pitch metres: data (x, y) is world (x, z).
-// The same file picks a run (the off-ball what-if, step 3, 2026-10-25; RunPicker below) and mounts the shot what-if's
+// The same file picks a run (the off-ball what-if, step 3; RunPicker below) and mounts the shot what-if's
 // cone and xG (ShotPlot.tsx): the stage mounts one picker.
 
 const LIFT = 0.03;
@@ -21,11 +21,11 @@ export function TargetPicker({ data }: { data: Loaded }) {
   return <><PassPicker data={data} /><RunPicker data={data} /></>;
 }
 
-// The pass is picked among his options only (Yi, 2026-10-25: "make it only options, we can not set the landing point"):
+// The pass is picked among his options only (no free landing point):
 // the pointer finds the option nearest it (within 2.5 m of where he stands at the pause), which the What-if's scene lights
 // and draws the lane to (WhatIfScene.tsx, the Explain kit); a click (not a drag) plays the pass worked out for him.
-// Nothing is drawn here: the facing arrow and the rings are gone (Yi: "there is an arrow for the passer, which is not
-// needed").
+// Nothing is drawn here: the facing arrow and the rings are gone (the passer's arrow was not
+// needed).
 function PassPicker({ data }: { data: Loaded }) {
   const st = useLand(), [down, setDown] = useState<[number, number] | null>(null);
   const fr = data.pkg.frames, fps = data.pkg.meta.fps, nAtt = fr[0].att.length, k0 = Math.min(fr.length - 1, Math.round(st.t0 * fps));
@@ -47,7 +47,7 @@ function PassPicker({ data }: { data: Loaded }) {
         e.stopPropagation();
         if (down && Math.hypot(e.clientX - down[0], e.clientY - down[1]) < 6) {
           const who = optionAt(at(e)), o = land.get().options?.find((x) => x.who === who);
-          if (o) land.set((s) => ({ ...s, phase: 'computing', target: o.at, toWho: o.who, loft: o.loft, hoverWho: null }));
+          if (o) land.set((s) => ({ ...s, phase: 'computing', target: o.at, meetAt: o.meetAt, toWho: o.who, loft: o.loft, hoverWho: null }));
         }
         setDown(null);
       }}>

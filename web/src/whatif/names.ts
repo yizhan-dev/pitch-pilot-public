@@ -1,4 +1,4 @@
-// How the what-if's cards name a player (2026-10-25, Yi: minimal and straightforward): the man's number and his shirt
+// How the what-if's cards name a player, minimal and straightforward: the man's number and his shirt
 // name, "#37 Pryce"; a man of the other team with his kit colour too, "Orange #4 Lenoir", since the numbers can clash.
 // The shirt name is the roster's (lineup/roster.ts, capitals on the shirt), written here in title case.
 import type { Look } from '../three/players/looks';

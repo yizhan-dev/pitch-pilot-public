@@ -1,10 +1,10 @@
-// The lofted pass arrow (Yi, 2026-10-25: a pass "should be able to be ground or lofted"), as a real path in the 3D
-// scene (Yi, the same day, asked whether a lofted pass is a picture painted over the broadcast, as pitch_prism's on its
-// fixed video, or a ball path in the 3D world that holds from any camera: "should be the latter"):
+// The lofted pass arrow (a pass can be ground or lofted), as a real path in the 3D
+// scene (not a picture painted over the broadcast, as pitch_prism's on its
+// fixed video, but a ball path in the 3D world that holds from any camera):
 //  - the arc is the ball's own kind of path, a parabola `4H q(1-q)` in the upright plane from the passer's feet to where
 //    it lands (the tip, on the grass);
-//  - the arrow is a flat thing bent along it (Yi chose 'flat': "the camera is at side, and we are not supposed to see the
-//    arrow tip like that"): the shaft a strip lying across the track, the head (pitch_prism's barbed head: tip, barb,
+//  - the arrow is a flat thing bent along it ('flat': the camera is at the side, and the tip must not be seen
+//    face-on): the shaft a strip lying across the track, the head (pitch_prism's barbed head: tip, barb,
 //    notch, barb) one rigid piece in the same strip on the arc's last stretch, pointing down the arc; from the side both
 //    are seen edge-on, from above or behind the whole arrow; once landed the tip touches the grass nose-first, a dart
 //    landing (LoftHead keeps the others: turned to the camera, upright in the arc's plane, both crossed);
@@ -21,7 +21,7 @@ import { useFrame } from '@react-three/fiber';
  *  m with its notch at `notch` of it and its barbs at `spread` rad, the tail dissolving over `tailFade` of the shaft;
  *  `t` 0..1 drawn from the tail, `alpha`, `rgb` */
 export interface LoftReq { tail: [number, number]; tip: [number, number]; H: number; w: number; S: number; notch: number; spread: number; tailFade: number; t: number; alpha: number; rgb: [number, number, number]; head: LoftHead }
-/** the head's options (Yi, 2026-10-25: the head was what was wrong): 'flat' (Yi's) lying across the track, pitched
+/** the head's options (the head was what looked wrong): 'flat' (the default) lying across the track, pitched
  *  along the arc, the shaft a flat strip with it; 'face' turned to the camera about the arc, the shaft too; 'plane'
  *  upright in the arc's own plane, its barbs above and below; 'cross' 'plane' and 'flat' together */
 export type LoftHead = 'face' | 'plane' | 'flat' | 'cross';
@@ -81,9 +81,8 @@ export function LoftArrows({ store }: { store: { list: LoftReq[] } }) {
       const back = S * Math.cos(r.spread), wide = S * Math.sin(r.spread), bx = tX - ax * back, by = tY - ay * back, bz = tZ - az * back;
       const qX = tX - ax * S * r.notch, qY = tY - ay * S * r.notch, qZ = tZ - az * S * r.notch;
       // the flat head's shaft ends on the head's inner edges, a V into its notch, so shaft and head never overlap: one
-      // outline, one coat of colour through the see-through (Yi, 2026-10-26: "we can see that the arrow is made of a
-      // rectangle and an arrow, overlapped with each other ... making the arrow with tail just look like they are one
-      // thing"); the other heads (and a head no wider than the shaft) keep the shaft running a little into the head
+      // outline, one coat of colour through the see-through (overlapped, the rectangle and the head showed as two
+      // pieces; this way the arrow and its tail read as one thing); the other heads (and a head no wider than the shaft) keep the shaft running a little into the head
       const fit = r.head === 'flat' && wide > h * 1.01, fk = h / wide;
       const P1 = [qX + (bx + nx * wide - qX) * fk, qY + (by - qY) * fk, qZ + (bz + nz * wide - qZ) * fk];
       const P2 = [qX + (bx - nx * wide - qX) * fk, qY + (by - qY) * fk, qZ + (bz - nz * wide - qZ) * fk];

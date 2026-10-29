@@ -1,4 +1,5 @@
 import { assetFile } from '../../../data/paths';
+import { hook } from '../../../dev';
 import { useEffect, useMemo, useState } from 'react';
 import { Canvas, useThree } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
@@ -11,7 +12,7 @@ import { ProceduralStadium } from '../Procedural';
 import { Furniture } from '../Furniture';
 import { BigScreen, DIRS, SCREEN_DEFAULT, type ScreenDir, type ScreenParams } from './BigScreen';
 
-// The big-screen testbed (/screen.html; Yi, 2026-10-22: design the 大屏 here, put it in the stadium once satisfied).
+// The big-screen testbed (/screen.html): the big screen is designed here and goes into the stadium once settled.
 // The screen hangs at the west goal end, set into the third tier's grey ring under the roof, inside the full stadium,
 // so every direction is judged where it will live. Panel: direction, sliders, camera presets, copy the parameters.
 // Address: ?dir=matrix|halftone|portrait|wave|flip|replay|tactics &cam=centre|far|close|corner|flat and any slider key (pitch=0.2).
@@ -41,18 +42,17 @@ function Rig({ cam, h }: { cam: string; h: number }) {
   // debugging: window.__meshes() lists every mesh (index, vertex count, colour), window.__hide([indices]) hides those
   const scene = useThree((st) => st.scene);
   useEffect(() => {
-    const W = window as unknown as Record<string, unknown>;
     const all = () => { const out: THREE.Mesh[] = []; scene.traverse((o) => { if ((o as THREE.Mesh).isMesh) out.push(o as THREE.Mesh); }); return out; };
-    W.__meshes = () => all().map((m, i) => { const mat = m.material as THREE.MeshStandardMaterial; return [i, m.geometry.getAttribute('position')?.count ?? 0, mat.color ? '#' + mat.color.getHexString() : mat.type]; });
-    W.__hide = (ix: number[]) => { const a = all(); a.forEach((m, i) => { m.visible = !ix.includes(i); }); return ix.length; };
-    W.__points = (on: boolean) => { scene.traverse((o) => { if ((o as THREE.Points).isPoints) o.visible = on; }); return on; };   // the glow sprites and the crowd
+    hook('meshes', () => all().map((m, i) => { const mat = m.material as THREE.MeshStandardMaterial; return [i, m.geometry.getAttribute('position')?.count ?? 0, mat.color ? '#' + mat.color.getHexString() : mat.type]; }));
+    hook('hide', (ix: number[]) => { const a = all(); a.forEach((m, i) => { m.visible = !ix.includes(i); }); return ix.length; });
+    hook('points', (on: boolean) => { scene.traverse((o) => { if ((o as THREE.Points).isPoints) o.visible = on; }); return on; });   // the glow sprites and the crowd
   }, [scene]);
   // any camera, for inspecting the stadium from anywhere: window.__look(px, py, pz, tx, ty, tz, fov)
   useEffect(() => {
-    (window as unknown as { __look?: unknown }).__look = (px: number, py: number, pz: number, tx: number, ty: number, tz: number, fov = 40) => {
+    hook('look', (px: number, py: number, pz: number, tx: number, ty: number, tz: number, fov = 40) => {
       camera.position.set(px, py, pz); camera.fov = fov; camera.updateProjectionMatrix(); camera.lookAt(tx, ty, tz);
       if (controls) { controls.target.set(tx, ty, tz); controls.update(); }
-    };
+    });
   }, [camera, controls]);
   useEffect(() => {
     const c = CAMS[cam] ?? CAMS.centre, target = new THREE.Vector3(X, TOP - h / 2, 0);
@@ -73,8 +73,7 @@ export function ScreenLab() {
   const [p, setP] = useState<ScreenParams>(init.p), [cam, setCam] = useState(init.cam), [copied, setCopied] = useState(false);
   const set = (patch: Partial<ScreenParams>) => setP((o) => ({ ...o, ...patch }));
   useEffect(() => {
-    const W = window as unknown as Record<string, unknown>;
-    W.__screen = (patch: Partial<ScreenParams>) => set(patch); W.__screenCam = (c: string) => setCam(c); W.__screenParams = () => p;
+    hook('screen', (patch: Partial<ScreenParams>) => set(patch)); hook('screenCam', (c: string) => setCam(c)); hook('screenParams', () => p);
   }, [p]);
   useEffect(() => {
     const q = new URLSearchParams(location.search); q.set('dir', p.dir); q.set('cam', cam);

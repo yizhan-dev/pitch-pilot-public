@@ -1,5 +1,5 @@
 // The speed trail's read-out (pitch_prism's locked racing-HUD label, freeze/trace.py): a big italic number with KM/H
-// beside it on one line (Yi, 2026-10-24; stacked under the number it ran onto the player), white with a soft dark offset edge, standing upright beside the player (not on the
+// beside it on one line (stacked under the number it ran onto the player), white with a soft dark offset edge, standing upright beside the player (not on the
 // ground, so it reads while he runs), to the left of his body. Sized with the player (pitch_prism: the number
 // 58 px for a 66 px player, so about 0.88 of his height), held between a floor and a ceiling in pixels so it stays
 // readable far away and does not swamp the close views. The layout is BallReadout's. A small pool, set each frame.
@@ -54,13 +54,13 @@ export function SpeedTags({ store }: { store: { list: SpeedTag[] } }) {
       }
       const w = st.w[i] ?? N * 0.9, gap = N * 0.14, uw = st.uw[i] ?? U * 2.6;
       const base = st.base[i] ?? N * 0.2, top = st.top[i] ?? N * 0.9;
-      // one line (Yi, 2026-10-24: the unit under the number ran onto the player): KM/H to the right of the number, its
-      // baseline on the digits' bottom (Yi, 2026-10-26: the unit sat too low; both were anchored at their line boxes'
+      // one line (the unit under the number ran onto the player): KM/H to the right of the number, its
+      // baseline on the digits' bottom (the unit sat too low when both were anchored at their line boxes'
       // bottoms, and the big number's box keeps more room under its baseline than the small unit's)
       num.position.set(0, 0, 0); unit.position.set(w + gap, base, 0);
       num.fillOpacity = (245 / 255) * tag.alpha; unit.fillOpacity = (175 / 255) * tag.alpha;
       num.outlineOpacity = 0.63 * tag.alpha; unit.outlineOpacity = 0.63 * tag.alpha;
-      // to the left of his body, the digits' middle at his waist, for everyone and in every view (Yi, 2026-10-26: up
+      // to the left of his body, the digits' middle at his waist, for everyone and in every view (up
       // and to the right, pitch_prism's place, the name tag over his head ran into it, and moving it down only for the
       // tagged players made it jump whenever a line named him): the anchor is the read-out's right end, at its middle
       st.v.set(tag.x, MID_AT * T.playerH, tag.z).addScaledVector(st.right, -LEFT_OF * T.playerH);
@@ -69,7 +69,7 @@ export function SpeedTags({ store }: { store: { list: SpeedTag[] } }) {
       const pxPerM = size.height / (2 * depth * tanH);
       const px = N * pxPerM, k = Math.min(T.maxPx, Math.max(T.minPx, px)) / px;
       let s = k * tag.scale;
-      // the offside verdict stands there too when it is his (VarMarks: to his left at his chest, Yi 2026-10-24): as it
+      // the offside verdict stands there too when it is his (VarMarks: to his left at his chest): as it
       // comes in, the read-out slides under it and takes its metres' size, their right ends lined up, so the three lines
       // read as one column (at its own size, up to 96 px, it ran under the subtitles in the close-up)
       const vk = varOn.current && F.att ? F.tag : 0;

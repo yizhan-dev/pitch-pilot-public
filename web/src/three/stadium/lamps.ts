@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 
-/** The floodlights evenly spaced (Yi, 2026-10-23: "the top light seems not so evenly spaced"). The shell builder puts a
+/** The floodlights evenly spaced (round the roof they looked unevenly spaced). The shell builder puts a
  *  lamp on every third sample of the roof opening's ring, and those samples crowd together at the corners: lamps were
  *  2.1 m apart on the straights and 0.3-1.7 m at the corners, so the corners read as bunched and the straights as sparse,
  *  and their halos summed into light and dark stripes on the opening's lip where the lamps were sparse. This keeps the

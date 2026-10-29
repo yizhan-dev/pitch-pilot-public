@@ -1,6 +1,6 @@
 import { modelFile } from '../data/paths';
-// The pass probability for the 战术 mode's passing mark (Yi, 2026-10-25: "can we actually implement the pass
-// probability? ... this will be grey out, if there is no player on ball, or within the range"). For the player on the
+// The pass probability for the 战术 mode's passing mark (greyed out when no player is on the ball or within
+// range). For the player on the
 // ball, the chance a pass to each team-mate is completed, from a small network distilled from Opta's own per-team-mate
 // expected completion (Stats Perform MA36 passOption, every pass of this match; private/hawkeye/pass_distil.py): trained
 // on the first half's pass options, tested on the second half's, where it follows Opta's numbers with a correlation of
@@ -30,10 +30,10 @@ export interface PassOption {
   offside: boolean;
 }
 export interface PassState { carrier: number | null; opts: PassOption[] | null }
-/** whether someone has the ball at the paused moment, for the column's Passing button (greyed when nobody has it, Yi);
+/** whether someone has the ball at the paused moment, for the column's Passing button (greyed when nobody has it);
  *  true while playing, so the button does not flicker with every pass. Kept by PitchOverlay3D in the 战术 mode */
 export const ballHeld = store<boolean>(true);
-/** the same for the Shot xG mark (Yi, 2026-10-26: "only when the ball is passing the halfway line"): someone has the ball in
+/** the same for the Shot xG mark (only once the ball is past the halfway line): someone has the ball in
  *  the opponents' half; true while playing */
 export const shotHeld = store<boolean>(true);
 /** the player on the ball at clip time t if he is in the opponents' half (the package's attackers attack +x), else null */
@@ -43,7 +43,7 @@ export function shooterAt(pkg: ClipPkg, t: number): number | null {
   const b = pkg.frames[frameAt(pkg, t)].ball;
   return b && (c < nAttOf(pkg) ? b[0] > 0 : b[0] < 0) ? c : null;
 }
-/** the pass chances on screen now, for the head tags (chat 1's spec, drawn by the Shell chat's ShowLayer): the carrier and
+/** the pass chances on screen now, for the head tags (the telestration spec, drawn by three/layers/ShowLayer.tsx): the carrier and
  *  each team-mate's chance, null when the passing mark is off or nobody has the ball. Kept by TacticsItems, a few times a
  *  second */
 export const passChances = store<PassState | null>(null);
@@ -79,7 +79,7 @@ export function carrierAt(pkg: ClipPkg, t: number): number | null {
 /** which side has the ball by the players at clip time t (1 the clip's attackers, 2 its defenders), null when it does not
  *  show: the player on the ball (carrierAt), else a keeper within REACH_M of it at any height (a keeper holding it in his
  *  hands: Hawk-Eye's possession flag still names the other side in 57 of the 198 frames with a keeper on the ball in the
- *  20 clips, Yi 2026-10-26: "offside line seems to be wrong when the GK is possessing the ball") */
+ *  20 clips, which put the offside line on the wrong side while the keeper had the ball) */
 export function holderSideAt(pkg: ClipPkg, t: number): 1 | 2 | null {
   const nAtt = nAttOf(pkg), c = carrierAt(pkg, t);
   if (c !== null) return c < nAtt ? 1 : 2;
@@ -92,8 +92,8 @@ export function holderSideAt(pkg: ClipPkg, t: number): 1 | 2 | null {
   return null;
 }
 
-// ---- the on-ball moments' contact (Yi, 2026-10-26: "it should stop at the point when the player's foot just hit the ball,
-// now sometimes it pause when the ball is in the air"). The feed's times are good to a few tenths and the packages' to
+// ---- the on-ball moments' contact: a moment stops where the player's foot meets the ball, never with the ball
+// already in the air. The feed's times are good to a few tenths and the packages' to
 // the 10 Hz frame; the moment was the event's time less 0.15 s, which left 25 kicks in the clips with the ball
 // already gone. The contact comes from the ball's own 25 Hz track instead: a peak of its change of velocity (as the
 // Explain mode's touches, explain/actions.ts) with the event's player beside the ball, the one nearest the feed's time;

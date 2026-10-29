@@ -1,4 +1,5 @@
 import { clipAddr, parseClip, directorFile } from '../data/paths';
+import { hook, hooked } from '../dev';
 // The orchestrator's board, http://127.0.0.1:5174/src/orchestrate/board.html?moment=pel-wil/shot-15-53:
 // the clip played as the narration would play its plan (the plan compiled to cues, src/explain/script.ts's own
 // timeline: holds, speed, subject, drawings), with the debug view over it: the beats on a timeline with what each one
@@ -68,7 +69,7 @@ const KIND_COL: Record<Beat['kind'], string> = { intro: '#7d8696', 'build-up': '
 const label = (b: Beat) => (b.entry ? ENTRY[b.entry].zh : KIND_ZH[b.kind]);
 const ITEM_ZH: Record<string, string> = { units: '防守三条线', pass: '传球箭头', run: '跑动箭头', zone: '空当区域', hull: '防守块', shot: '射门锥和 xG', marking: '盯人连线', spotlight: '光柱', network: '传球网络', pressure: '逼抢', marker: '选中圈' };
 
-/** the pointers (Yi, 2026-10-24, like a game): one over the player on the ball, always; one over the player the narration
+/** the pointers (like a game): one over the player on the ball, always; one over the player the narration
  *  names, while it names him (a director script's `callouts`), so the audience can tell who is meant */
 interface Pointers { carrier: { current: number }; call: { current: number } }
 function Scene({ data, clock, onTick, items, mode, looks, pointers, calling, names }: { data: Loaded; clock: Clock; onTick: (dt: number) => void; items: Item[]; mode: PitchMode; looks: Look[] | undefined; pointers: Pointers; calling: boolean; names: (p: number) => string | null }) {
@@ -76,7 +77,7 @@ function Scene({ data, clock, onTick, items, mode, looks, pointers, calling, nam
   const callName = useCallback((p: number) => (p === pointers.call.current ? names(p) : null), [names, pointers]);
   const game = useGameSettings();
   const hide = useMemo<HideRef>(() => ({ current: -1 }), []), hideOfficial = useMemo<HideRef>(() => ({ current: -1 }), []), hover = useMemo<HideRef>(() => ({ current: -1 }), []);
-  // the shot's freeze, as the telestration session's sandbox draws it: the shooter alone in toon, the rest in silhouette
+  // the shot's freeze, as the telestration sandbox draws it: the shooter alone in toon, the rest in silhouette
   const focus = useMemo<HideRef>(() => ({ current: -1 }), []), shotOn = items.some((it) => it.kind === 'shot');
   const clipPlane = useMemo(() => new THREE.Plane(new THREE.Vector3(0, 0, -1), 1e5), []);
   const officialLooks = useMemo(() => makeLooks(3, 3, { hair: 5, number: 5, skin: 5 }).map((l) => ({ ...l, number: -1, name: '', keeper: false })), []);
@@ -122,12 +123,12 @@ function Scene({ data, clock, onTick, items, mode, looks, pointers, calling, nam
 function VarCam() {
   const st = useMemo(() => ({ wide: null as number[] | null, lastAge: Infinity, set: null as null | ((...a: number[]) => void) }), []);
   useFrame(() => {
-    type CamW = { __camSet?: ((...a: number[]) => void) & { varWrapped?: boolean } };
-    const W = window as unknown as CamW, F = VAR_FACTS, V = TELE.offside.var;
-    if (!W.__camSet) return;
-    if (!W.__camSet.varWrapped) {
-      const orig = W.__camSet; st.set = orig;
-      W.__camSet = Object.assign((...a: number[]) => { st.wide = a; orig(...a); }, { varWrapped: true });
+    type CamSet = ((...a: number[]) => void) & { varWrapped?: boolean };
+    const camSet = hooked<CamSet>('camSet'), F = VAR_FACTS, V = TELE.offside.var;
+    if (!camSet) return;
+    if (!camSet.varWrapped) {
+      const orig = camSet; st.set = orig;
+      hook('camSet', Object.assign((...a: number[]) => { st.wide = a; orig(...a); }, { varWrapped: true }));
     }
     // not while the item leaves: the script's next camera has cut away by then
     if (!F.on || F.exit !== null || !st.set || !st.wide) return;
@@ -249,25 +250,25 @@ export function Board() {
     const sel = camSel !== undefined ? camSel : now.select;
     if (sel !== s.sel) { s.sel = sel; setSettings({ selected: sel ?? null }); }
     const camKey = cam ? `${camBeat!.id}:${cam.view}:${cam.preset ?? ''}:${cam.pose ?? ''}` : '';
-    const W = window as unknown as { __camSet?: (...a: number[]) => void };
+    const camSet = hooked<(...a: number[]) => void>('camSet');
     // a pose waits for the camera director's __camSet (the board's first apply can come before its first frame; r1 of
     // pass-24-21 opened on the director's seed instead of the script's pose)
-    if (cam && camKey !== s.cam && (W.__camSet || (!cam.pose && cam.preset !== 'shot'))) {
+    if (cam && camKey !== s.cam && (camSet || (!cam.pose && cam.preset !== 'shot'))) {
       s.cam = camKey;
       // `move` (s of narration time): ease from the pose the script last set to this one, orbit by orbit (target,
       // yaw the short way, pitch, distance in proportion), for two cameras alike enough that a cut reads as a jump
-      // (Yi, 2026-10-25, pass-24-21 at 18 s); otherwise a cut
-      if (cam.pose && W.__camSet && cam.move && s.pose) s.mv = { from: s.pose, to: cam.pose, n0: tl.n(camBeat!.t0), d: cam.move };
-      else if (cam.pose && W.__camSet) { s.mv = null; s.pose = cam.pose; W.__camSet(...cam.pose); }
-      else if (cam.preset === 'shot' && data && cam.player !== undefined) { const c = shotCamera(data, cam.at ?? camBeat!.at, cam.player); if (c && W.__camSet) W.__camSet(...c); }
+      // (as in pass-24-21 at 18 s); otherwise a cut
+      if (cam.pose && camSet && cam.move && s.pose) s.mv = { from: s.pose, to: cam.pose, n0: tl.n(camBeat!.t0), d: cam.move };
+      else if (cam.pose && camSet) { s.mv = null; s.pose = cam.pose; camSet(...cam.pose); }
+      else if (cam.preset === 'shot' && data && cam.player !== undefined) { const c = shotCamera(data, cam.at ?? camBeat!.at, cam.player); if (c && camSet) camSet(...c); }
       else setSettings({ view: cam.view });
       s.view = cam.view;
     } else if (!cam && now.view && now.view !== s.view) { s.view = now.view; setSettings({ view: now.view }); }
-    if (s.mv && W.__camSet) {
+    if (s.mv && camSet) {
       const m = s.mv, u = Math.min(1, Math.max(0, (n - m.n0) / m.d)), e = u * u * (3 - 2 * u);
       let dy = m.to[3] - m.from[3]; dy -= 360 * Math.round(dy / 360);
       const p = [0, 1, 2].map((i) => m.from[i] + (m.to[i] - m.from[i]) * e).concat([m.from[3] + dy * e, m.from[4] + (m.to[4] - m.from[4]) * e, m.from[5] * Math.pow(m.to[5] / m.from[5], e)]);
-      W.__camSet(...p); s.pose = p;
+      camSet(...p); s.pose = p;
       if (u >= 1) s.mv = null;
     }
     // a scripted free pose counts as the viewer's touch, so the camera director's return to the broadcast view (ball
@@ -317,15 +318,14 @@ export function Board() {
 
   useEffect(() => {
     if (!plan || !tl) return;
-    const W = window as unknown as Record<string, unknown>;
-    W.__plan = plan; W.__cues = cues; W.__beatFrame = beatFrame; W.__sketch = sketch; W.__looks = looks?.map((l) => `${l.number} 号 ${l.name}`); W.__people = people;
-    W.__setN = (n: number) => { play(false); if (CAPTURE) W.__teleNow = n; apply(n); if (CAPTURE) setTick((x) => x + 1); };
+    hook('plan', plan); hook('cues', cues); hook('beatFrame', beatFrame); hook('sketch', sketch); hook('looks', looks?.map((l) => `${l.number} 号 ${l.name}`)); hook('people', people);
+    hook('setN', (n: number) => { play(false); if (CAPTURE) hook('teleNow', n); apply(n); if (CAPTURE) setTick((x) => x + 1); });
     /** for the recorder: the narration's length, and how fast n runs at n (1 in a hold, the beat's rate otherwise) */
-    W.__narrN = N; W.__nOf = (t: number) => tl.n(t); W.__clipT = () => clock.t; W.__rateAt = (n: number) => (tl.at(n).hold ? 1 : stateAt(tl, n).rate);
-    if (CAPTURE) W.__capture = true;
+    hook('narrN', N); hook('nOf', (t: number) => tl.n(t)); hook('clipT', () => clock.t); hook('rateAt', (n: number) => (tl.at(n).hold ? 1 : stateAt(tl, n).rate));
+    if (CAPTURE) hook('capture', true);
     /** a candidate insight (chosen or not) on its own: the clock at its moment (a run 1.2 s in, so the arrow has drawn),
      *  its drawings without their windows, its protagonist selected; returns the sketch too */
-    W.__candFrame = (id: string) => {
+    hook('candFrame', (id: string) => {
       const x = plan.candidates.find((c) => c.id === id); if (!x || !geo) return null;
       play(false);
       const runLike = ['blind-side-run', 'overlap', 'half-space-run', 'third-man', 'striker-wide', 'rotation', 'hook-run'].includes(x.entry);
@@ -335,7 +335,7 @@ export function Board() {
       st.current.key = `cand:${id}`; setItems(items);
       const sel = x.players[0] ?? null; st.current.sel = sel; setSettings({ selected: sel });
       return { id, t: +t.toFixed(2), svg: schematic(geo, items, t, (p) => String(looks?.[p]?.number ?? p), sel) };
-    };
+    });
     apply(plan.beats[0] ? tl.n(plan.beats[0].t0) : 0);
     const key = (e: KeyboardEvent) => {
       if (e.key === ' ') { play(!st.current.playing); e.preventDefault(); }

@@ -1,4 +1,4 @@
-// The vision cone's darkness (Yi, 2026-10-23: show a player's vision cone and darken everything behind him): every
+// The vision cone's darkness (a player's vision cone, everything behind him darkened): every
 // built-in material in the scene (grass, players, goals, stands; MeshStandard, Basic, Lambert, Phong, Toon) learns, like
 // fog, to darken a fragment by where it stands on the ground relative to one player: nothing in his central view (within
 // `central` of where his head points), part in his peripheral view (to `peripheral`), most behind him; never within
@@ -7,7 +7,7 @@
 // the sky) are left as they are. Off (uVisOn 0) the patch costs one branch per fragment.
 import * as THREE from 'three';
 
-/** the offside close-up's cue on the attacker's body (Yi, 2026-10-23: the part of him beyond the wall shows lighter, so
+/** the offside close-up's cue on the attacker's body (the part of him beyond the wall shows lighter, so
  *  the audience sees at once what is offside): within `uOffR` m of him (`uOffP`, scene x, z) and above the grass, what
  *  lies beyond the wall's plane (x = `uOffX`, beyond along `uOffSg`) is lifted towards white by `uOffK`, with a bright
  *  seam where the wall cuts him */
@@ -16,7 +16,7 @@ export const OFFB = {
   uOffP: { value: new THREE.Vector2() },
 };
 
-/** up to this many players' views at once: a spot stays lit if any of them sees it (Yi, 2026-10-23: the selected
+/** up to this many players' views at once: a spot stays lit if any of them sees it (the selected
  *  players together; what none of them can see is the dark) */
 export const VIS_MAX = 4;
 
@@ -29,7 +29,7 @@ export const VIS = {
   uVisDark: { value: new THREE.Vector2(0.62, 0.3) },  // how much darker: behind, peripheral
   uVisKeep: { value: 1.2 },
   uVisSoft: { value: 0.06 },                        // the edges' softness, in cos units
-  // from his eyes (Yi, 2026-10-23: as if the view came out of his head): each player's eyes (scene x, up, z); what is
+  // from his eyes (as if the view came out of his head): each player's eyes (scene x, up, z); what is
   // farther from them than uVisR m is still all dark (the sight spreading out from the eyes), a soft bright band at
   // that front (uVisWash); uVisK the whole effect's strength 0..1 (the scene dims first)
   uVisE: { value: Array.from({ length: VIS_MAX }, () => new THREE.Vector3()) },

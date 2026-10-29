@@ -1,4 +1,4 @@
-/* the 讲解 subtitles (src/explain/Narration.tsx): bottom centre, just above the minimap (proposal A, 2026-10-22) */
+/* the Explain subtitles (src/explain/Narration.tsx): bottom centre, just above the minimap (proposal A) */
 .nr { position: absolute; z-index: 28; left: 50%; transform: translateX(-50%); bottom: calc(var(--hud-bottom, 20px) + 226px);
   display: flex; flex-direction: column; align-items: center; gap: 6px; pointer-events: none; max-width: calc(100% - 680px); min-width: 0; }
 .nr.nr-low { bottom: calc(var(--hud-bottom, 20px) + 14px); }

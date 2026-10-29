@@ -1,10 +1,11 @@
-// The ball's speed (Yi, 2026-10-22: an option for the shots; the height was tried and dropped), beside the ball, turned to the camera, the same
+// The ball's speed (an option for the shots; the height was tried and dropped), beside the ball, turned to the camera, the same
 // size on screen at any distance. pitch_prism's locked racing-HUD read-out (the trace's speed label): a big italic white
 // number with its unit stacked smaller under the number's right edge, a soft dark offset edge for legibility; here in
 // the project's display face, Barlow Condensed 600 italic. Speed is the ball's, from the tracking (a centred difference
 // over 0.16 s), held at its peak for `holdS` seconds so a shot's speed stays readable after the save. Fades in above
 // `minKmh`, out below. On when TELE.readout.mode is 'speed', or when the `on` prop says so (the pause window's shots).
 import { useEffect, useMemo, useRef } from 'react';
+import { hooked } from '../../dev';
 import * as THREE from 'three';
 import { useFrame } from '@react-three/fiber';
 import { Text } from '@react-three/drei';
@@ -39,8 +40,7 @@ export function BallReadout({ data, clock, on }: { data: Loaded; clock: Clock; o
   useFrame((state) => {
     const R = TELE.readout, g = group.current;
     if (!g) return;
-    const W = window as unknown as { __capture?: boolean; __teleNow?: number };
-    const now = W.__teleNow ?? (W.__capture ? clock.t : state.clock.elapsedTime), dt = st.lastNow < 0 ? 1 : Math.max(0, Math.min(0.2, now - st.lastNow));
+    const now = hooked<number>('teleNow') ?? (hooked<boolean>('capture') ? clock.t : state.clock.elapsedTime), dt = st.lastNow < 0 ? 1 : Math.max(0, Math.min(0.2, now - st.lastNow));
     st.lastNow = now;
     const pkg = data.pkg, t = clock.t, b = ballAt(pkg, t);
     // the speed, held at its peak over the last holdS seconds (stateless, so scrubbing and recording agree)

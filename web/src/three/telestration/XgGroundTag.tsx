@@ -1,4 +1,4 @@
-// The xG widget lying on the grass (Yi, 2026-10-22: when the view is above a certain height, the xG tag is displayed
+// The xG widget lying on the grass (when the view is above a certain height, the xG tag is shown
 // as if it were on the grass). The same plate as the standing widget (XgWidget.tsx) and the same frames (xgFrame: the
 // leader, the plate opening, the decimals rolling, the glitch), drawn into a canvas each frame and laid on a plane beside
 // the shooter's feet: depth tested like the other ground marks (players standing on it hide it), turned about the

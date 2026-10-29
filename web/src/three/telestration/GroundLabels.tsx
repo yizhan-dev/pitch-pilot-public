@@ -4,13 +4,14 @@
 // the grass (flat text is unreadable there). A fixed pool of troika texts (drei <Text>), set imperatively each frame.
 // Latin text only: Barlow Condensed has no CJK, and troika would fetch fallback fonts from a CDN for missing glyphs.
 import { useEffect, useMemo, useRef } from 'react';
+import { hook } from '../../dev';
 import * as THREE from 'three';
 import { useFrame } from '@react-three/fiber';
 import { Text } from '@react-three/drei';
 import fontUrl from '@fontsource/barlow-condensed/files/barlow-condensed-latin-600-normal.woff?url';
 
 /** dir: the text's baseline along this ground direction (scene x, z), turned end for end when that would read
- *  backwards from the camera (Yi: the shot cone's distance along its edge, the angle tangent to its arc); without it
+ *  backwards from the camera (the shot cone's distance along its edge, the angle tangent to its arc); without it
  *  the text reads upright across the camera's view */
 export interface GroundLabel { x: number; z: number; text: string; alpha: number; sizeM: number; rgb: [number, number, number]; dir?: [number, number]; nudge?: number }
 /** nudge: ems along the reading direction, to centre a part of the text on (x, z) (the shot cone's angle: the digits,
@@ -25,7 +26,7 @@ export function GroundLabels({ store }: { store: { list: GroundLabel[] } }) {
   useEffect(() => () => mat.dispose(), [mat]);
   const tmp = useMemo(() => ({ up: new THREE.Vector3(), right: new THREE.Vector3(), n: new THREE.Vector3(0, 1, 0), m: new THREE.Matrix4(), v: new THREE.Vector3(), last: [] as string[], col: new THREE.Color(), r2: new THREE.Vector3(), u2: new THREE.Vector3() }), []);
   useFrame(({ camera }) => {
-    (window as unknown as { __teleLabels?: unknown }).__teleLabels = refs.current;   // for the headless checks
+    hook('teleLabels', refs.current);   // for the headless checks
     // the text's up on the ground: the camera's up projected on the grass (away from the viewer; north when straight down)
     tmp.up.set(0, 1, 0).applyQuaternion(camera.quaternion).setY(0);
     if (tmp.up.lengthSq() < 1e-6) camera.getWorldDirection(tmp.up).setY(0);

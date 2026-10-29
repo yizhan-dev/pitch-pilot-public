@@ -1,5 +1,5 @@
-// The game UI's shared settings (?ui=game), the contract between the HUD panels (src/hud/, built in a parallel
-// session) and the 3D pitch (src/three/). The HUD writes them, the pitch reads them. Every field is mirrored to the
+// The game UI's shared settings (?ui=game), the contract between the HUD panels (src/hud/, built
+// separately) and the 3D pitch (src/three/). The HUD writes them, the pitch reads them. Every field is mirrored to the
 // address so the headless scripts can shoot any state: ?view=free&style=toon&scope=all&layers=speed,map&sel=7
 // Design: docs/design/three-channels.html; plan: docs/plans/2026-10-22-game-ui.md.
 import { useSyncExternalStore } from 'react';
@@ -7,7 +7,7 @@ import { tr } from '../i18n';
 
 /** broadcast: follows the ball from the main stand; free: the spidercam; third: 1.5-person behind the selected player;
  *  first: the selected player's eyes; referee, ar1, ar2: the officials' eyes; tactical: straight down from above the
- *  pitch, like a tactics board (Yi, 2026-10-22) */
+ *  pitch, like a tactics board */
 export type ViewMode = 'broadcast' | 'free' | 'third' | 'first' | 'referee' | 'ar1' | 'ar2' | 'tactical' | 'aerialNear' | 'aerialFar' | 'aerialIn';
 /** ('ghost-still': the ghost without its trail, the What-if mode's pause and touch; not in the style menu) */
 export type PlayerStyle = 'toon' | 'lines' | 'token' | 'silhouette' | 'ghost' | 'ghost-still';
@@ -16,8 +16,8 @@ export type Scope = 'all' | 'selected' | 'attack';
 export type LayerKey = 'speed' | 'trail' | 'fov' | 'lines' | 'offside' | 'mark' | 'ball' | 'xg' | 'map' | 'toast';
 export type Preset = 'clean' | 'tactic' | 'fitness' | 'all';
 
-// in the HUD's order (Yi chose it with the HUD session, 2026-10-22): cameras, officials, players; keys 1-8 down the list
-/** the views in Yi's order (2026-10-22, with the HUD session): cameras, then the two player views (renamed as a pair:
+// in the HUD's order: cameras, officials, players; keys 1-8 down the list
+/** the views in the menu's order: cameras, then the two player views (renamed as a pair:
  *  球员视角 through his eyes, 球员跟拍 a camera following him), then the officials. The HUD binds the keys. */
 export const VIEWS: { key: ViewMode; label: string; hotkey: string; needsPlayer?: boolean; hidden?: boolean }[] = [
   { key: 'broadcast', label: tr('转播', 'Broadcast'), hotkey: '1' },
@@ -28,12 +28,12 @@ export const VIEWS: { key: ViewMode; label: string; hotkey: string; needsPlayer?
   { key: 'referee', label: tr('主裁', 'Referee'), hotkey: '6' },
   { key: 'ar1', label: tr('边裁 1', 'Assistant 1'), hotkey: '7' },
   { key: 'ar2', label: tr('边裁 2', 'Assistant 2'), hotkey: '8' },
-  // the stadium from outside, as from a drone (Yi, 2026-10-22: 外景, a near and a far one); last so the keys above keep
+  // the stadium from outside, as from a drone (a near and a far one); last so the keys above keep
   // their numbers
-  // (Yi, 2026-10-27: "replace the aerial wide with this stadium orbit, and name the aerial close just to drone")
+  // (the stadium orbit replaces the aerial wide on the menu, and the aerial close is named just Drone)
   { key: 'aerialNear', label: tr('无人机', 'Drone'), hotkey: '9' },
-  // the whole pitch from high in the roof's opening, turning (Yi, 2026-10-27, made for the match summary: "rotating to
-  // show the full pitch inside the stadium"; then "I like the stadium orbit")
+  // the whole pitch from high in the roof's opening, turning (made for the match summary, to show the full pitch inside
+  // the stadium; on the menu too as the stadium orbit)
   { key: 'aerialIn', label: 'Stadium orbit', hotkey: '0' },
   // the stadium from far outside: off the menus since the orbit took its place, kept in case
   { key: 'aerialFar', label: tr('远景', 'Aerial wide'), hotkey: '', hidden: true },
@@ -62,18 +62,18 @@ export const LAYERS: { key: LayerKey; label: string; group: '球员身上' | '�
 ];
 
 export const PRESETS: Record<Preset, { label: string; layers: LayerKey[] }> = {
-  // the 战术 mode's default (Yi, 2026-10-22): the plain dark board after the change, so for now no pitch control (its look
+  // the 战术 mode's default: the plain dark board after the change, so for now no pitch control (its look
   // on the board is still to be settled), no lines between players and no ball trail (the drawings come from the
-  // telestration session later); no number plates
+  // telestration layer); no number plates
   clean: { label: tr('简洁', 'Clean'), layers: ['map'] },
-  // 战术 is the mode's own name now; the Spearman 'space' layer is gone (Yi, 2026-10-24: pitch control is the 战术 base map,
+  // 战术 is the mode's own name now; the Spearman 'space' layer is gone (pitch control is the 战术 base map,
   // the notebook's model precalculated; docs/plans/space-metrics.md)
   tactic: { label: tr('阵型', 'Shape'), layers: ['ball', 'map', 'lines', 'offside', 'trail'] },
   fitness: { label: tr('体能', 'Fitness'), layers: ['ball', 'map', 'speed', 'trail'] },
   all: { label: tr('全开', 'All on'), layers: LAYERS.map((l) => l.key) },
 };
 
-/** the game's three modes (Yi, 2026-10-22), from watching to changing: 看 → 懂 → 改. 观赛 you watch the match as it was
+/** the game's three modes, from watching to changing: 看 → 懂 → 改. 观赛 you watch the match as it was
  *  (views, the player card, the minimap); 讲解 the AI walks you through it (commentary, lines drawn on the pitch); 战术
  *  you take it apart (the dark analysis pitch, the display layers, the what-if tools when paused). The HUD's 模式
  *  button lists them in this order, with the sub-lines. */
@@ -82,36 +82,36 @@ export const MODES: { key: GameMode; label: string; sub: string }[] = [
   { key: 'watch', label: tr('观赛', 'Watch'), sub: tr('自由看球：切视角，点球员看数据', 'Watch freely: switch views, click a player for stats') },
   { key: 'explain', label: tr('讲解', 'Explain'), sub: tr('AI 带你看：配解说，在场上画出跑位和传球', 'AI walks you through it: commentary, runs and passes drawn on the pitch') },
   { key: 'tactics', label: tr('战术', 'Tactics'), sub: 'Take it apart: space and pitch control, threat, passing options, and a pen to draw' },
-  // the fourth (Yi, 2026-10-24 evening, docs/plans/hud-notes.md "Four modes"): change a curated moment, see a simulation
+  // the fourth (docs/plans/hud-notes.md "Four modes"): change a curated moment, see a simulation
   { key: 'whatif', label: 'What-if', sub: 'Change a key moment and watch what could have happened, simulated' },
 ];
 
-/** the modes on the dark analysis board: 战术, and What-if (its board is the tactics board, Yi 2026-10-24) */
+/** the modes on the dark analysis board: 战术, and What-if (its board is the tactics board) */
 export const boardOf = (m: GameMode) => m === 'tactics' || m === 'whatif';
-/** views not offered on the board (Yi, 2026-10-25): the officials' eyes and the stadium from outside (the officials are
+/** views not offered on the board: the officials' eyes and the stadium from outside (the officials are
  *  not drawn there either); entering the board from one of them goes back to the broadcast view */
 export const OFF_BOARD_VIEWS: ViewMode[] = ['referee', 'ar1', 'ar2', 'aerialNear', 'aerialFar', 'aerialIn'];
 
-/** the Show menu (Yi, 2026-10-24/25), the same in every mode and kept across them: what is drawn on which players, one tag
+/** the Show menu, the same in every mode and kept across them: what is drawn on which players, one tag
  *  over the head (the stamina bar under the name, eFootball's way, three/layers/ShowLayer.tsx), and the chosen players'
  *  style (the rest stay toon; Stage draws the two sets). For the MVP name, stamina and the style only (the speed ring
- *  and the event toasts went, "too heavy"; no token style) */
+ *  and the event toasts went, too heavy for it; no token style) */
 export type ShowWho = 'ball' | 'selected' | 'home' | 'away' | 'all';
 export type ShowWhat = 'name' | 'stamina';
 export type ShowStyle = 'toon' | 'lines' | 'silhouette' | 'ghost';
-/** who: one choice at a time (Yi, 2026-10-26: the On row is single choice, like the style) */
+/** who: one choice at a time (the On row is single choice, like the style) */
 export interface ShowOpts { who: ShowWho; what: ShowWhat[]; style: ShowStyle }
 export const SHOW_WHAT: { key: ShowWhat; label: string }[] = [{ key: 'name', label: 'Name' }, { key: 'stamina', label: 'Stamina' }];
 export const SHOW_STYLES: { key: ShowStyle; label: string }[] = [{ key: 'toon', label: 'Toon' }, { key: 'lines', label: 'Skeleton' }, { key: 'silhouette', label: 'Silhouette' }, { key: 'ghost', label: 'Ghost' }];
 export const SHOW_WHO: { key: ShowWho; label: string }[] = [{ key: 'ball', label: 'On Ball Player' }, { key: 'selected', label: 'Selected Player' }, { key: 'home', label: 'Home Team' }, { key: 'away', label: 'Away Team' }, { key: 'all', label: 'All Players' }];
-/** the player on the ball with his name, everyone toon (Yi, 2026-10-26: the name on by default, the viewer can change it;
+/** the player on the ball with his name, everyone toon (the name on by default, the viewer can change it;
  *  the ball's trail is off by default, its layer not in the clean preset) */
 const DEFAULT_SHOW: ShowOpts = { who: 'ball', what: ['name'], style: 'toon' };
 
 export interface GameSettings {
   view: ViewMode;
   mode: GameMode;
-  /** mode === 'tactics', kept in step by setSettings (the pitch, the layers and other sessions read it): the grass flips
+  /** mode === 'tactics', kept in step by setSettings (the pitch, the layers and other modules read it): the grass flips
    *  to the dark analysis pitch, and the player style and the display layers apply only while it is on. Setting it
    *  (the older toggle) switches the mode to 战术, or back to 观赛. */
   tactical: boolean;
@@ -120,7 +120,7 @@ export interface GameSettings {
   layers: LayerKey[];
   /** the selected player, as an index into the package's players (attackers first, then defenders), or null */
   selected: number | null;
-  /** the Show menu's choices; entering 战术 leaves them as they are (Yi, 2026-10-24) */
+  /** the Show menu's choices; entering 战术 leaves them as they are */
   show: ShowOpts;
 }
 
@@ -173,9 +173,8 @@ function toURL(s: GameSettings) {
 /** the current settings, outside React (the 3D loop reads them every frame) */
 export const getSettings = () => state;
 
-/** a mode's own way out (the What-if chat, at Yi's word, 2026-10-26: "if we simulate one step, and then click go back
- *  to watch mode, we should first animate the clip in reversed way, to go back to the freeze moment, and then do the
- *  transition to put the pitch back to grass texture"): while one is set, a change of mode away from `from` is first
+/** a mode's own way out (leaving What-if after a simulated step first plays the step back in reverse to the freeze
+ *  moment, and only then turns the board back to grass): while one is set, a change of mode away from `from` is first
  *  offered to `hold`; true holds it (the rest of the patch still applies), and the mode makes the change itself when
  *  it is done, with setSettings(..., true). whatif/useWhatIf.tsx sets it */
 let leaveGuard: { from: GameMode; hold: (to: GameMode) => boolean } | null = null;
@@ -191,7 +190,7 @@ export function setSettings(patch: Partial<GameSettings> | ((s: GameSettings) =>
     delete p.mode; delete p.tactical;
     if (!Object.keys(p).length) return;
   }
-  // entering the 战术 mode starts from its defaults every time (Yi, 2026-10-22): 卡通 players and the 简洁 preset (the
+  // entering the 战术 mode starts from its defaults every time: 卡通 players and the 简洁 preset (the
   // plain dark board, no lines between players, no ball trail); the minimap keeps its own switch, and whatever the same
   // patch sets wins. An address that opens in the mode keeps what it says.
   if (p.mode !== undefined && boardOf(p.mode) && p.mode !== state.mode) {
@@ -216,23 +215,23 @@ export const setShowStyle = (style: ShowStyle) => setSettings((s) => ({ show: { 
 /** the players the Show menu's choices apply to this frame (three/layers/ShowLayer.tsx keeps it: on the ball, selected,
  *  a team, all); Stage draws them in the Show style, the rest toon */
 export const showChosen = new Set<number>();
-/** the players the Explain mode's director script names right now (explain/director.ts, chat 4): the Show layer tags them
- *  as it tags the player on the ball, so the commentary's call-outs look as the Watch mode does (Yi, 2026-10-25) */
+/** the players the Explain mode's director script names right now (explain/director.ts): the Show layer tags them
+ *  as it tags the player on the ball, so the commentary's call-outs look as the Watch mode does */
 export const showNamed = new Set<number>();
-/** the grey board for a stretch of an Explain script (explain/director.ts, chat 4; Yi 2026-10-26, 80:17's pitch
- *  control "the tactics mode with grey pitch"): Stage's flip turns to it as for the Tactics mode, without leaving Explain */
+/** the grey board for a stretch of an Explain script (explain/director.ts; e.g. 80:17's pitch
+ *  control on the tactics mode's grey pitch): Stage's flip turns to it as for the Tactics mode, without leaving Explain */
 export const scriptBoard: { on: boolean; base: 'pc' | 'q' | null } = { on: false, base: null };   // base: the Tactics mode's base map (hud/BaseMap3D.tsx) on it
-/** what the Explain mode shows on the players (Yi, 2026-10-26: there is no Show menu in Explain, and the Watch mode's
+/** what the Explain mode shows on the players (there is no Show menu in Explain, and the Watch mode's
  *  choices must not carry into it): the player on the ball, and through showNamed the selected one and the one the
  *  commentary names, each with his name and stamina, everyone toon. The other modes take the Show menu's choices */
 export const EXPLAIN_SHOW: ShowOpts = { who: 'ball', what: ['name', 'stamina'], style: 'toon' };
 export const showOf = (s: GameSettings): ShowOpts => (s.mode === 'explain' ? EXPLAIN_SHOW : s.show);
 
 /** the players the Show layer tags over the head this frame (three/layers/ShowLayer.tsx keeps it): the telestration
- *  session's hover cue sits higher over them. (The 2026-10-22 stamina bars, removed then, are back as part of the tag.) */
+ *  hover cue sits higher over them. (The stamina bar is part of the tag.) */
 export const showTagged = new Set<number>();
 /** the tag's anchor, for whoever stacks with it (the hover cue): the top of the head, `upM` metres over the neck joint; its
- *  size is TELE.pointer.stack* (chat 1's style.ts) times stackScale, `px` the unscaled height (name 16, row 4, bar 4) */
+ *  size is TELE.pointer.stack* (three/telestration/style.ts) times stackScale, `px` the unscaled height (name 16, row 4, bar 4) */
 export const SHOW_TAG = { upM: 0.28, px: 24 };
 export const staminaShown = (_s: GameSettings, p: number, _nAtt: number) => showTagged.has(p);
 

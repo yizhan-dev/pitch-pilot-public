@@ -1,4 +1,5 @@
 import { assetFile } from './data/paths';
+import { hook, hooked } from './dev';
 import { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import '@fontsource/inter/400.css';
@@ -6,7 +7,7 @@ import '@fontsource/barlow-condensed/600.css';
 import { LoadingScene } from './loading/LoadingScene';
 import type { LookKey } from './loading/looks';
 
-// The loading scene's own page (/loading.html, chat 5's request): the scene over a still of the line-up show's first
+// The loading scene's own page (/loading.html): the scene over a still of the line-up show's first
 // drone frame, a progress slider and a ready button. Address: ?look=ring|ringtilt|pass|hex &name=<text> (empty: none)
 // &ui=0 (no panel) &sim=fast|slow (a load played on the scene's clock: fast is in by 0.5 s, slow stalls twice and is in
 // by 5.5 s). Hooks for the headless recordings: __frames, __replay (and the scene's __teleNow).
@@ -31,11 +32,10 @@ function Page() {
   // the frame counter, and the simulated load on the scene's clock
   useEffect(() => {
     let raf = 0;
-    const W = window as unknown as { __frames?: number; __teleNow?: number };
     const tick = () => {
       raf = requestAnimationFrame(tick);
-      W.__frames = (W.__frames ?? 0) + 1;
-      if (SIM) { const t = typeof W.__teleNow === 'number' ? W.__teleNow : performance.now() / 1000 - t0.current, [p, r] = sim(t); setProgress(p); setReady(r); }
+      hook('frames', (hooked<number>('frames') ?? 0) + 1);
+      if (SIM) { const tn = hooked<number>('teleNow'), t = typeof tn === 'number' ? tn : performance.now() / 1000 - t0.current, [p, r] = sim(t); setProgress(p); setReady(r); }
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
@@ -43,9 +43,9 @@ function Page() {
   const replay = () => {
     t0.current = performance.now() / 1000; setExited(false); setRun((n) => n + 1);
     if (!SIM) { setProgress(0); setReady(false); }
-    (window as unknown as { __loadReplay?: () => void }).__loadReplay?.();
+    hooked<() => void>('loadReplay')?.();
   };
-  (window as unknown as { __replay?: () => void }).__replay = replay;
+  hook('replay', replay);
   return (
     <>
       <img className="ld-back" src={assetFile('loading/drone.jpg')} alt="" />

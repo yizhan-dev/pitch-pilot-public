@@ -15,17 +15,17 @@ import { attackingOf, kitLabel, playerTeam } from '../three/coords';
 // a list; pick one), 射门视角 and 传球人视角. The rest are shown, greyed, until they are built.
 
 interface Opt { key: string; label: string; ready: boolean }
-// the what-ifs that change the play (the pass's target, the runs) left 战术 for the What-if mode of their own (Yi,
-// 2026-10-24 evening; whatif/useWhatIf.tsx), which has no pause window: its question card asks instead
+// the what-ifs that change the play (the pass's target, the runs) left 战术 for the What-if mode of their own
+// (whatif/useWhatIf.tsx), which has no pause window: its question card asks instead
 const TACTICS: Record<MomentKind, Opt[]> = {
   shot: [{ key: 'mate-shot', label: tr('换队友来射', 'A teammate shoots'), ready: true }, { key: 'eyes', label: tr('射门视角', "Shooter's view"), ready: true }, { key: 'angle', label: tr('射门角度和 xG', 'Shot angle & xG'), ready: false }],
   pass: [{ key: 'options', label: tr('传球选项', 'Pass options'), ready: false }],
   free: [{ key: 'drag', label: tr('拖动任意球员', 'Drag any player'), ready: false }, { key: 'lines', label: tr('2 秒预判线', '2-second forecast'), ready: false }],
 };
 const OPTIONS: Record<GameMode, Record<MomentKind, Opt[]>> = {
-  // 观赛: "Paused" and nothing else (Yi, 2026-10-26: the shooter's and passer's views and the time to the pass are past the MVP)
+  // 观赛: "Paused" and nothing else (the shooter's and passer's views and the time to the pass are past the MVP)
   watch: { shot: [], pass: [], free: [] },
-  // 讲解: as 观赛, "Paused" alone (Yi, 2026-10-26, chat 4: "the same as the one we designed in Watch tab"; the script is
+  // 讲解: as 观赛, "Paused" alone, the same as Watch's (the script is
   // the explanation, so its own button stood unbuilt)
   explain: { shot: [], pass: [], free: [] },
   tactics: TACTICS,
@@ -39,7 +39,7 @@ export function PauseWindow({ data, t, paused, looks }: { data: Loaded; t: numbe
   const [model, setModel] = useState<XgFreezeModel | null>(null);
   useEffect(() => { loadXg().then(setModel); }, []);
   const m = useMemo(() => momentAt(pkg, t), [pkg, t]);
-  // a player by his kit's colour and number, Orange #11: by team, as the kits (coords.ts, Yi 2026-10-23)
+  // a player by his kit's colour and number, Orange #11: by team, as the kits (coords.ts)
   const attacking = attackingOf(data.pkg.meta);
   const name = (i: number | null) => (i === null ? '' : kitLabel(playerTeam(i, nAtt, attacking), looks[i]?.number ?? i + 1));
 

@@ -34,8 +34,8 @@ export interface Beat {
   /** clip seconds the beat covers while the clock runs; a held beat has t0 = t1 = at */
   t0: number; t1: number;
   /** a held beat: the clock stops at `at` for this many real seconds (held beats at one `at` play in order) */
-  /** the grey board while this beat runs, from t0 to t1 (the Explain mode: game/settings.ts scriptBoard; 80:17's pitch
-   *  control, Yi 2026-10-26) */
+  /** the grey board while this beat runs, from t0 to t1 (the Explain mode: game/settings.ts scriptBoard; as for 80:17's pitch
+   *  control) */
   board?: boolean;
   /** the Tactics mode's base map on that board (hud/BaseMap3D.tsx: 'pc' pitch control in its 24 bands a side, 'q') */
   base?: 'pc' | 'q';
@@ -51,28 +51,28 @@ export interface Beat {
   /** the drawings, with their clip-time windows (Telestration's `window`); a held beat's items show for its hold.
    *  Telestration `Item`s, plus the pass and run arrows it has not built yet (draw.ts) */
   draw: DrawItem[];
-  /** what the line must say there, for the narration session ({p:i} {n:i} as in its scripts); a hint, not the line */
+  /** what the line must say there, for the narration ({p:i} {n:i} as in its scripts); a hint, not the line */
   say: string;
   /** 0..1, how much the beat matters to this clip's story (beats below the cut are dropped, see Plan.dropped) */
   salience: number;
-  /** the camera for this beat (director scripts, 2026-10-23): a view, the player a player's view belongs to, or a preset
+  /** the camera for this beat (director scripts): a view, the player a player's view belongs to, or a preset
    *  ('shot': the telestration's low shot camera behind `player` at `at`); held from the beat's start until the next
    *  beat with a camera */
   /** a director script's camera from this beat on: a view (a player's view selects him), the low shot camera, or a
    *  fixed free-camera pose (the Director's __camSet: orbit centre x, height, z (the data's y), yaw and pitch in degrees,
    *  distance) */
   camera?: { view: ViewMode; player?: number; preset?: 'shot'; pose?: [number, number, number, number, number, number]; at?: number; note?: string; move?: number;
-    /** the ball's camera (the Explain mode; Yi 2026-10-26, 22:54's ball through Lowe's legs): `up` m over the grass,
+    /** the ball's camera (the Explain mode; such as 22:54's ball through Lowe's legs): `up` m over the grass,
      *  `behind` m behind the ball on the line of the pass kicked at `from` and taken at `to` (clip times), looking along
      *  it down to `lookY` m; it stops `stopS` m along the line from the kick, and the ball runs on from it */
     ball?: { from: number; to: number; behind: number; up: number; stopS?: number; lookY?: number; side?: number; fov?: number } };
-  /** the English lines (Yi, 2026-10-23: the product is English): the subtitle and the spoken form, at clip time `t`
+  /** the English lines (the product is English): the subtitle and the spoken form, at clip time `t`
    *  (a held line at the beat's `at`); {p:i} full name, {s:i} short name, {n:i} No. 13 */
   lines?: { t: number; subtitle: string; voice?: string; held?: boolean }[];
   /** the director's notes for this beat: nuances, alternatives, what is still missing */
   notes?: string[];
-  /** an insight beat: its catalogue entry, the detector's confidence, and the line's two tones (Yi, 2026-10-23: praise,
-   *  or an improvement put as "如果……会更好", never "he is bad at") */
+  /** an insight beat: its catalogue entry, the detector's confidence, and the line's two tones (praise,
+   *  or an improvement put as "it would be better if ...", never "he is bad at") */
   entry?: InsightId;
   confidence?: number;
   tone?: { praise?: string; improve?: string };
@@ -127,7 +127,7 @@ export interface Plan {
   /** the clutter budget's check over the compiled timeline */
   budget: { maxItems: number; worst: number; at: number | null };
   /** every insight the detectors found, chosen or not (the debug view and the storyboard list the unvalidated ones
-   *  for Yi's eye) */
+   *  for checking by eye) */
   candidates: { id: string; entry: InsightId; t: number; t0: number; t1: number; players: number[]; salience: number; confidence: number; validated: boolean; say: string; facts: Fact[]; draw: DrawItem[]; why: string[]; chosen: boolean }[];
   /** every attacker's run during the attack's passes (for the check against Opta's activeRun) */
   runs: { p: number; from: number; to: number; peak: number; disp: number; passT: number; received: boolean }[];

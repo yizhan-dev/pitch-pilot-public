@@ -26,8 +26,8 @@ const CH = Array.from({ length: CH_N }, (_, i) => {
   const r2 = ((i * 37 + 13) % 100) / 100, r3 = ((i * 17 + 29) % 100) / 100, r4 = ((i * 89 + 5) % 100) / 100;
   return { ang: 0.05 + 0.28 * r2, spd: 17 + 12 * r3, yaw: (r4 - 0.5) * 1.1, life: 0.62 + 0.45 * r3, phase: ((i * 37) % 100) / 100 * 1.1, side: 0.2 + 0.25 * ((i * 13) % 100) / 100 };
 });
-/** the champagne fountains across the goal (data y, m): just outside each post, and one further out each side (Yi,
- *  2026-10-23: four instead of two); each stands on a launcher in stadium/Furniture.tsx */
+/** the champagne fountains across the goal (data y, m): just outside each post, and one further out each side (four
+ *  instead of two); each stands on a launcher in stadium/Furniture.tsx */
 const FOUNTAINS = [-11, -5.5, 5.5, 11];
 const N = FOUNTAINS.length * CH_N * STREAK + 2 * BURSTS.length * (FW_N + 6);
 const clamp = (v: number, a: number, b: number) => Math.min(b, Math.max(a, v));
@@ -48,7 +48,7 @@ export function Celebration({ clock, goalT, goalX = 52.5 }: { clock: Clock; goal
     const m = new THREE.ShaderMaterial({
       // size is in pixels as the KICK site had it, right for the broadcast camera; closer than about 65 m a spark keeps
       // a real size instead (WORLD metres per unit of size) and grows as it nears, so a close view is not a sparse
-      // dotted line (Yi, 2026-10-23). uFocal: the camera's focal length in device pixels.
+      // dotted line. uFocal: the camera's focal length in device pixels.
       uniforms: { uDpr: { value: 1 }, uFocal: { value: 1000 } }, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, vertexColors: true,
       vertexShader: `attribute float alpha; attribute float size; uniform float uDpr, uFocal; varying vec3 vC; varying float vA;
         void main() { vC = color; vA = alpha; vec4 mv = modelViewMatrix * vec4(position, 1.0); gl_Position = projectionMatrix * mv;
@@ -77,12 +77,12 @@ export function Celebration({ clock, goalT, goalX = 52.5 }: { clock: Clock; goal
     if (tch <= CH_END) {
       const gbx = goalX - xin * 3, hgt = smooth(tch / 0.12), chF = clamp((CH_END - tch) / 0.4, 0, 1), G = 15;
       for (const fy of FOUNTAINS) {
-        const ys = Math.sign(fy), P0 = [gbx, fy, 0.32];   // the mouth of a small spark jet on the grass (stadium/Furniture.tsx Launchers; Yi, 2026-10-22)
+        const ys = Math.sign(fy), P0 = [gbx, fy, 0.32];   // the mouth of a small spark jet on the grass (stadium/Furniture.tsx Launchers)
         for (const p of CH) {
           const a = (tch + p.phase) % p.life, spr = Math.sin(p.ang) * p.spd, vz = Math.cos(p.ang) * p.spd;
           const vx = xin * spr * p.side, vy = ys * spr * (0.3 + 0.5 * Math.abs(p.yaw)), lf = Math.max(0, 1 - a / p.life);
           for (let s = 0; s < STREAK; s++) {
-            // the streak: its last 0.06 s, drawn as eight points (four until 2026-10-23: they came apart up close),
+            // the streak: its last 0.06 s, drawn as eight points (four came apart up close),
             // brightest at the head
             const aa = Math.max(0, a - 0.06 * s / (STREAK - 1));
             const wx = P0[0] + vx * aa * hgt, wy = P0[1] + vy * aa * hgt, wz = P0[2] + (vz * aa - 0.5 * G * aa * aa) * hgt;

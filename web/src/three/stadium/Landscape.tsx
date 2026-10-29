@@ -5,7 +5,7 @@ import { glowTexture, glowMaterial, focalPx } from './glow';
 import { GROUND_TONE } from './night';
 
 // The ground the stadium stands on: a stone plinth with a sharp sill and a flight of steps all round (the
-// "chassis" under the body). Optional, off by default since Yi asked to keep the ground simple: a paved plaza whose
+// "chassis" under the body). Optional, off by default to keep the ground simple: a paved plaza whose
 // joints follow the building's outline with lamp posts (plaza), and reflecting pools with jets (fountain).
 
 /** one station round the building's outline at ground level */

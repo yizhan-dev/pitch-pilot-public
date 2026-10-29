@@ -5,12 +5,12 @@ import { useLand } from './state';
 import { namer } from './names';
 import { noShotWhy, type ShotEval } from './shot';
 
-/** the chain (Continue from here, Start over) is off for this version: one step, the pass and what came of it (Yi,
- *  2026-10-27 night: "we only allow user to make one step, they can not continue from there"); the code stays */
+/** the chain (Continue from here, Start over) is off: one step only, the pass and what came of it, with no way to
+ *  continue from there; the code stays */
 const CHAIN = false;
 
-/** how he finished and what the control would have cost, as data (Yi, 2026-10-27 night: the control's chance of being
- *  disrupted shown, not only used): "Volley first time · a touch 71% disrupted", "A touch, then a drive · 29% disrupted" */
+/** how he finished and what the control would have cost, as data (the control's chance of being disrupted is shown,
+ *  not only used): "Volley first time · a touch 71% disrupted", "A touch, then a drive · 29% disrupted" */
 function finishLine(ev: ShotEval): string {
   const b = ev.best, t = ev.touch, pct = t ? `${Math.round(t.pLose * 100)}% disrupted` : null;
   if (!b) return '';
@@ -19,15 +19,14 @@ function finishLine(ev: ShotEval): string {
   return `${kind} first time${pct ? ` · a touch ${pct}` : ''}`;
 }
 
-// The What-if's widget at the top centre (Yi, 2026-10-26: "keep it simple: What would you do?"; "the goal is to make it
-// very easy to use and read"; "keep the top widget simple and minimal"). While he picks: the question and Pass | Shoot
-// only, each option's chance by his name on the pitch (WhatIfTags.tsx, as Tactics shows its pass chance); Shoot plays
-// his shot from here (his real shot at a shooting moment). While the pass is worked out and plays: the title alone. At
-// the stop (Yi: "we do not need to show xG, #15 Marsh: a touch then a drive, etc", "just show Simulation (also drop the
-// time to its right), and then the buttons", "we can delete the details button for this MVP"): the title, "Simulation"
-// or "Real play", the outcome in a word only where the pitch shows no xG for it (offside, no shot, a pass that does not
-// reach him), and one row of buttons: Continue from here, Try another, and Start over once a chain has begun (before
-// that it would do the same as Try another). No verdict against the real choice (Yi: "just show the data").
+// The What-if's widget at the top centre, kept simple and minimal so it is easy to use and read. While he picks: the
+// question ("What would you do?") and Pass | Shoot only, each option's chance by his name on the pitch (WhatIfTags.tsx,
+// as Tactics shows its pass chance); Shoot plays his shot from here (his real shot at a shooting moment). While the
+// pass is worked out and plays: the title alone. At the stop, no xG in the card (the pitch shows it), no time beside
+// the title and no details button: the title, "Simulation" or "Real play", the outcome in a word only where the pitch
+// shows no xG for it (offside, no shot, a pass that does not reach him), and one row of buttons: Continue from here,
+// Try another, and Start over once a chain has begun (before that it would do the same as Try another). No verdict
+// against the real choice: the data only.
 
 export function AskCard({ meta, nAtt, looks, onShoot, onContinue, onRetry, onStartOver }: {
   meta: { attacking: string }; nAtt: number; looks: Look[];
@@ -46,7 +45,7 @@ export function AskCard({ meta, nAtt, looks, onShoot, onContinue, onRetry, onSta
   const o = st.outcomes[st.shown];
   const word = !done ? null : off ? 'Offside'
     : st.shot && (got || ownShot || st.isShot) ? (st.shot.no || !st.shot.eval.best ? 'No shot' : null)
-    : o && o.kind !== 'kept' ? (o.kind === 'cut' ? (looks[o.who]?.keeper ? 'Claimed by the keeper' : 'Cut out') : o.kind === 'lost' ? 'Dispossessed' : o.kind === 'tackled' ? 'Tackled' : o.kind === 'out' ? 'Out of play' : 'Nobody reaches it') : null;
+    : o && o.kind !== 'kept' ? (o.kind === 'cut' ? (looks[st.toPkg[o.who] ?? o.who]?.keeper ? 'Claimed by the keeper' : 'Cut out') : o.kind === 'lost' ? 'Dispossessed' : o.kind === 'tackled' ? 'Tackled' : o.kind === 'out' ? 'Out of play' : 'Nobody reaches it') : null;
   const title = picking ? (first ? 'What would you do?' : 'What next?') : computing ? (st.auto ? 'His choice' : 'Simulating') : st.isReal ? 'Real play' : 'Simulation';
   return (
     <div className="glass wi-ask" aria-label="What if">

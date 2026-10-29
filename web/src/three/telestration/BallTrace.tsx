@@ -4,7 +4,7 @@
 // glance (pitch_prism's lofted-pass cue: the ground track under the arc). Optionally a thin drop line from the ball to
 // its shadow. Pinned to the match: it follows clip time, so a pause freezes it where the ball is.
 // Variants to compare (TELE.ball.mode): 'shadow' trace and shadow; 'drop' also the drop line; 'plain' the trace alone.
-// Touches (Yi, round two, 2026-10-23: a ball stopped and struck again drew one bent trace through the touch): the trace
+// Touches (a ball stopped and struck again drew one bent trace through the touch): the trace
 // starts again at every touch, a sudden change of the ball's horizontal velocity (a trap, a pass, a shot, a header, the
 // post; a bounce changes mostly the vertical one). The part before the touch does not join the new one: its tail runs
 // in to the touch point and it is gone in `cutS` s, while the new trace grows out of the touch point.
@@ -19,7 +19,7 @@ import { RibbonLayer, type RibbonPoint } from './ribbon';
 import { holdInNet } from '../stadium/goalSpace';
 import { TELE, surfaceColour } from './style';
 
-/** the clip times where the trace starts again (Yi, round two, 2026-10-23: only touches that obviously change the
+/** the clip times where the trace starts again (only touches that obviously change the
  *  ball's direction). A touch is a jump of over `dv` m/s in the ball's horizontal velocity (two samples either side, the
  *  largest within 0.1 s); it restarts the trace when the ball's way out (the next 0.12 s) turns more than `turnDeg` from
  *  the way of the trace it would join (its chord back to the last restart, at most `seconds`), or when that trace is
@@ -54,14 +54,14 @@ export function ballTouches(pkg: Loaded['pkg'], dv = 3.5, turnDeg = 30, seconds 
   return out;
 }
 
-/** the round-two looks (TELE.ball.look; Yi, 2026-10-23: like a trail on the grass while the ball rolls, a flat band
+/** the ribbon looks (TELE.ball.look: like a trail on the grass while the ball rolls, a flat band
  *  rather than a cone in the air, always under the ball). All are constant-width white ribbons (TELE.ball.half, alpha,
  *  fade, seconds as the comet), fading to the old end, ending in a round cap, never drawn over the ball (ribbon.ts):
  *   'tape'    one ribbon that lies flat under the ball (on the grass while it rolls) while the ball is within `flatTo`
  *             m of the grass and stands up to face the camera as the ball rises (fully by `faceAt` m), its centre
  *             rising from the ball's underside to its centre as it does
  *   'track'   a ribbon on the grass while the ball rolls, and a camera-facing ribbon for the part in the air, the one
- *             handing over to the other between `airFrom` and `airFull` m (Yi chose it, 2026-10-23, B "without the
+ *             handing over to the other between `airFrom` and `airFull` m (the default, B "without the
  *             ground track": nothing on the grass under a lofted ball, `trackUnderAir` 0)
  *   'curtain' the ground track, and under the part in the air an upright translucent curtain from the grass to the
  *             path (alpha `curtainFoot` at its foot to `curtainTop` at its top), the path a thin line (`lineHalf`) on top
@@ -72,13 +72,13 @@ const LOOK = {
   /** the live ribbons end this far behind the ball's centre (its radius: the round end stays under the ball) */
   headM: 0.11,
   groundY: 0.01, flatTo: 0.15, faceAt: 0.6, hopM: 0.04,
-  // the hand-over from the grass ribbon to the air one, kept short so the two are never seen together (Yi, 2026-10-24:
-  // with 0.3 to 0.9 m a bouncing ball drew two trails)
+  // the hand-over from the grass ribbon to the air one, kept short so the two are never seen together (with
+  // 0.3 to 0.9 m a bouncing ball drew two trails)
   airFrom: 0.25, airFull: 0.4, groundUnderAir: 0.5, trackUnderAir: 0,
   // a flight lasts from just before the ball rises until it has stayed down this long: its bounces do not break it into
-  // pieces of grass and air ribbon (Yi, 2026-10-24: "several discontinuous tapes")
+  // pieces of grass and air ribbon (several discontinuous tapes)
   flightBackS: 0.4, flightAheadS: 0.08,
-  /** the ribbon on the grass widens at most `groundCap` times (TELE.ball.groundMinPx, groundFlatMin: Yi, 2026-10-23,
+  /** the ribbon on the grass widens at most `groundCap` times (TELE.ball.groundMinPx, groundFlatMin:
    *  far away it thinned to a pitch line) */
   groundCap: 8,
   curtainFoot: 0.18, curtainTop: 0.03, curtainEdge: 0.1, lineHalf: 0.035,
@@ -122,7 +122,7 @@ export function BallTrace({ data, clock, surface }: { data: Loaded; clock: Clock
       return Math.min(2, 2 * lat * Math.min(60, d / Math.max(0.3, cam.position.y)));
     };
     /** one stretch of the trace, clip times t0..t1, tapering and fading over its own length (so a trace cut short by a
-     *  touch still ends in a point, never a flat edge: Yi, round two), its alpha times mult; `live`: it ends at the ball
+     *  touch still ends in a point, never a flat edge), its alpha times mult; `live`: it ends at the ball
      *  (the gap just behind the ball) */
     const span = (t0: number, t1: number, tHead: number, mult: number, live: boolean) => {
       const n = Math.max(2, Math.round((t1 - t0) / 0.02) + 1);
@@ -158,7 +158,7 @@ export function BallTrace({ data, clock, surface }: { data: Loaded; clock: Clock
     }
     res.trail.end(res.size); res.shadow.end(res.size); res.drop.end(res.size);
 
-    /** the round-two looks: the same spans as the comet (the live one from the last touch, the one before the touch
+    /** the ribbon looks: the same spans as the comet (the live one from the last touch, the one before the touch
      *  running in to it), each drawn as the look's ribbons */
     function ribbons(look: string) {
       const G = rib.ground, A = rib.air, [cr, cg, cb] = res.c;

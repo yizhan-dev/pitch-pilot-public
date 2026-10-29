@@ -1,8 +1,7 @@
 import { modelFile } from '../data/paths';
-// The what-if ends in a shot (Yi, 2026-10-25: "pause right at #37 receive it, and then plot the xG of him shooting";
-// "for now ... only the one-shot-before-goal scenario"): the pass is changed, the simulation stops as the receiver
-// takes the ball, and we give his chance of scoring if he shot from there, with the defenders and their keeper where the
-// simulation has them then (the defender-aware model, response/xg.ts); beside it what really happened, on the same model.
+// The what-if ends in a shot (only the last-pass-before-a-shot scenario): the pass is changed, the simulation pauses
+// as the receiver takes the ball, and we give his chance of scoring if he shot from there, with the defenders and
+// their keeper where the simulation has them then (the defender-aware model, response/xg.ts); beside it what really happened, on the same model.
 // Package frames: the attacking team attacks +x; a shooter of the other team is turned round.
 import { xgFreeze, type XgFreezeModel, type XgPoint } from '../response/xg';
 import { turnover, type TurnoverModel } from '../response/outcomes';
@@ -21,18 +20,50 @@ interface Pkg {
 let xgP: Promise<XgFreezeModel | null> | null = null;
 export const loadXgModel = () => (xgP ??= fetch(modelFile('xg_shot.json')).then((r) => (r.ok ? r.json() : fetch(modelFile('xg_freeze.json')).then((q) => (q.ok ? q.json() : null)))).catch(() => null));
 
-/** a high ball received in the box (aerial.json, private/response/aerial_fit.py on StatsBomb's 360 data: 2026-10-27,
- *  Yi: "likely the ball will not be able to get on the ground without defender clearing them"): `control` the chance he
+/** a high ball received in the box (aerial.json, private/response/aerial_fit.py on StatsBomb's 360 data: such a ball is
+ *  often cleared by a defender before it can be brought down): `control` the chance he
  *  loses it if he takes it down, `first` the share taken first time, both logistic in the nearest opponent's distance
  *  (log m). Loaded once beside the xG model; without it the tracking turnover model (with the ball's height) stands in. */
 export interface AerialModel { control: number[]; first: number[] }
 let AER: AerialModel | null = null, aerP: Promise<AerialModel | null> | null = null;
-export const loadAerial = (): Promise<AerialModel | null> => (aerP ??= fetch(modelFile('aerial.json')).then((r) => (r.ok ? r.json() as Promise<AerialModel> : null)).then((m) => (AER = m)).catch(() => null));
+/** the StatsBomb rulers fetched together (three beside the aerial one, so every caller of loadAerial has them): a
+ *  ground ball received in the box (ground_box.json, private/response/ground_box.py), the crowd along a ground
+ *  ball's line (lane_crowd.json, lane_crowd.py), the first-time pass (first_time.json, first_time.py) */
+export interface GroundBoxModel { control: number[]; first: number[] }
+export interface CrowdModel { box: number[]; open: number[] }
+export interface FirstTimeModel { bins: number[]; share: number[]; ratio: number[] }
+let GBOX: GroundBoxModel | null = null, CROWD: CrowdModel | null = null, FIRST: FirstTimeModel | null = null;
+const fetchModel = <T,>(name: string): Promise<T | null> => fetch(modelFile(name)).then((r) => (r.ok ? (r.json() as Promise<T>) : null)).catch(() => null);
+export const loadAerial = (): Promise<AerialModel | null> => (aerP ??= Promise.all([fetchModel<AerialModel>('aerial.json'), fetchModel<GroundBoxModel>('ground_box.json'), fetchModel<CrowdModel>('lane_crowd.json'), fetchModel<FirstTimeModel>('first_time.json')])
+  .then(([a, g, cr, f]) => { AER = a; GBOX = g; CROWD = cr; FIRST = f; return a; }));
 const sig = (x: number) => 1 / (1 + Math.exp(-Math.max(-50, Math.min(50, x))));
 export const aerialLoss = (nearest: number, tov: TurnoverModel | null, ballZ: number) => AER ? sig(AER.control[0] + AER.control[1] * Math.log(Math.max(nearest, 0.3))) : tov ? turnover(tov, nearest, ballZ) : 0;
 /** the share of such balls played first time (null without the model): 72% with a man within 1 m, 62% at 1-2 m, 56%
  *  at 2-3 m, 45% at 3-5 m, 21% beyond 5 m */
 export const aerialFirst = (nearest: number) => (AER ? sig(AER.first[0] + AER.first[1] * Math.log(Math.max(nearest, 0.3))) : null);
+/** a ground ball received in the box: the chance he loses it as he controls it, from the nearest opponent (the keeper
+ *  counted): 33% within 1 m, 24% at 1-2 m, 18% at 2-3 m, 13% at 3-5 m (StatsBomb 360, 3,283 receptions); null without
+ *  the model. The turnover model (every reception, real tracking) read 16% at 0.9 m where this reads 36% (90:10's
+ *  ground ball met in the goal area) */
+export const boxLoss = (nearest: number) => (GBOX ? sig(GBOX.control[0] + GBOX.control[1] * Math.log(Math.max(nearest, 0.3))) : null);
+/** a ground ball's chance against the crowd along its line, as a ratio to the same ball with nobody within 5 m of it
+ *  (lane_crowd.py: into the box a man within 0.5 m of the line costs 30%, two men within 1.5 m 33%; in the open 37%
+ *  and 27%); 1 without the model, and for a ball under 10 m (the fit's floor) */
+export function crowdFactor(len: number, inBox: boolean, nearest: number, n15: number): number {
+  if (!CROWD || len < 10) return 1;
+  const w = inBox ? CROWD.box : CROWD.open, x = [1, Math.log(len), Math.log(Math.max(0.3, Math.min(nearest, 5))), Math.min(n15, 3)], x0 = [1, Math.log(len), Math.log(5), 0];
+  const z = (v: number[]) => sig(v.reduce((a, b, i) => a + b * w[i], 0));
+  return Math.min(1, Math.max(0.05, z(x) / z(x0)));
+}
+/** a first-time pass's completion against a held one's, by the passer's turn from his facing (first_time.py's table
+ *  is by the angle between the ball's way in and the pass, about 180 degrees less the turn): 1 for a ball played across
+ *  the body, 0.72 for one played on with his back to it; 1 without the model */
+export function firstTimeRatio(turnDeg: number): number {
+  if (!FIRST) return 1;
+  const a = Math.max(0, Math.min(180, 180 - turnDeg));
+  for (let i = 0; i + 1 < FIRST.bins.length; i++) if (a < FIRST.bins[i + 1]) return Math.min(1, FIRST.ratio[i] ?? 1);
+  return 1;
+}
 
 /** whether `shooter` (package index) can shoot at clip time t (noShot): facing given (his own body), else the way he
  *  moves on the 10 Hz frames */
@@ -55,8 +86,7 @@ export function xgAt(model: XgFreezeModel, pkg: Pkg, t: number, shooter: number,
   return xgFreeze(model, turn(pos[shooter]), header, opp, gk >= 0 ? turn(pos[gk]) : null);
 }
 
-/** "no shot from here" (Yi, 2026-10-25: "if you check #32 for the 26:40 decision, when he receives the ball, there
- *  is literally no way for him to do a shot at all, we should not give it a xG"): his back to goal (facing, or for a
+/** "no shot from here", for a man with no way to shoot at all, who gets no xG: his back to goal (facing, or for a
  *  dragged ghost moving, more than 100 degrees away from the goal's centre) with an opponent within 2 m; no angle (under
  *  7 degrees of goal mouth); or too far (over 35 m). At 26:40 #32 takes it running away from goal (114 degrees, 5.7 m/s)
  *  with Orange #4 1.0 m off: no shot; #37 runs at goal (22 degrees) with a man 0.9 m in front: a shot, likely blocked
@@ -92,9 +122,8 @@ export function movingFacing(pos: (k: number) => XgPoint, k: number): XgPoint | 
   return Math.hypot(v[0], v[1]) > 0.3 ? v : null;
 }
 
-/** the shot he can take as he receives (Yi, 2026-10-25: "he shall use a header, or adjust to do a lofted shot, or do
- *  a drive, it depends on the one that has the highest xG"; "we stop at the point when the player first touches the
- *  ball, but not the position when it is ready to shoot"): two ways, each on the shot-type model (xg_shot.json):
+/** the shot he can take as he receives, a header, a volley or a drive, whichever is worth the most (the simulation
+ *  stops at his first touch, not where he is set to shoot): two ways, each on the shot-type model (xg_shot.json):
  *  - first time, as the ball comes: a header above 1.6 m, a volley between 0.5 and 1.6, a drive below (StatsBomb's
  *    labels, so a header is worth about a third of a drive from the same spot, a volley two thirds);
  *  - a touch first, then a drive: he needs 0.5 s, plus 0.6 s for every 90 degrees he must turn beyond 35 off goal
@@ -106,16 +135,15 @@ export function movingFacing(pos: (k: number) => XgPoint, k: number): XgPoint | 
 export type ShotKind = 'header' | 'volley' | 'drive';
 export interface ShotWay { how: 'first' | 'touch'; kind: ShotKind; xg: number; value: number; adjust: number; pLose: number; at: XgPoint }
 export interface ShotEval { first: ShotWay | null; touch: ShotWay | null; best: ShotWay | null; no: NoShot }
-// (HEAD_Z 1.3 since 2026-10-27 night, 1.6 before: a ball at chest height is headed stooping, or chested down, not
-// volleyed with the leg at 1.3 m; Yi: "sounds good")
+// (HEAD_Z 1.3, not 1.6: a ball at chest height is headed stooping, or chested down, not volleyed with the leg at
+// 1.3 m)
 export const TURN_FREE_DEG = 35, TOUCH_S = 0.5, TURN_S_PER_90 = 0.6, LIFT_S = 0.3, CHEST_S = 0.5, HEAD_Z = 1.3, KNEE_Z = 0.5, CHEST_MAX_Z = 1.9;
 /** a ball between the hip and the chest (VOLLEY_MAX_Z to HEAD_Z) is not struck first time at all: it is chested down,
- *  or he meets it elsewhere on its flight (onball.ts: at his head earlier, at his feet a step or two later; Yi,
- *  2026-10-27: "this point player won't get the ball, he either keep running a few more steps for the ball to fall
- *  lower, or run toward ball earlier, to make it a header") */
+ *  or he meets it elsewhere on its flight (onball.ts: at his head earlier, running towards the ball, or at his feet a
+ *  few steps later, once it has fallen lower) */
 export const VOLLEY_MAX_Z = 1.1;
-// (A stricter touch under pressure was built as a switch on 2026-10-27, an opponent within 1.2 m before the strike ruling
-// the touch out, and dropped the same day at Yi's word: the turnover model is the fitted one, and StatsBomb's shots say
+// (A stricter touch under pressure was built as a switch, an opponent within 1.2 m before the strike ruling
+// the touch out, and dropped: the turnover model is the fitted one, and StatsBomb's shots say
 // 55-62% of box shots with an opponent within 2 m came after a touch; the xG model already carries the block and the
 // pressure at the strike. Record in docs/plans/what-if.md, "Second realism round".)
 /** positions in the shooting frame (+x at goal) at 10 Hz steps: `at(i, j)` player i at step j; which are opponents and
@@ -129,7 +157,7 @@ export function evalShot(model: XgFreezeModel, tov: TurnoverModel | null, S: Sho
   const kind: ShotKind = S.ballZ >= HEAD_Z ? 'header' : S.ballZ >= KNEE_Z ? 'volley' : 'drive', awkward = S.ballZ >= VOLLEY_MAX_Z && S.ballZ < HEAD_Z;
   let x1 = awkward ? 0 : xgFreeze(model, me, kind === 'header', opp, keeper, false, { volley: kind === 'volley', firstTime: true });
   // close in (within 6 m) the keeper is the whole question, and the model sees him as a 1 m body: a man 4 m out with
-  // the keeper a step aside got 0.49 (2026-10-25). There the keeper is taken as set on the line from the goal's centre
+  // the keeper a step aside got 0.49. There the keeper is taken as set on the line from the goal's centre
   // to the shooter, 1 m off his line, whichever gives the lower value
   if (!awkward && Math.hypot(52.5 - me[0], me[1]) < 6) {
     const dxg = 52.5 - me[0], dyg = -me[1], dl = Math.max(1e-6, Math.hypot(dxg, dyg)), set: XgPoint = [52.5 - (dxg / dl) * 1.0, -(dyg / dl) * 1.0];
@@ -144,21 +172,30 @@ export function evalShot(model: XgFreezeModel, tov: TurnoverModel | null, S: Sho
     const turn = f && fl > 1e-6 ? (Math.acos(Math.max(-1, Math.min(1, (f[0] * dx + f[1] * dy) / (fl * dl)))) * 180) / Math.PI : 0;
     const adjust = Math.min(1.5, TOUCH_S + (TURN_S_PER_90 * Math.max(0, turn - TURN_FREE_DEG)) / 90 + (S.ballZ >= HEAD_Z ? CHEST_S : S.ballZ >= KNEE_Z ? LIFT_S : 0));
     const j = k + Math.round(adjust / 0.1), me2 = at(who, j), opp2 = S.opp.map((i) => at(i, j)), keeper2 = S.gk !== null ? at(S.gk, j) : null;
-    // the control simulated (Yi, 2026-10-27: "if at that point he needs to stop the ball, and then we will calculate
-    // how likely that will be disrupted by a defender, and thus maybe he had to do a direct shot"): while he brings
+    // the control simulated (how likely a defender disrupts him as he stops the ball, which may leave him a direct
+    // shot as the better way): while he brings
     // the ball down and sets himself, the opponents close on the engine's paths; the nearest any of them comes to him
     // over that window is what the loss model reads. A ball above the knee pays the aerial model's loss whole (that is
     // where a high ball is lost); a ground ball the turnover model's share of its 1.5 s
-    // (the keeper among them: in his box he comes for a high ball; the aerial model counts him, 2026-10-27 night)
+    // (the keeper among them: in his box he comes for a high ball; the aerial model counts him)
     let closest = nearest;
     for (let jj = k; jj <= j; jj++) { const q = at(who, jj); for (const i of S.gk !== null ? [...S.opp, S.gk] : S.opp) { const o = at(i, jj); closest = Math.min(closest, Math.hypot(o[0] - q[0], o[1] - q[1])); } }
-    const pLose = S.ballZ >= KNEE_Z ? aerialLoss(closest, tov, S.ballZ) : tov ? turnover(tov, closest, S.ballZ) * Math.min(1, adjust / 1.5) : 0;
-    const x2 = xgFreeze(model, me2, false, opp2, keeper2, false, { volley: false, firstTime: false });
+    // (a ground ball in the box: StatsBomb's receptions there, the loss whole as the aerial one's; elsewhere the
+    // turnover model's share of its 1.5 s)
+    const inBox = me[0] >= 36 && Math.abs(me[1]) <= 20.16, bl = S.ballZ < KNEE_Z && inBox ? boxLoss(closest) : null;
+    const pLose = S.ballZ >= KNEE_Z ? aerialLoss(closest, tov, S.ballZ) : bl !== null ? bl : tov ? turnover(tov, closest, S.ballZ) * Math.min(1, adjust / 1.5) : 0;
+    let x2 = xgFreeze(model, me2, false, opp2, keeper2, false, { volley: false, firstTime: false });
+    // (close in, the same keeper rule as the first-time shot's: a keeper who came for the ball and stands beside the
+    // shooter read as an open goal, 0.79 at 17:28)
+    if (Math.hypot(52.5 - me2[0], me2[1]) < 6) {
+      const dxg = 52.5 - me2[0], dyg = -me2[1], dl = Math.max(1e-6, Math.hypot(dxg, dyg)), set: XgPoint = [52.5 - (dxg / dl) * 1.0, -(dyg / dl) * 1.0];
+      x2 = Math.min(x2, xgFreeze(model, me2, false, opp2, set, false, { volley: false, firstTime: false }));
+    }
     touch = { how: 'touch', kind: 'drive', xg: x2, value: x2 * (1 - pLose), adjust, pLose, at: me2 };
   }
-  // his decision (this version: the disruption enters as a probability only, no disrupted branch is played; Yi,
-  // 2026-10-27): a control more likely disrupted than not forces the first-time strike; otherwise the way worth more
-  // (Yi, 2026-10-25), the control's worth already discounted by the disruption
+  // his decision (the disruption enters as a probability only, no disrupted branch is played): a control more
+  // likely disrupted than not forces the first-time strike; otherwise the way worth more, the control's worth
+  // already discounted by the disruption
   const best = first && touch && touch.pLose >= 0.5 ? first : touch && (!first || touch.value > first.value) ? touch : first;
   return { first, touch, best, no: null };
 }
@@ -195,7 +232,7 @@ export function realShot(model: XgFreezeModel, pkg: Pkg, t0: number) {
   if (!e || e.player == null) return null;
   const header = (e.tags ?? []).some((g) => /head/i.test(g)), penalty = (e.tags ?? []).some((g) => /penalty/i.test(g));
   // (the feed says header or not; first time or a volley it does not, so the base technique; a penalty is its own
-  // number, PENALTY_XG: the model has no such feature and gave this match's 0.27 against Opta's 0.79, 2026-10-26)
+  // number, PENALTY_XG: the model has no such feature and gave this match's 0.27 against Opta's 0.79)
   return { t: e.t, who: e.player, header, xg: penalty ? PENALTY_XG : xgAt(model, pkg, e.t, e.player, header), opta: (e as { xg?: number }).xg ?? null, goal: e.type === 'Goal' };
 }
 

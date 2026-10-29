@@ -2,8 +2,8 @@ import * as THREE from 'three';
 import { SKIN_TONES, HAIR_COLOURS, type Look } from '../three/players/looks';
 import type { Prop } from './Props';
 
-// The cast: five characters built from the players' cartoon body, one per mode and one for the tour (Yi, 2026-10-26,
-// option B: portraits and small full-body animations for the tour's cards and the mode menu). Each wears a costume over
+// The cast: five characters built from the players' cartoon body, one per mode and one for the tour (option
+// B: portraits and small full-body animations for the tour's cards and the mode menu). Each wears a costume over
 // the kit (looks.ts Zone), carries a few props (Props.tsx) and loops one Mixamo animation (scripts/mixamo_joints.mjs).
 
 export interface Anim {
@@ -102,7 +102,7 @@ export const CAST: Role[] = [
     ],
   },
   {
-    // a woman (Yi, 2026-10-26): 1.70 m, narrower shoulders and waist, wider hips, a bust; dark hair in a ponytail
+    // a woman: 1.70 m, narrower shoulders and waist, wider hips, a bust; dark hair in a ponytail
     key: 'guide', name: 'Guide', mode: 'Tour', anim: { name: 'waving-2', pingpong: true, size: { k: 0.945, inward: 0.018 } },
     look: look({ skin: SKIN_TONES[5], hair: HAIR_COLOURS[1], style: 'ponytail', build: { arm: 0.84, leg: 0.9, torso: 0.9, head: 0.97 },
       shape: { hip: 1.12, waist: 0.86, shoulder: 0.9, bust: 0.2 },

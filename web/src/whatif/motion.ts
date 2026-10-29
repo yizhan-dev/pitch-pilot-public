@@ -1,12 +1,12 @@
 import { animFile } from '../data/paths';
-// Bodies for players we only know as positions: the what-if's simulated players (Yi, 2026-10-24: the main dish) have a
+// Bodies for players we only know as positions: the what-if's simulated players (the main use) have a
 // path on the ground and nothing else, so their joints are made from Mixamo clips baked to our 29 joints
 // (web/scripts/mixamo_joints.mjs; anim/). Each player faces between where he runs and where the ball is (a
 // fast runner looks where he goes, a slow one at the ball), turns at a capped rate, and plays the locomotion clips that
 // match his speed and his direction against his facing (walk, jog, run; forward, diagonal, sideways, backwards),
 // blended, each clip in place and advanced by the ground he covers over its stride, so the feet slide little.
 // Out: a Joints block like the tracking's (25 fps, attackers first), so the cartoon players draw it unchanged.
-// The baked clips and the tracked skeletons have the same handedness in the pitch frame (measured 2026-10-24: 293 of
+// The baked clips and the tracked skeletons have the same handedness in the pitch frame (measured: 293 of
 // 295 fast runners), so a pose is placed by a plain rotation, never mirrored.
 import type { Joints } from '../data';
 import type { MomentPkg } from '../types';
@@ -19,7 +19,7 @@ interface Loop { data: Float32Array; frames: number; period: number; speed: numb
 
 // eight directions at a jog (measured against the facing, counter-clockwise: diagonals +39° and -41°, strafes +74° and
 // -90°, backward diagonals +102° and -143°, backwards 174°); the nine that three.js's FBX parser failed on were run
-// through Blender once (2026-10-24, round trip within 4 mm), so no direction is mirrored any more
+// through Blender once (round trip within 4 mm), so no direction is mirrored
 const LOOPS = {
   walk: 'standard-walk', jog: 'jog-forward', run1: 'running-1', run: 'running', back: 'jog-backward', left: 'jog-strafe-left', right: 'jog-strafe-right',
   diag: 'jog-forward-diagonal', diag2: 'jog-forward-diagonal-2', bdiag: 'jog-backward-diagonal', bdiag2: 'jog-backward-diagonal-2',

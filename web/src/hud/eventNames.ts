@@ -1,4 +1,4 @@
-// The synced Opta event types as viewers read them (the UI is English only since 2026-10-23, Yi; the Chinese names were
+// The synced Opta event types as viewers read them (the UI is English only; the Chinese names were
 // retired with the Chinese version), for the replay plate's lists and titles and the event toasts.
 const EVENT_LABELS: Readonly<Record<string, string>> = {
   Pass: 'Pass', Carry: 'Carry', BallRecovery: 'Ball recovery', BallTouch: 'Touch', TakeOn: 'Take-on', Clearance: 'Clearance', Tackle: 'Tackle', Interception: 'Interception',

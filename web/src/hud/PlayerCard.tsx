@@ -11,14 +11,14 @@ import { attackingOf, playerTeam } from '../three/coords';
 /** a booking's name */
 const CARD_NAME: Record<string, string> = { red: tr('红牌', 'Red card'), yellow: tr('黄牌', 'Yellow card'), 'second-yellow': tr('两黄变一红', 'Second yellow') };
 
-// The player card, bottom left (Yi, 2026-10-22). With nobody selected, the nameplate's shape greyed out. With a player selected the
+// The player card, bottom left. With nobody selected, the nameplate's shape greyed out. With a player selected the
 // default is a nameplate, as in eFootball or FC: shirt number and name (the team shows by colour alone), the expand
 // button, the match stamina as a labelled bar, and the instant stamina as a thin bar along the very bottom edge, no label
 // or number, only how far it has drained.
 // Expanded, the card grows upward: the name moves to the top, the stamina stays at the bottom, and in between come the
 // cartoon portrait (role and live speed on it) and this match's numbers so far, eight entries chosen by role. Under them
 // a light strip of stacked arrows scrolls the card's middle up a page: the portrait goes out of view and the full stats
-// come in (Yi). Information only,
+// come in. Information only,
 // no actions. ?card=open opens the card at load, ?card=full also the full stats, for the screenshots.
 
 export interface PlayerCardProps {
@@ -81,13 +81,13 @@ const SILHOUETTE = (
   </svg>
 );
 
-/** stacked arrows: pointing down in the brief view (more below), turned up in the full view (back up) (Yi) */
+/** stacked arrows: pointing down in the brief view (more below), turned up in the full view (back up) */
 const STACK = (
   <svg width="18" height="14" viewBox="0 0 24 18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 3 L12 9 L18 3 M6 9 L12 15 L18 9" /></svg>
 );
 
-/** Two pages one above the other in a window that shows one of them, both as tall as the taller one (Yi: the card
- *  should not change size), so switching only moves the pages up or down a page inside a fixed window. Both stay mounted;
+/** Two pages one above the other in a window that shows one of them, both as tall as the taller one (the card
+ *  never changes size), so switching only moves the pages up or down a page inside a fixed window. Both stay mounted;
  *  their natural heights are measured on inner boxes (ResizeObserver), the padded heights set on the pages. */
 function PageScroll({ first, second, showSecond }: { first: ReactNode; second: ReactNode; showSecond: boolean }) {
   const a = useRef<HTMLDivElement>(null), b = useRef<HTMLDivElement>(null);
@@ -143,7 +143,7 @@ export function PlayerCard({ pkg, clock, looks, score, portraitOf }: PlayerCardP
   }, [pkg, looks]);
 
   if (validSelected === null || !look) {
-    // nobody selected: the nameplate's own shape, greyed (Yi), so the corner does not jump when a player is picked
+    // nobody selected: the nameplate's own shape, greyed, so the corner does not jump when a player is picked
     return (
       <div className="hud-card">
         <div className="hud-plate hud-glass empty" aria-label={tr('球员卡：未选中球员', 'Player card: no player selected')}>
@@ -163,7 +163,7 @@ export function PlayerCard({ pkg, clock, looks, score, portraitOf }: PlayerCardP
       </div>
     );
   }
-  // his team, whose kit colour the plate takes (home blue, away orange in every clip: coords.ts, Yi 2026-10-23)
+  // his team, whose kit colour the plate takes (home blue, away orange in every clip: coords.ts)
   const side = playerTeam(validSelected, nAttOf(pkg), attackingOf(pkg.meta));
   const now = (pkg.clock0 ?? 0) + t, info = roles[validSelected] ?? { label: tr('中场', 'Midfielder'), role: '中场' as Role }, role = info.role, portrait = portraitOf?.(validSelected) ?? null;
   // measured where the export has it (running, events), examples otherwise (top speed and sprints always, for now)
@@ -179,7 +179,7 @@ export function PlayerCard({ pkg, clock, looks, score, portraitOf }: PlayerCardP
         <div className="hud-plate-head">
           <span className="hud-plate-no">{look.number}</span>
           <span className="hud-plate-name">{look.name}</span>
-          {/* no GK tag by a keeper's name since the portrait says GK (Yi, 2026-10-23: it showed twice) */}
+          {/* no GK tag by a keeper's name since the portrait says GK (it would show twice) */}
           <button type="button" className="hud-plate-toggle" aria-expanded={expanded} aria-label={expanded ? tr('收起球员卡', 'Collapse the player card') : tr('展开球员卡', 'Expand the player card')} onClick={toggle}>{CHEVRON}</button>
         </div>
         <i className="hud-plate-rule" />
@@ -192,7 +192,7 @@ export function PlayerCard({ pkg, clock, looks, score, portraitOf }: PlayerCardP
                   <span className="hud-portrait-role"><span className="hud-portrait-what">{info.label}</span><Bookings list={(pkg.cards ?? []).filter((b) => b.player === validSelected && b.clock <= now)} /></span>
                   <span className="hud-portrait-speed"><small>{tr('当前速度', 'Speed')}</small><b>{speedAt(pkg, validSelected, t).toFixed(1)}</b><small>km/h</small></span>
                 </div>
-                {/* the same stats in every mode (Yi, 2026-10-25: the 战术 numbers, ΔxT, xG, xGOT, xA, potential xA, retired) */}
+                {/* the same stats in every mode (the 战术 numbers, ΔxT, xG, xGOT, xA, potential xA, are retired) */}
                 <StatsGrid entries={entries} />
               </>}
               second={<>

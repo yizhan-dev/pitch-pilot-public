@@ -1,8 +1,8 @@
-/* The What-if mode's own panels (whatif/, chat 2's): the widget at the top centre (AskCard.tsx) and the Details card,
-   the result card's .pw-card (app.css), on the right. The moments are picked in the replay plate (Yi, 2026-10-26). */
+/* The What-if mode's own panels (whatif/): the widget at the top centre (AskCard.tsx) and the Details card,
+   the result card's .pw-card (app.css), on the right. The moments are picked in the replay plate. */
 .wi-ask .wi-q { color: var(--ink); font-size: 13px; }
 
-/* the moment's card at the top centre (Yi, 2026-10-26: "What would you do?" and a very short description), under the
+/* the moment's card at the top centre ("What would you do?" and a very short description), under the
    top bar, as wide as its text up to 520 px */
 .wi-ask { position: absolute; left: 50%; top: 18px; transform: translateX(-50%); z-index: 31; width: max-content; max-width: 520px; padding: 10px 16px 11px; display: grid; gap: 5px; border-top: 2px solid var(--ink); font-family: 'Inter', system-ui, sans-serif; color: var(--ink); text-align: center; }
 .wi-ask-h { display: flex; align-items: baseline; justify-content: center; gap: 10px; }
@@ -12,7 +12,7 @@
 .wi-ask .pw-n { margin: 0; font-size: 12.5px; line-height: 1.4; color: var(--ink-3); }
 .wi-ask .wi-turn { color: var(--ink); font-size: 13px; }
 
-/* the what-if cards' parts (Yi, 2026-10-24; moved here from app.css): ground or lofted, the real play, the turn */
+/* the what-if cards' parts (moved here from app.css): ground or lofted, the real play, the turn */
 .wi-kind { display: flex; gap: 6px; margin: 8px 0 2px; }
 .wi-kind button { flex: 1; height: 28px; font: 600 13px Inter, system-ui, sans-serif; color: var(--ink); background: transparent; border: 1px solid var(--hairline-strong); cursor: pointer; }
 .wi-kind button:hover:not(.on) { background: rgba(255, 255, 255, .08); }
@@ -62,12 +62,12 @@
 .wi-card .wi-actions { flex-direction: column; gap: 6px; }
 .wi-card .wi-actions button { flex: none; white-space: nowrap; }
 
-/* the widget's parts (AskCard.tsx, 2026-10-26): Pass | Shoot, the xG at the stop, the one button and the small links */
+/* the widget's parts (AskCard.tsx): Pass | Shoot, the xG at the stop, the one button and the small links */
 .wi-seg { display: inline-flex; justify-self: center; margin: 8px 0 2px; border: 1px solid var(--hairline-strong); }
 .wi-seg button { height: 30px; padding: 0 18px; font: 600 13px Inter, system-ui, sans-serif; color: var(--ink-2, rgba(255, 255, 255, .78)); background: transparent; border: 0; cursor: pointer; }
 .wi-seg button + button { border-left: 1px solid var(--hairline-strong); }
 .wi-seg button.on { background: var(--ink); color: #0b0f15; }
-/* the stop (Yi, 2026-10-26: "these buttons are not designed well; make sure their layout is good"): the outcome in a word
+/* the stop, its buttons laid out as one set: the outcome in a word
    where it has one, then one row of buttons of one height and one type, the way on first (filled, as Pass | Shoot's
    chosen half), the others outlined like the segment's frame */
 .wi-ask-out { margin: 2px 0 0; text-align: center; font: 700 20px/1.1 var(--font-display); letter-spacing: .02em; color: var(--ink); }
@@ -79,8 +79,8 @@
 .wi-ask-act .wi-ask-go:hover { background: #fff; border-color: #fff; }
 .wi-ask-act button:disabled { opacity: .5; cursor: default; }
 
-/* the names over the What-if's players (three/whatif/WhatIfTags.tsx): the Watch mode's Show tag look (the Shell
-   chat's .gm-tag in app.css, same sizes: --name from TELE.pointer.stackName, scaled by --s) */
+/* the names over the What-if's players (three/whatif/WhatIfTags.tsx): the Watch mode's Show tag look
+   (.gm-tag in app.css, same sizes: --name from TELE.pointer.stackName, scaled by --s) */
 .wi-ntags { position: absolute; inset: 0; z-index: 5; overflow: hidden; pointer-events: none; }
 .wi-ntag { --s: 1; position: absolute; left: 0; top: 0; display: grid; justify-items: center; will-change: transform; }
 .wi-ntag-name { font: 600 calc(var(--name) * var(--s))/1 var(--font-display, 'Barlow Condensed', sans-serif); letter-spacing: .04em; text-transform: uppercase; white-space: nowrap; color: #f2f4f7; text-shadow: 0 1px 2px rgba(0, 0, 0, .9), 0 0 6px rgba(0, 0, 0, .55); }

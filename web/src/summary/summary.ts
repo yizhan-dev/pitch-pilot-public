@@ -2,10 +2,10 @@ import { matchFile } from '../data/paths';
 import { store } from '../hud/draft';
 import { setSettings, type ViewMode } from '../game/settings';
 
-// The match summary after the last clip (Yi, 2026-10-26: "at the very last clip, a pulsating button at center top would
-// be 'Match Summary', and if user click it, the camera will go back to the drone perspective, echoing the beginning
-// intro, and then we will do a drop down panel, showing the 技术统计, and then cycling between that page and other ones,
-// such as passing network, attacking lane, key player heatmap, team heatmap, running distance"). The data is one file,
+// The match summary after the last clip: on the last clip a pulsing Match Summary button at the top centre; pressed, the
+// camera goes back up to a drone view, echoing the opening, and a panel drops down with the match stats, then the
+// other pages (passing network, attacking lanes, the player of the match's heat map, the team heat maps, the running
+// distance). The data is one file,
 // written by private/hawkeye/match_summary.py (aggregates of the tracking and the Opta feeds, every player by tracking id;
 // sealed in the release); MatchSummary.tsx draws it.
 
@@ -51,14 +51,13 @@ export const SUMMARY_FILE = matchFile('summary.json');
 let loading: Promise<MatchSummaryData | null> | null = null;
 export const loadSummary = () => (loading ??= fetch(SUMMARY_FILE).then((r) => (r.ok ? r.json() : null)).catch(() => { loading = null; return null; }));
 
-/** the strip under the panel (Yi, 2026-10-27: "another thin widget right under the center panel ... YIZHAN STADIUM, time,
- *  weather"): decoration, invented to match the scene (a clear night under the floodlights); not the real match's date
+/** the thin strip right under the panel, the venue, the time and the weather: decoration, invented to match the scene (a clear night under the floodlights); not the real match's date
  *  or time, which would name it */
 export const VENUE = { name: 'YIZHAN Stadium', kickoff: '20:00', weather: 'Clear', tempC: 16 };
 
 /** the summary is open (the camera on the drone, the panel down) */
 export const summaryOpen = store<boolean>(false);
-/** open it: the whole pitch from high in the roof's opening, turning (Yi, 2026-10-27: not the drone outside; the panel
+/** open it: the whole pitch from high in the roof's opening, turning (not the drone outside; the panel
  *  drops once the camera is up) */
 export function openSummary() { summaryOpen.set(true); setSettings({ view: 'aerialIn' as ViewMode, selected: null }); }
 /** close it: back to the broadcast camera */

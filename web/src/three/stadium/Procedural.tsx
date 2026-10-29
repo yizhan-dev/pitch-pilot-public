@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { hooked } from '../../dev';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { roundedRect, withBreaks, type PathPt, type Profile } from './path';
@@ -129,10 +130,10 @@ export function ProceduralStadium({ cutaway = false, shell = 'crystal', clipPlan
   return <group><StadiumBowl clip={clip} time={time} events={events} /><StadiumShell clip={clip} form={shell} interior={interior} /></group>;
 }
 
-/** every gate, the four corners' included (Yi, 2026-10-22: "lets do it") */
+/** every gate, the four corners' included */
 const GATES = VOM_GATES;
-/** The crowd's life (Yi, 2026-10-22: candidates 8 and 2 of docs/research/stadium-vivid.md, "do not make it move too
- *  much", flashes "not that big and bright"). bob: how far a quarter of the crowd shifts, metres. flash: the share of
+/** The crowd's life (candidates 8 and 2 of docs/research/stadium-vivid.md, kept subtle: little movement, small and
+ *  dim flashes). bob: how far a quarter of the crowd shifts, metres. flash: the share of
  *  seats taking a phone photo in each sixteenth of a second (about four at once round the bowl); a shot or a goal
  *  raises it for a few seconds when the caller passes the clip's events (StadiumEvent). */
 const CROWD_FX = { bob: 0.02, flash: 0.0001 };
@@ -144,7 +145,7 @@ export function stadiumEvents(pkg: { events?: { t: number; type?: string }[]; me
   const team = pkg.meta?.attacking === 'away' ? 'away' as const : 'home' as const;   // the clip's attacking side scores its goal
   // the scored goal's x: a package's attackers attack +x, so +52.5 unless meta.goal says otherwise. Goals from the feed
   // carried no x, so the reactions kept the default +x end of the stadium; in a clip the game shows turned round (Stage
-  // maps x by the view's sign) that was the other end, and the crowd by the goal hardly moved (Yi, 2026-10-24)
+  // maps x by the view's sign) that was the other end, and the crowd by the goal hardly moved
   const gx = pkg.meta?.goal?.x ?? 52.5;
   const out: StadiumEvent[] = (pkg.events ?? []).filter((e) => SHOT_TYPES.has(e.type ?? '')).map((e) => (e.type === 'Goal' ? { t: e.t, kind: 'goal' as const, team, x: gx } : { t: e.t, kind: 'shot' as const }));
   if (pkg.meta?.goal && !out.some((e) => e.kind === 'goal')) out.push({ t: pkg.meta.goal.t, kind: 'goal', x: pkg.meta.goal.x, team });
@@ -196,7 +197,7 @@ export function StadiumBowl({ clip = [], fasciaLed = false, time, events }: { cl
   useFrame(({ size, camera, clock }) => {
     const f = focalPx(size.height, (camera as THREE.PerspectiveCamera).fov); crowdMat.uniforms.uFocal.value = f; seatMat.uniforms.uFocal.value = f;
     // the clip's clock when the caller passes it; else render time, or window.__crowdT when a recording steps frames itself
-    const t = time ? time() : ((window as unknown as { __crowdT?: number }).__crowdT ?? clock.elapsedTime);
+    const t = time ? time() : (hooked<number>('crowdT') ?? clock.elapsedTime);
     crowdMat.uniforms.uTime.value = t; crowdMat.uniforms.uFlash.value = CROWD_FX.flash + flashBurst(events, t);
     // the latest goal in the last 12 s drives the goal reactions (goalFx.ts)
     let since = -1, gx = GOAL_FX.x;

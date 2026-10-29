@@ -11,13 +11,13 @@ import { ballHeld, shotHeld } from './passProb';
 import { useClockTime } from './useClockTime';
 import { tr } from '../i18n';
 
-// The left column: the current mode's tools (Yi, 2026-10-22/23), a column of icon buttons down the left edge, under the
-// score, out of the pitch's way. One column (Yi chose it over two). Hovering a button names it (and its key, or the menu's
+// The left column: the current mode's tools, a column of icon buttons down the left edge, under the
+// score, out of the pitch's way. One column (chosen over two). Hovering a button names it (and its key, or the menu's
 // current choice); the buttons with a corner mark open a menu to the right. Group titles are one short word (two
-// characters, or four letters in English) so they never widen the column (Yi, 2026-10-23). It slides in when a mode with tools is
+// characters, or four letters in English) so they never widen the column. It slides in when a mode with tools is
 // entered and out when it is left, and where the expanded player card would run into it (it can be about 590 px tall)
 // it moves aside, to the card's right.
-// With `draft` (the HUD preview and, since 2026-10-23, ?ui=game; docs/plans/hud-notes.md) every mode has its own: 观赛 the
+// With `draft` (the HUD preview and ?ui=game; docs/plans/hud-notes.md) every mode has its own: 观赛 the
 // display options, 战术 a base map and an annotation (each one at a time, combinable), 画板 the drawing tools; that state
 // is draft.ts's. Without it (the preview's ?current=1), the 战术 mode's old display switches (src/game/settings.ts).
 
@@ -36,7 +36,7 @@ const openMenu = (id: RailMenu) => { railMenu.set(id); setPanel('rail'); };
 
 
 export interface TacticsRailProps {
-  /** the HUD preview's designs (every mode's column); off in ?ui=game until Yi accepts them */
+  /** the HUD preview's designs (every mode's column); off in ?ui=game until they are accepted */
   draft?: boolean;
   clock?: Clock;
   playback?: Playback;
@@ -45,7 +45,7 @@ export interface TacticsRailProps {
 /** the Tactics pause's glide between moments peaks at this many times play's speed */
 const GLIDE_PEAK_SPEED = 2;
 
-/** the pen's link tool (Yi, 2026-10-26): two players, two rings joined by one line (the four joined dots looked like the
+/** the pen's link tool: two players, two rings joined by one line (the four joined dots looked like the
  *  zone's shape). The column's icons' style (icons.tsx) */
 function LinkIcon({ size = 24 }: { size?: number }) {
   return (
@@ -57,7 +57,7 @@ function LinkIcon({ size = 24 }: { size?: number }) {
 
 export function TacticsRail({ draft = false, clock, playback }: TacticsRailProps) {
   const { mode, layers, style, scope } = useGameSettings();
-  // the Tactics pen (Yi, 2026-10-25: Draw merged into Tactics): `drawMode` now means "the pen is on", in Tactics only
+  // the Tactics pen (Draw merged into Tactics): `drawMode` now means "the pen is on", in Tactics only
   const penOn = useStore(drawMode) && draft && mode === 'tactics';
   // the freeze frames in play: from a drawing, its marks animate out before play goes on; play pauses on each frame
   useFreezeFramePlay(playback, clock);
@@ -136,8 +136,8 @@ export function TacticsRail({ draft = false, clock, playback }: TacticsRailProps
     const baseLabel = BASES.find((x) => x.key === selectedBase)?.label ?? 'Off';
     return (
       <>
-        {group('Map', menuButton({   // was 'Base' (Yi, 2026-10-25: "I do not understand why it is Base Pitch Control")
-          id: 'base', icon: <RailIcon name="space" size={20} />, label: 'Map', lit: !!selectedBase, tip: `Map · ${baseLabel}`,   // the popover and the tip follow the group's name (Yi, 2026-10-25: Map)
+        {group('Map', menuButton({   // was 'Base', a name that did not explain the pitch-control map under it
+          id: 'base', icon: <RailIcon name="space" size={20} />, label: 'Map', lit: !!selectedBase, tip: `Map · ${baseLabel}`,   // the popover and the tip follow the group's name (Map)
           onPress: () => { if (selectedBase) { base.set(null); setPanel(null); } else { base.set(lastBase.current); openMenu('base'); } },
           children: <>
             <p className="hud-rpop-h">Map</p>
@@ -149,7 +149,7 @@ export function TacticsRail({ draft = false, clock, playback }: TacticsRailProps
           </>,
         }))}
         {group(tr('标注', 'Mark'), [...ANNOTS.map((x) => {
-          // a mark without sub-options (Passing since 2026-10-25) is a plain switch, greyed while paused with nobody on the ball
+          // a mark without sub-options (Passing) is a plain switch, greyed while paused with nobody on the ball
           if (!x.subs.length) {
             const disabled = x.key === 'pass' && !held;
             return (
@@ -175,7 +175,7 @@ export function TacticsRail({ draft = false, clock, playback }: TacticsRailProps
             </>,
           });
         }),
-          // the shot chance, a switch of its own (Yi, 2026-10-26): the player on the ball's xG if he shot now; greyed as Passing
+          // the shot chance, a switch of its own: the player on the ball's xG if he shot now; greyed as Passing
           <button key="xg" type="button" className="hud-rbtn" style={{ ...staggered(), ...(!shotOk ? { opacity: 0.35, cursor: 'default' } : {}) }} tabIndex={tab}
             aria-pressed={xgOn} aria-disabled={!shotOk} aria-label="Shot xG"
             data-tip={shotOk ? 'Shot xG: his chance if he shot now' : held ? "Shot xG · in the opponents' half only" : 'Shot xG · nobody on the ball'}
@@ -193,7 +193,7 @@ export function TacticsRail({ draft = false, clock, playback }: TacticsRailProps
     );
   };
 
-  // ---- the pen (Yi with chat 1, 2026-10-25, telestration-notes §22): a switch; while it is on, the clip pauses, the
+  // ---- the pen (telestration-notes §22): a switch; while it is on, the clip pauses, the
   // pointer draws (Pen3D.tsx) and a palette beside it holds the tools, the tool's options and undo, redo, clear
   const toolIcon = (key: Tool) => {
     switch (key) {
@@ -208,7 +208,7 @@ export function TacticsRail({ draft = false, clock, playback }: TacticsRailProps
   };
   const penGroup = () => {
     const current = TOOLS.find((x) => x.key === selectedTool) ?? TOOLS[0];
-    // the zone's hint follows its clicks (Yi, 2026-10-26: "otherwise we won't know when and where to close it")
+    // the zone's hint follows its clicks, so the viewer knows when and where to close it
     const corners = selectedTool === 'zone' ? openZone(drawnStrokes)?.pts.length ?? 0 : 0;
     const how = !corners ? current.how : corners < 3 ? 'Click the next corner' : 'Click the first corner to close';
     return group('Pen', (
@@ -239,14 +239,14 @@ export function TacticsRail({ draft = false, clock, playback }: TacticsRailProps
     ));
   };
 
-  // the Tactics pause (Yi, 2026-10-26: "we can just add a pause, and two buttons: move to next event, move to previous
-  // event ... so we can easily find the point where we can draw passing probabilities, xG"): at the top centre while
+  // the Tactics pause (a pause and two buttons, the previous and the next event, so the viewer can easily find a
+  // moment to draw passing probabilities or xG on): at the top centre while
   // paused, in place of the what-if's pause window, the clip's on-ball moments one by one (clipMoments, TacticsItems)
   const moments = useStore(clipMoments), playing = useStore(playbackPlaying), now = useClockTime(clock ?? { t: 0 } as Clock, 4);
   const prevMoment = [...moments].reverse().find((m) => m.t < now - 0.05), nextMoment = moments.find((m) => m.t > now + 0.05);
   const atMoment = moments.find((m) => Math.abs(m.t - now) <= 0.05);
-  // no jump (Yi, 2026-10-26: "players should not teleport, but just keep playing in two times speed and then stop at the
-  // next event ... acceleration and deceleration ... not linear but more smoothed"): the clock glides there, backwards for
+  // no jump (the players never teleport: play runs on at up to twice its speed and stops at the next event, easing in
+  // and out rather than linear): the clock glides there, backwards for
   // the previous event, on a cosine ease, its peak speed twice play's; pressing play stops the glide
   const glide = useRef<number | null>(null);
   const stopGlide = () => { if (glide.current !== null) cancelAnimationFrame(glide.current); glide.current = null; };
@@ -295,10 +295,10 @@ export function TacticsRail({ draft = false, clock, playback }: TacticsRailProps
     <div ref={ref} className={`hud-rail${on ? ' on' : ''}`} style={aside === null ? undefined : { left: aside }} role="toolbar" aria-orientation="vertical" aria-label={tr('当前模式的工具', "This mode's tools")} aria-hidden={!on}>
       {draft ? (
         <div key={shown} className="hud-rail-in">
-          {/* 观赛's display options are chat 5's Show menu (2026-10-25), in Watch and Tactics */}
+          {/* 观赛's display options are the Show menu, in Watch and Tactics */}
           {shown === 'watch' && <ShowMenu tabIndex={tab} />}
           {shown === 'tactics' && tacticsCol()}
-          {/* the player style is in the Show menu since 2026-10-25 (Yi: one button, not two with the same icon) */}
+          {/* the player style is in the Show menu (one button, not two with the same icon) */}
           {shown === 'tactics' && <ShowMenu tabIndex={tab} />}
         </div>
       ) : (

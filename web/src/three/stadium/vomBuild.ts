@@ -4,7 +4,7 @@ import { VOM, VOM_HALF, vomLat, vomRange, inRange, type VomGate } from './layout
 
 // The vomitories' geometry (fourth version, see VOM in layout.ts): a box at the head of a gangway whose level roof runs
 // back into the rake, a doorway in its front, and a lit passage behind. Darker than the light grey bands so it sits in
-// the seating rather than on it (Yi: "slightly darker so it looks more resonant"). The tiers' cells inside each box are
+// the seating rather than on it (slightly darker, so it blends in). The tiers' cells inside each box are
 // cut away by the tiers themselves (vomCut, used in Procedural.tsx and TopTier.tsx).
 
 type Frame = { x: number; y: number; nx: number; ny: number; corner: boolean };

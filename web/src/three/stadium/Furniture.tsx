@@ -202,7 +202,7 @@ function drawSignature(g: CanvasRenderingContext2D, w: number, h: number) {
 }
 
 /** Project KICK: the monogram (the pure icon, assets/brand/kick-mark-white.png) 0.5 m tall like the YIZHAN symbol,
- *  beside PROJECT KICK in Jost, tracked capitals (Yi, 2026-10-23: "I personally like Jost") */
+ *  beside PROJECT KICK in Jost, tracked capitals (the brand's preferred typeface for wordmarks) */
 async function drawKick(g: CanvasRenderingContext2D, w: number, h: number) {
   try { const f = new FontFace('Jost', `url(${jostUrl})`); await f.load(); document.fonts.add(f); } catch { /* the fallback face still reads */ }
   const img = await new Promise<HTMLImageElement | null>((res) => { const i = new Image(); i.onload = () => res(i); i.onerror = () => res(null); i.src = kickMarkUrl; });
@@ -237,13 +237,13 @@ const RUNS: { a: [number, number]; b: [number, number]; kind: 'side' | 'end' }[]
 
 function AdBoards() {
   const invalidate = useThree((st) => st.invalidate);
-  // Every board runs the same three banners in turn (Yi, 2026-10-23: "yizhan -> projkick -> our slogan"): each holds
+  // Every board runs the same three banners in turn (YIZHAN, then PROJECT KICK, then the slogan): each holds
   // 4 s, then the next pushes it up and out over 0.5 s, all boards together, on the stadium's clock (paused, they hold).
   // (Before: the signature on the side boards, the slogan on the end boards, fixed.)
   const tex = useMemo(() => ({ sig: ledTexture(SIG_TILE, drawSignature, invalidate), kick: ledTexture(KICK_TILE, drawKick, invalidate), slogan: ledTexture(SLOGAN_TILE, drawSlogan, invalidate) }), [invalidate]);
   const white = useMemo(() => { const t = new THREE.DataTexture(new Uint8Array([255, 255, 255, 255]), 1, 1); t.needsUpdate = true; return t; }, []);   // keeps the emissive map's uv path
   // The LED face sat 1 mm in front of the box: from the broadcast camera, 60-100 m away, the depth buffer cannot tell
-  // them apart, and the white content blinked as the camera moved (Yi, 2026-10-21; measured: 1,223 pixels flipping
+  // them apart, and the white content blinked as the camera moved (measured: 1,223 pixels flipping
   // between renders 1 cm apart on the far boards). The box now stands 1 cm behind the face, and the face wins every
   // depth tie whatever the distance (polygon offset towards the camera).
   const led = { roughness: 0.6, toneMapped: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -4 };
@@ -252,7 +252,7 @@ function AdBoards() {
     // uAdT: the rotation's clock; uAdOff: a vertical shift of the whole rotation, banner heights (the goal message's exit
     // pushes the first banner in from below: goalBoards.ts); both set by the goal code's tick
     uniforms: { uAd0: { value: tex.sig }, uAd1: { value: tex.kick }, uAd2: { value: tex.slogan }, uAdT: { value: 0 }, uAdOff: { value: 0 } },
-    // each board shows a whole number of each banner's tiles, the spare length dark at both ends (Yi, 2026-10-25: the
+    // each board shows a whole number of each banner's tiles, the spare length dark at both ends (when the
     // tiles were centred on the board, so a run of an even count, like the 36 m runs by the benches, ended on half a
     // PROJECT KICK); tiles keep their width, so the marks are never stretched. vAdA / vAdB: where each banner's tiles
     // start and end on this board, in metres from its left end (sig, kick, slogan)
@@ -261,7 +261,7 @@ function AdBoards() {
     decl: `uniform sampler2D uAd0, uAd1, uAd2; uniform float uAdT, uAdOff; varying vec3 vAdA, vAdB;
       // q: metres from the board's left end, height 0..1; dx, dy: q's screen derivatives, taken where q is continuous. At
       // the push's seam the sampled height jumps by a whole banner, and derivatives taken there pick the coarsest mip
-      // level: a grey line ran along the seam (Yi, 2026-10-23). Explicit gradients keep the sharp level.
+      // level: a grey line ran along the seam. Explicit gradients keep the sharp level.
       vec3 adTex(sampler2D m, float tile, float a, float b, vec2 q, vec2 dx, vec2 dy) {
         if (q.x < a || q.x > b) return vec3(0.0);
         return textureGrad(m, vec2((q.x - a) / tile, q.y), vec2(dx.x / tile, dx.y), vec2(dy.x / tile, dy.y)).rgb;
@@ -272,7 +272,7 @@ function AdBoards() {
         return adTex(uAd2, ${SLOGAN_TILE.toFixed(1)}, vAdA.z, vAdB.z, q, dx, dy);
       }`,
     frag: `{
-        const float HOLD = 4.5, PUSH = 0.5;   // 4 s still, then a 0.5 s push (7 s still was too slow, Yi)
+        const float HOLD = 4.5, PUSH = 0.5;   // 4 s still, then a 0.5 s push (7 s still was too slow)
         float ph = uAdT / HOLD, cur = mod(floor(ph), 3.0), nxt = mod(cur + 1.0, 3.0), s = smoothstep(HOLD - PUSH, HOLD, fract(ph) * HOLD);
         vec2 q = vEmissiveMapUv, dx = dFdx(q), dy = dFdy(q); float y = q.y - s + uAdOff;   // the old banner rises out of the top, the next from below
         totalEmissiveRadiance *= y >= 1.0 ? vec3(0.0) : y >= 0.0 ? adSample(cur, vec2(q.x, y), dx, dy) : adSample(nxt, vec2(q.x, y + 1.0), dx, dy);
@@ -485,12 +485,12 @@ function CornerFlags() {
 }
 
 /** The goal celebration's champagne fountains (players/Celebration.tsx) rise from 3 m behind the goal line, 5.5 m and
- *  11 m either side of the goal's centre (four per goal since 2026-10-23, two before); with nothing there they seemed
- *  to come out of the grass (Yi, 2026-10-22). A small black
+ *  11 m either side of the goal's centre (four per goal); with nothing there they seemed
+ *  to come out of the grass. A small black
  *  spark jet stands at each of those four points, as at real grounds: a low cabinet with a short nozzle, whose mouth is
- *  the fountain's origin, 0.32 m up (Celebration.tsx lowered from 1.2 m to match). Yi found the first two versions too
+ *  the fountain's origin, 0.32 m up (Celebration.tsx lowered from 1.2 m to match). The first two versions were too
  *  big: a 0.66 m cabinet with the nozzle at 1.2 m, then a mast. */
-const LAUNCH = { x: 52.5 + 3, z: [5.5, 11], top: 0.32 };   // two each side of each goal (Yi, 2026-10-23: four fountains)
+const LAUNCH = { x: 52.5 + 3, z: [5.5, 11], top: 0.32 };   // two each side of each goal: four fountains
 function Launchers() {
   const mats = useMemo(() => ({
     body: new THREE.MeshStandardMaterial({ color: '#0e1013', roughness: 0.55, metalness: 0.35 }),

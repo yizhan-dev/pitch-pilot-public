@@ -1,5 +1,5 @@
 {
- "_comment": "Stadium exterior v0, fixed by Yi on 2026-10-21. Do not edit: later design work changes DEFAULT_CRYSTAL or adds v1.",
+ "_comment": "Stadium exterior v0, frozen. Do not edit: later design work changes DEFAULT_CRYSTAL or adds v1.",
  "crystal": {
   "cornerClear": 3,
   "cutMain": 1,

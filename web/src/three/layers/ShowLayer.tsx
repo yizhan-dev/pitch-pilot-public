@@ -16,16 +16,16 @@ import { passChances } from '../../hud/passProb';
 import { clipSwap } from '../../game/clipSwap';
 import { wiTagged } from '../../whatif/state';
 
-// What the Show menu draws on the players (hud/ShowMenu.tsx, settings.ts `show`; Yi, 2026-10-24/25), in every mode: one
-// tag over the head, eFootball's way (Yi chose V4 with chat 1, telestration-notes §23): from the head up the hover /
-// selection cue (chat 1's HoverPointer), the stamina bar, the name. The name is the shirt number in the team's colour and
+// What the Show menu draws on the players (hud/ShowMenu.tsx, settings.ts `show`), in every mode: one
+// tag over the head, eFootball's way (V4, telestration-notes §23): from the head up the hover /
+// selection cue (HoverPointer), the stamina bar, the name. The name is the shirt number in the team's colour and
 // the shirt name; the bar is a gauge of one length for everyone, the instant stamina (the player card's bottom-edge bar,
-// playerStats.instantStamina). All sizes are chat 1's TELE.pointer.stack* in pixels, scaled together by stackScale(depth),
+// playerStats.instantStamina). All sizes are TELE.pointer.stack* in pixels, scaled together by stackScale(depth),
 // so the tag and the cue never drift apart. On whom: the player on the ball (he keeps it while his pass travels, until
 // someone else has it), the selected one, either team. DOM over the canvas, placed every frame from the neck joint,
 // after the frame is rendered (addAfterEffect), so with the frame's own camera: placed in useFrame they ran before the
-// camera director moved the camera and trailed it by a frame while the view was dragged (Yi, 2026-10-25).
-// The pass chance (chat 1's spec in hud-notes, r102; chat 3's request 16, Yi 2026-10-26): while Tactics' passing mark
+// camera director moved the camera and trailed it by a frame while the view was dragged.
+// The pass chance (the spec in hud-notes, r102): while Tactics' passing mark
 // publishes hud/passProb.ts `passChances`, every team-mate of the carrier gets a tag, whatever the On setting, with his
 // chance in chanceColour hung off the right of the name, else of the stamina bar, else alone; offside, no number.
 
@@ -64,7 +64,7 @@ export function ShowLayer({ data, clock, looks, hide, hover }: { data: Loaded; c
     parent?.appendChild(tags.box);
     return () => { tags.box.remove(); showTagged.clear(); };
   }, [gl, tags]);
-  // the names, the number in his team's colour (the cue's, chat 1's inkColour)
+  // the names, the number in his team's colour (the cue's, inkColour)
   useEffect(() => {
     tags.list.forEach((g, p) => {
       const L = looks?.[p];
@@ -78,8 +78,8 @@ export function ShowLayer({ data, clock, looks, hide, hover }: { data: Loaded; c
   const st = useMemo(() => ({ v: new THREE.Vector3(), w: new THREE.Vector3(), fwd: new THREE.Vector3(), chances: new Map<number, number | null>(), wt: new Set<number>() }), []);
   /** who is within reach of the ball at each tenth of a second of the clip (null: nobody, or the ball not tracked), worked
    *  out once per tenth and kept for the clip: the search back through a pass in flight asked for up to 60 of them on every
-   *  new tenth (profiled 2026-10-26) */
-  //   The man on it the tenth before keeps it while he is still within CARRIER_HOLD_M (the What-if chat, 2026-10-27: at
+   *  new tenth (profiled) */
+  //   The man on it the tenth before keeps it while he is still within CARRIER_HOLD_M (at
   // a What-if stop the defender who closed the receiver down stood as near the ball as he did, 0.30 m against 0.34 m at
   // 74:31, and the name flipped to the defender), so the tenths are worked out in order, from the last one known
   const near = useMemo(() => new Map<number, number | null>(), [pkg]);
@@ -108,7 +108,7 @@ export function ShowLayer({ data, clock, looks, hide, hover }: { data: Loaded; c
     if (show.who === 'ball') { const c = carrierAt(t); if (c !== null) on.add(c); }
     if (show.who === 'selected' && selected !== null) on.add(selected);
     if (show.who === 'all' || show.who === 'home' || show.who === 'away') for (let p = 0; p < P; p++) if (show.who === 'all' || show.who === playerTeam(p, nAtt, attacking)) on.add(p);
-    for (const p of showNamed) on.add(p);   // the Explain mode's call-outs (chat 4)
+    for (const p of showNamed) on.add(p);   // the Explain mode's call-outs
     return on;
   };
 
@@ -129,8 +129,8 @@ export function ShowLayer({ data, clock, looks, hide, hover }: { data: Loaded; c
     const pc = passChances.get(), chances = st.chances;
     chances.clear();
     if (pc && pc.carrier !== null && pc.opts) for (const o of pc.opts) if (o.p !== pc.carrier) chances.set(o.p, o.offside ? null : o.prob);
-    // the men the What-if mode names itself (WhatIfTags.tsx): no Show tag on them, so each name is printed once (the
-    // What-if chat, 2026-10-26); they stay out of showTagged, so the hover cue sits on them as on an untagged man
+    // the men the What-if mode names itself (WhatIfTags.tsx): no Show tag on them, so each name is printed once;
+    // they stay out of showTagged, so the hover cue sits on them as on an untagged man
     const wt = wiTagged(st.wt);
     for (let p = 0; p < P; p++) {
       const g = tags.list[p], c = chances.get(p), num = typeof c === 'number';
@@ -148,7 +148,7 @@ export function ShowLayer({ data, clock, looks, hide, hover }: { data: Loaded; c
       if (!g.shown) { g.el.style.display = ''; g.shown = true; }
       const k = stackScale(depth), ks = k.toFixed(3);
       if (ks !== g.s) { g.el.style.setProperty('--s', ks); g.s = ks; }
-      // over the cue while he has one, once chat 1's cue sits under the tag (TELE.pointer.tagged 'under', eFootball's way)
+      // over the cue while he has one, when the cue sits under the tag (TELE.pointer.tagged 'under', eFootball's way)
       const lift = (S.stackGap + (S.tagged === 'under' && (p === sel || p === hv) ? 2 * 0.833 * S.stackTri + S.stackGap : 0)) * k;
       const what = `${name ? 'n' : ''}${bar ? 'b' : ''}${num ? 'c' : ''}`;
       if (what !== g.what) {
@@ -164,7 +164,7 @@ export function ShowLayer({ data, clock, looks, hide, hover }: { data: Loaded; c
       }
       if (!g.bw) { g.bw = g.el.offsetWidth / k; g.bh = g.el.offsetHeight / k; }
       // on whole pixels, so the text is drawn on the same grid every frame (at fractional places the figures and the
-      // caps were rounded apart, the number reading now high, now low; Yi, 2026-10-25); centred by its own size
+      // caps were rounded apart, the number reading now high, now low); centred by its own size
       g.el.style.transform = `translate3d(${Math.round(((st.v.x + 1) / 2) * w - (g.bw * k) / 2)}px, ${Math.round(((1 - st.v.y) / 2) * h - lift - g.bh * k)}px, 0)`;
       if (bar) {
         const v = sampleAt(stamina[p], t, data.pkg.meta.fps), band = staminaBand(v);

@@ -8,7 +8,7 @@ import '@fontsource/inter/600.css';
 import './styles/app.css';
 import { PublicSample } from './sample/PublicSample';
 
-// The page is the game, in dev as in the release, with or without ?ui=game (old links keep it). The 2026-10-20/21
-// prototype pages it used to open without it (the workbench, ?ui=full, ?ui=events) were removed on 2026-10-26 with
-// their data (Yi: "please do all 5 yourself"; docs/plans/data-restructure.md, "Legacy removed").
+// The page is the game, in dev as in the release, with or without ?ui=game (old links keep it). The early
+// prototype pages it used to open without it (the workbench, ?ui=full, ?ui=events) were removed with
+// their data (docs/plans/data-restructure.md, "Legacy removed").
 createRoot(document.getElementById('root')!).render(<PublicSample />);

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { hook } from '../dev';
 import * as THREE from 'three';
 import { useFrame, useThree } from '@react-three/fiber';
 import type { Clock } from '../clock';
@@ -17,11 +18,11 @@ import { BaseMap3D } from './BaseMap3D';
 import { Pen3D } from './Pen3D';
 import { base, annot, annotSub, playbackPlaying, useStore } from './draft';
 
-// The HUD draft's pitch layer in ?ui=game (2026-10-23, Yi: wire the new design into the Decision Lab): what the HUD preview
+// The HUD draft's pitch layer in ?ui=game (the new design wired into the Decision Lab): what the HUD preview
 // draws on its stand-in pitch, laid on the real grass under the players. A transparent canvas over the pitch carries the
-// 战术 mode's annotation canvas (overlayShapes.tsx); the base map is BaseMap3D's (on the GPU), the marks chat 1 draws are
-// TacticsItems' and the pen's Pen3D's (its pointer and strokes; 画板's canvas strokes and auto lines are gone, 2026-10-25).
-// 观赛's speed rings moved to chat 5's Show menu (three/layers/ShowLayer.tsx). Mounted inside the Stage's canvas by GameApp.
+// 战术 mode's annotation canvas (overlayShapes.tsx); the base map is BaseMap3D's (on the GPU), the telestration marks are
+// TacticsItems' and the pen's Pen3D's (its pointer and strokes; 画板's canvas strokes and auto lines are gone).
+// 观赛's speed rings moved to the Show menu (three/layers/ShowLayer.tsx). Mounted inside the Stage's canvas by GameApp.
 
 const L = 105, W = 68;
 /** the canvas's resolution, pixels per metre (1680 x 1088 for the pitch) */
@@ -30,7 +31,7 @@ const PX_PER_M = 16;
 const REDRAW_HZ = 30;
 /** the canvas's height over the grass and the board, metres: over GameLayers (0.03), under the selection rings (0.05) */
 const LIFT_M = 0.035;
-/** a temporary check (Yi's eye): the pass chances written on the grass, ?ptags=1 */
+/** a temporary check by eye: the pass chances written on the grass, ?ptags=1 */
 const PTAGS = typeof location !== 'undefined' && new URLSearchParams(location.search).get('ptags') === '1';
 
 export interface PitchOverlay3DProps {
@@ -66,10 +67,10 @@ export function PitchOverlay3D({ data, clock, looks, mode }: PitchOverlay3DProps
   // for the headless checks: where a pitch point is on the page, to draw on the grass with synthetic pointer events
   const { camera, gl } = useThree();
   useEffect(() => {
-    (window as unknown as { __pitchToScreen?: (x: number, y: number) => [number, number] }).__pitchToScreen = (x, y) => {
+    hook('pitchToScreen', (x: number, y: number): [number, number] => {
       const v = new THREE.Vector3(x, LIFT_M, y).project(camera), r = gl.domElement.getBoundingClientRect();
       return [r.left + (v.x * 0.5 + 0.5) * r.width, r.top + (-v.y * 0.5 + 0.5) * r.height];
-    };
+    });
   }, [camera, gl]);
 
   // ---- redrawing: at once after any change of what shows, then with the clock, at most REDRAW_HZ
@@ -105,8 +106,8 @@ export function PitchOverlay3D({ data, clock, looks, mode }: PitchOverlay3DProps
     // the 战术 mode's base map is BaseMap3D's (on the GPU, under this canvas)
     // the annotation, fading in with the board
     if (shown === 'tactics' && selectedAnnotation && boardFade > 0) {
-      // the pass probability is chat 1's passing network (TacticsItems.tsx); ?ptags=1 adds each chance on the grass, a
-      // temporary check for Yi's eye until chat 1's head tags take the numbers
+      // the pass probability is the telestration passing network (TacticsItems.tsx); ?ptags=1 adds each chance on the
+      // grass, a temporary check by eye until the head tags take the numbers
       const real = PTAGS && selectedAnnotation === 'pass' ? passStateAt(pkg, t, () => { redraw.current.dirty = true; }) : { carrier: null, opts: null };
       drawShapes(ctx, annotationShapes(pkg, t, selectedAnnotation, annotationSubs[selectedAnnotation], m, allMoves, xg, name, validSelected, real), boardFade, turned);
     }
@@ -121,7 +122,7 @@ export function PitchOverlay3D({ data, clock, looks, mode }: PitchOverlay3DProps
       </mesh>
       {/* the base map, on the GPU, under this canvas */}
       <BaseMap3D data={data} clock={clock} mode={mode} />
-      {/* the marks chat 1 draws (the offside line) */}
+      {/* the telestration marks (the offside line) */}
       <TacticsItems data={data} clock={clock} surface={mode} looks={looks} />
       {/* the Tactics pen: its pointer and its marks */}
       <Pen3D data={data} clock={clock} surface={mode} />

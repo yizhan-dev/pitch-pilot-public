@@ -12,26 +12,26 @@ import { drawMode, base, playbackPlaying, useStore } from './draft';
 import { holderSideAt } from './passProb';
 import { xtGrid, XT_NX, XT_NY, XT_RANGE } from './analysis';
 
-// The 战术 mode's base map (pitch control as a contour map, or Q for an Explain board, or one of the two grids), drawn on the GPU (Yi, 2026-10-25: "why the pitch control
-// surface looks so low resolution?", then "still very bad, can we make it smoother? more layers?"). It was painted into
+// The 战术 mode's base map (pitch control as a contour map, or Q for an Explain board, or one of the two grids), drawn on the GPU, as a canvas
+// texture read low-resolution and stepped, even with more bands. It was painted into
 // the pitch overlay's canvas (16 px a metre) and stretched over the grass, so a close camera saw its pixels and the bands'
 // steps. Here the export's 53 x 35 cells go to the GPU as a small texture, and every screen pixel samples them smoothly
 // (Catmull-Rom, 16 taps) and works out its band, the band edges anti-aliased by the pixel's own footprint (fwidth): smooth
-// at any zoom, and the CPU only blends the two 10 Hz frames. Bands: PC_BANDS a side (24, Yi's pick of 6, 12 and 24). A plane just under the overlay's canvas (marks and strokes stay
+// at any zoom, and the CPU only blends the two 10 Hz frames. Bands: PC_BANDS a side (24, chosen over 6 and 12). A plane just under the overlay's canvas (marks and strokes stay
 // on top), fading in with the board as the canvas does. Mounted by PitchOverlay3D.
-// The grids (Yi, 2026-10-26, for a commentator to talk over): only the division, no zone picked out and no words on the grass
-// (Yi: "do not highlight any zone, just show the division of the pitch"). Solid lines drawn only where the pitch has no
-// line of its own, so they read as its markings carried on (the dashed first version crossed and doubled them: "a bit
-// shabby"), their edges anti-aliased by the pixel's footprint and never thinner than the marks' 1.5 px:
+// The grids (for a commentator to talk over): only the division, no zone picked out and no words on the grass
+// (no zone highlighted, just the division of the pitch). Solid lines drawn only where the pitch has no
+// line of its own, so they read as its markings carried on (the dashed first version crossed and doubled them and looked
+// shabby), their edges anti-aliased by the pixel's footprint and never thinner than the marks' 1.5 px:
 // - five lanes, positional play's: the boxes' and goal areas' sides carried up the pitch (wing, half-space, centre), the
 //   boxes' lines carried out to the touchlines; with halfway, 5 x 4 = 20 zones
 // - the 18 zones, 6 along and 3 across, the bands on the boxes' lines (16.5, 18, 18 m a half, not 17.5 m each, which put a
 //   line 1 m from the box's), so zone 14 is the central one just outside the box
-// The xT map (Yi, 2026-10-27: "we also can add a xT map, using the xT trained and described in our project kick's xT.ipynb"):
+// The xT map, the xT trained and described in project_kick's xT.ipynb:
 // project_kick's expected-threat surface (hud/analysis.ts XT, 16 x 12 cells, the notebook's model_utils/xt_surface.npy, equal
 // to the engine's copy), turned for the side on the ball (passProb.ts holderSideAt; the last side while nobody has it), in
 // the colourway's ramp on a log scale from XT_FLOOR to the highest cell (space.ts: a linear scale shows nothing but the box,
-// and from the lowest cell the own half turns olive). For Yi's eye, temporary: ?xtlook=cells (the model's cells with a
+// and from the lowest cell the own half turns olive). To compare by eye, temporary: ?xtlook=cells (the model's cells with a
 // one-pixel seam) against the default smooth look (bilinear between the cells' centres); ?xtcolour=heat against gold.
 
 const L = 105, W = 68;
@@ -39,12 +39,12 @@ const L = 105, W = 68;
 const LIFT_M = 0.034;
 /** the base map's refresh while playing, per second (the export is 10 Hz; paused: at once for each new moment) */
 const PLAYING_HZ = 15;
-/** the xT map's look, for Yi's choice (a temporary switch, see above; the colourway is space.ts's XT_COLOUR) */
+/** the xT map's look, still to be chosen (a temporary switch, see above; the colourway is space.ts's XT_COLOUR) */
 const XT_LOOK = new URLSearchParams(location.search).get('xtlook') === 'cells' ? 0 : 1;
 /** the laws' box (16.5 m deep, 40.32 m wide) and goal area (5.5 m deep, 18.32 m wide), metres */
 const BOX_X = L / 2 - 16.5, BOX_HALF = 20.16, SIX_X = L / 2 - 5.5, SIX_HALF = 9.16;
-/** the grids' look: the marks' blue line with their halo (style.ts: blue is "anything else"). Yi, 2026-10-27: "looking much
- *  better, I like it", over white paint at 45% like the pitch's own markings, which left with its ?grid=paint switch */
+/** the grids' look: the marks' blue line with their halo (style.ts: blue is "anything else"). Preferred
+ *  over white paint at 45% like the pitch's own markings, which left with its ?grid=paint switch */
 const gridLook = { ink: TELE.color.blue.board, halfW: 0.05, alpha: 0.8, glow: TELE.glow.strength * TELE.glow.gain.board, sigma: TELE.glow.sigma };
 /** the kits' lighter tones, as the canvas drew them */
 const LIGHT: Record<Team, [number, number, number]> = { home: [106, 184, 255], away: [255, 149, 96] };
@@ -167,8 +167,8 @@ export function BaseMap3D({ data, clock, mode }: { data: Loaded; clock: Clock; m
   const { mode: gameMode } = useGameSettings();
   const drawing = useStore(drawMode), selectedBase = useStore(base), playing = useStore(playbackPlaying);
   const shown = drawing ? 'draw' : gameMode, on = shown === 'tactics' && !!selectedBase;
-  // an Explain script may ask for the same map on its board (game/settings.ts scriptBoard.base; chat 4, Yi 2026-10-26:
-  // "the exact pitch control ... of what we see in actual tactics mode"); the data is loaded for the whole mode
+  // an Explain script may ask for the same map on its board (game/settings.ts scriptBoard.base: exactly
+  // the pitch control the Tactics mode shows); the data is loaded for the whole mode
   const scripted = gameMode === 'explain';
   const space = useSpace(pkg, (on && selectedBase === 'pc') || scripted);
   const nAtt = pkg.frames[0]?.att.length ?? 11, attacking = attackingOf(pkg.meta as { attacking?: string });

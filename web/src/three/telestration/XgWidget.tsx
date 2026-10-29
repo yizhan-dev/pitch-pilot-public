@@ -1,5 +1,5 @@
-// The shot's xG as a widget standing beside the shooter's head (Yi, 2026-10-22: when we pause, a widget animates in
-// next to the player's head, the number rolling to its value, with a little digital glitch). A leader line draws out
+// The shot's xG as a widget standing beside the shooter's head (at the pause it animates in next to the player's
+// head, the number rolling to its value, with a little digital glitch). A leader line draws out
 // from the head, the plate opens from the leader's end with a glitch (chromatic split, slices torn sideways, flicker),
 // the digits roll like a counter and stop one after another, a last glitch as the final digit lands. A DOM overlay
 // pinned to the head (drei Html), the same size on screen at any distance (scaled with the view's height), driven every
@@ -15,7 +15,7 @@ import { hash01 } from './sparks';
  *  the side of the head the plate stands on (1 the screen's right), the accent colour (the shooter's team colour) */
 export interface XgWidgetState {
   on: boolean; head: [number, number, number]; value: number; age: number; exit: number | null; side: 1 | -1; accent: string;
-  /** 'stand' beside the head; 'ground' lying on the grass beside his feet (Yi: from high views; XgGroundTag.tsx) */
+  /** 'stand' beside the head; 'ground' lying on the grass beside his feet (from high views; XgGroundTag.tsx) */
   mode: 'stand' | 'ground'; feet: [number, number]; ringR: number; tagM: number;
 }
 export const newXgWidgetState = (): XgWidgetState => ({ on: false, head: [0, 0, 0], value: 0, age: 0, exit: null, side: 1, accent: '#6ab8ff', mode: 'stand', feet: [0, 0], ringR: 1, tagM: 1.4 });
@@ -120,7 +120,7 @@ export function XgWidget({ store }: { store: { s: XgWidgetState } }) {
           }}>
             <div ref={(r) => { if (r) el.current.accent = r; }} style={{ width: 'calc(var(--u) * 4)', flex: 'none' }} />
             <div ref={(r) => { if (r) el.current.caption = r; }} style={{ alignSelf: 'flex-end', lineHeight: 1, padding: '0 calc(var(--u) * 6) calc(var(--u) * 9.7) calc(var(--u) * 12)', fontSize: 'calc(var(--u) * 17)', fontWeight: 600, letterSpacing: '0.06em', color: 'rgba(242,244,247,0.66)' }}>xG</div>
-            {/* the digits' bottom on the caption's (Yi, 2026-10-26: the number sat 8 px, 6.8 units, lower than "xG"; its padding is inside its
+            {/* the digits' bottom on the caption's (the number sat 8 px, 6.8 units, lower than "xG"; its padding is inside its
                 1em box (border-box), so a translate lifts it) */}
             <div ref={(r) => { if (r) el.current.num = r; }} style={{ alignSelf: 'flex-end', marginLeft: 'auto', padding: '0 calc(var(--u) * 14) calc(var(--u) * 7) calc(var(--u) * 2)', translate: '0 calc(var(--u) * -6.8)', fontSize: 'calc(var(--u) * 44)', fontWeight: 700, lineHeight: 1, height: '1em', color: '#f2f4f7', fontVariantNumeric: 'tabular-nums' }}>
               {Array.from({ length: SLOTS }, (_, i) => (

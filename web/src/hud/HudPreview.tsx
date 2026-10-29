@@ -1,4 +1,5 @@
 import { clipAddr, parseClip } from '../data/paths';
+import { hook, hooked } from '../dev';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { loadMoment, duration, type Loaded } from '../data';
 import { makeClock } from '../clock';
@@ -46,8 +47,8 @@ function withPreviewCards(pkg: ClipPkg, spec: string | null): ClipPkg {
   return { ...pkg, cards: [...(pkg.cards ?? []), ...cards] };
 }
 
-/** ?sheet=show: the Show menu (ShowMenu.tsx) alone in a column on the grass, for checking it by eye before chat 3 mounts
- *  it at the bottom of the left column; ?panel=show opens its panel */
+/** ?sheet=show: the Show menu (ShowMenu.tsx) alone in a column on the grass, for checking it by eye before it is mounted
+ *  at the bottom of the left column; ?panel=show opens its panel */
 function ShowSheet() {
   return (
     <div className="hud-preview"><div className="hud-preview-bg grass" />
@@ -75,13 +76,13 @@ function IconSheet() {
 // The HUD's own preview page (/hud.html), without the 3D pitch: a dark stand-in behind the overlays, one clip loaded
 // with loadMoment and played on a local clock. ?moment=<clip> picks the clip, ?t=<s> holds the time (for screenshots),
 // ?panel=... opens a panel, and the settings parameters (view, layers, style, scope, sel) work as in ?ui=game.
-// The pitch is not here to click on, so a player starts selected (the clip's shooter, else the first attacker; Yi,
-// 2026-10-22); ?sel=<i> picks another and ?sel=none starts with nobody. Space plays and pauses; [ and ] step the selected
+// The pitch is not here to click on, so a player starts selected (the clip's shooter, else the first
+// attacker); ?sel=<i> picks another and ?sel=none starts with nobody. Space plays and pauses; [ and ] step the selected
 // player, \ clears it. ?cards=7:yellow,12:red,3:second-yellow gives players cards from the clip's start, to preview the
 // card badges (design only: the real cards come from the export). ?bg=grass puts mowed grass behind the overlays instead of
 // the dark stand-in, to judge the see-through parts against something like the pitch (plain CSS, no match imagery); in the
 // 战术 mode it turns the dark grey of the 3D side's analysis board, as the pitch does in ?ui=game.
-// The preview shows the HUD's draft designs (Yi's next proposals, 2026-10-23: the 战术 mode's analysis layers); ?current=1
+// The preview shows the HUD's draft designs (the next proposals: the 战术 mode's analysis layers); ?current=1
 // shows the HUD as ?ui=game has it.
 
 export function HudPreview() {
@@ -118,13 +119,12 @@ export function HudPreview() {
     if (!data) return;
     const end = duration(data.pkg);
     if (hold !== null) { clock.t = Math.min(end, Math.max(0, +hold || 0)); clock.playing = false; } else { clock.t = 0; clock.playing = true; }
-    const W: Window & { __frames?: number } = window;
     let raf = 0, last = performance.now();
     const tick = (now: number) => {
       const dt = Math.min(0.1, (now - last) / 1000); last = now;
       // forward loops at the end; rewinding stops at the start, paused, back at 1x (as in GameApp)
       if (clock.playing) { clock.t += dt * clock.rate; if (clock.t > end) clock.t = 0; if (clock.t < 0) { clock.t = 0; clock.rate = 1; setSpeed(1); clock.playing = false; setPlaying(false); } }
-      W.__frames = (W.__frames ?? 0) + 1;
+      hook('frames', (hooked<number>('frames') ?? 0) + 1);
       raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);

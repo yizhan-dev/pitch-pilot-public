@@ -3,10 +3,10 @@ import type { GameMode, LayerKey, ViewMode } from '../game/settings';
 import { pickedMode, OptionIcon } from './modeIconOptions';
 
 // Line icons for the views, drawn on a 24 grid in currentColor, 1.6 strokes, round ends: one family with the HUD's
-// hairlines. Picked by Yi from four candidates each (2026-10-22): a television for the broadcast, an orbit for the free
+// hairlines. Picked from four candidates each: a television for the broadcast, an orbit for the free
 // camera, the pitch from above, two cards for the referee, the chequered flag for the assistants, and for the two player
 // views a pair in one viewfinder: an eye (first person) and the player himself (1.5 person).
-// Aligned by their main mass on the grid's centre (12, 12), measured with getBBox (2026-10-22): the television's screen
+// Aligned by their main mass on the grid's centre (12, 12), measured with getBBox: the television's screen
 // and the pitch are the same rounded rectangle, both centred; the others are shifted by what the measurement showed.
 
 const F = { fill: 'currentColor', stroke: 'none' } as const;
@@ -28,7 +28,7 @@ const PATHS: Record<ViewMode, ReactNode> = {
     <path d="M6.84 8.96 A9 4.2 0 1 0 15.08 8.45" />
     <path d="M17.5 7.04 L15.08 8.45 L16.89 10.59" />
   </g>,
-  // the pitch from straight above, like a tactics board; its outline is the television's screen (Yi), so the two
+  // the pitch from straight above, like a tactics board; its outline is the television's screen, so the two
   // neighbours line up
   tactical: <>
     {SCREEN}
@@ -55,8 +55,8 @@ const PATHS: Record<ViewMode, ReactNode> = {
     <circle cx="12" cy="10" r="2.6" />
     <path d="M6.8 18 C6.8 15.4 9.1 14.2 12 14.2 C14.9 14.2 17.2 15.4 17.2 18" />
   </>,
-  // 近景 and 远景 (外景, 2026-10-22): placeholders drawn by the 3D session so the type check passes; the HUD session to
-  // offer candidates for Yi. 近景: the bowl close, its wall; 远景: the bowl small on the ground, a drone's orbit above
+  // 近景 and 远景 (外景): placeholders so the type check passes, until candidates are drawn in the HUD's
+  // style. 近景: the bowl close, its wall; 远景: the bowl small on the ground, a drone's orbit above
   aerialNear: <>
     <ellipse cx="12" cy="11.5" rx="8.5" ry="4.4" />
     <ellipse cx="12" cy="11.5" rx="4.4" ry="2" />
@@ -77,8 +77,8 @@ const PATHS: Record<ViewMode, ReactNode> = {
   </>,
 };
 
-/** the flag on a pole shorter than the full height and a small number at its foot (Yi: number a little smaller, pole a
- *  little shorter than the first draft) */
+/** the flag on a pole shorter than the full height and a small number at its foot (the number a little smaller and the
+ *  pole a little shorter than the first draft's) */
 function flag(n: string) {
   return <g transform="translate(-0.8 0)">
     <path d="M5 19.5 V4" />
@@ -97,7 +97,7 @@ export function ViewIcon({ view, size = 24, className }: { view: ViewMode; size?
 }
 
 /** a mode's icon (观赛, 讲解, 战术), on the 模式 button and in its menu: for now the candidate PICK names in
- *  ./modeIconOptions.tsx, until Yi picks (2026-10-22) */
+ *  ./modeIconOptions.tsx, until one is picked */
 export function ModeIcon({ mode, size = 24 }: { mode: GameMode; size?: number }) {
   return <OptionIcon node={pickedMode(mode).node} size={size} />;
 }
@@ -112,8 +112,8 @@ export function MapIcon({ size = 24 }: { size?: number }) {
   );
 }
 
-/** the display switches' icons on the 战术 mode's rail (TacticsRail.tsx): first drafts, one each, in the views' family
- *  (2026-10-22); candidates for Yi to come */
+/** the display switches' icons on the 战术 mode's rail (TacticsRail.tsx): first drafts, one each, in the views' family;
+ *  candidates to come */
 const LAYER_PATHS: Partial<Record<LayerKey, ReactNode>> = {
   // speed: a gauge and its needle
   speed: <><path d="M4.2 17 A8.6 8.6 0 1 1 19.8 17" /><path d="M12 14.2 L16.2 9" /><circle cx="12" cy="14.6" r="1.5" {...F} /></>,
@@ -168,10 +168,10 @@ export function StyleIcon({ size = 24 }: { size?: number }) {
   );
 }
 
-/** the left column's buttons in the HUD preview's draft (2026-10-23): 观赛's display options, the 战术 mode's base map and
+/** the left column's buttons in the HUD preview's draft: 观赛's display options, the 战术 mode's base map and
  *  annotations, 画板's tools; first drafts, one each */
 const RAIL_PATHS: Record<string, ReactNode> = {
-  // 观赛: a battery, partly full (the stamina bars, a draft option: the 3D side removed them on 2026-10-22)
+  // 观赛: a battery, partly full (the stamina bars, a draft option: the 3D side does not draw them)
   stamina: <><rect x="2.8" y="7.5" width="16.4" height="9" rx="2" /><path d="M21.2 10.6 V13.4" /><rect x="5" y="9.8" width="7.6" height="4.4" rx=".6" {...F} /></>,
   // 观赛: a name tag over a player
   names: <><rect x="4" y="3.5" width="16" height="6.5" rx="1.6" /><path d="M7 6.75 H14" /><circle cx="12" cy="15" r="2.2" /><path d="M7.6 21 C7.6 18.6 9.6 17.6 12 17.6 C14.4 17.6 16.4 18.6 16.4 21" /></>,

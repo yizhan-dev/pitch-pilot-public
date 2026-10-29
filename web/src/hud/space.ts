@@ -1,11 +1,11 @@
 import { clipFile, clipAddr, inMatch, MATCH } from '../data/paths';
-// The 战术 mode's space family, precalculated at export with Yi's notebook model (Yi, 2026-10-24; docs/plans/space-
+// The 战术 mode's space family, precalculated at export with the notebook's model (docs/plans/space-
 // metrics.md in the main tree): Fernández & Bornn pitch control, the space value V learned from where the defenders stand
 // for a ball position ("defense as a sensor", trained on this match), Q = PC x V, each player's Q and its change over the
 // last second, and the space-generation events (private/hawkeye/space_core.py, space_export.py, from the 25 Hz Hawk-Eye
 // tracking). Each clip has <id>.space.json (the header, the card's windows, the events) and <id>.space.bin (per 10 Hz
 // frame: the maps and the per-player numbers) beside its package. Package metres, the clip's attackers attacking +x.
-// Shown: pitch control and Q. Retired by Yi (2026-10-24): V as a map of its own (it stays inside Q) and SOG / SOL / SGG;
+// Shown: pitch control and Q. Retired: V as a map of its own (it stays inside Q) and SOG / SOL / SGG;
 // the export still carries their numbers (windows, sgg, dq), which nothing reads; the code that drew them is in
 // <private-workspace>
 import { useEffect, useState } from 'react';
@@ -91,9 +91,9 @@ export function useSpace(pkg: ClipPkg, enabled = true): Space | null {
 
 // ---- the base maps
 export type SpaceMapKey = 'pc' | 'v' | 'q';
-/** Q is "controlled Q" (Yi, 2026-10-25: "do what you recommend"): max(0, 2 PC - 1) x V, the valuable ground the side on
+/** Q is "controlled Q": max(0, 2 PC - 1) x V, the valuable ground the side on
  *  the ball clearly controls, 0 at 50/50. The notebook's Q (PC x V) is about half of V on the 84% of cells within 40-60%
- *  control (Q and V correlate 0.95 over the cells), so it mostly repeated V, which Yi had removed as a map */
+ *  control (Q and V correlate 0.95 over the cells), so it mostly repeated V, which is retired as a map */
 
 /** for each pitch-control cell, its bilinear weights on the space-value nodes (both grids are fixed by the export) */
 let vWeights: { grid: string; i: Int32Array; w: Float32Array } | null = null;
@@ -148,21 +148,21 @@ export function spaceSide(sp: Space, t: number): 1 | 2 {
   return sp.held[k] === 2 ? 2 : 1;
 }
 
-// ---- pitch control as a contour map (Yi, 2026-10-24: "can we do it in contour map like display?"; the notebook draws pitch
-// control with contourf, cell 46), drawn on the GPU by BaseMap3D.tsx since 2026-10-25 (smooth at any zoom)
-/** bands on each side of 50/50 (Yi, 2026-10-25: "more layers", then "can we choose 24 layers too": 24; 6 before) */
+// ---- pitch control as a contour map (as the notebook draws pitch
+// control with contourf, cell 46), drawn on the GPU by BaseMap3D.tsx (smooth at any zoom)
+/** bands on each side of 50/50 (24; 6 read too coarse) */
 export const PC_BANDS = 24;
 
 /** where Q reaches full colour on the board: about its 99th percentile over the 20 demo clips' cells (measured
- *  2026-10-24 every 0.5 s: controlled Q p95 0.059, p99 0.137, max 0.50; the notebook's Q was p99 0.30). Fixed, so a map's
+ *  every 0.5 s: controlled Q p95 0.059, p99 0.137, max 0.50; the notebook's Q was p99 0.30). Fixed, so a map's
  *  strength means the same thing from frame to frame and clip to clip */
 export const Q_FULL = 0.14;
 
-// ---- the xT map (Yi, 2026-10-27), drawn by BaseMap3D: the value's strength t runs on a log scale from XT_FLOOR (clear below
+// ---- the xT map, drawn by BaseMap3D: the value's strength t runs on a log scale from XT_FLOOR (clear below
 // it: about the halfway line's cells, 0.01-0.015, so the own half stays the board) to the highest cell (0.373). Two colourways
-// for Yi's eye (temporary, ?xtcolour=heat): gold, the maps' gold with the alpha on t and the top brightened to a pale yellow;
+// to compare by eye (temporary, ?xtcolour=heat): gold, the maps' gold with the alpha on t and the top brightened to a pale yellow;
 // heat, a magma-like ramp from a dark violet through red and orange to a pale yellow
-/** the maps' gold (Q, Yi 2026-10-26: A; the xT map) and the pale yellow its top brightens to; the gold's alpha at the top */
+/** the maps' gold (Q's, candidate A; the xT map) and the pale yellow its top brightens to; the gold's alpha at the top */
 export const MAP_GOLD: [number, number, number] = [255, 209, 102], XT_PALE: [number, number, number] = [255, 242, 196];
 export const XT_ALPHA = 0.75;
 export const XT_FLOOR = 0.015;
@@ -179,7 +179,7 @@ export function xtLegendBar(): string {
   return `linear-gradient(90deg, ${css(MAP_GOLD, 0.06)}, ${css(MAP_GOLD, XT_ALPHA * 0.7)} 70%, ${css(XT_PALE, XT_ALPHA)})`;
 }
 
-// ---- the pitch-control look on the dark board (Yi, 2026-10-24: A of four candidates, the kits' colours as before;
+// ---- the pitch-control look on the dark board (candidate A of four, the kits' colours as before;
 // <private-workspace>)
 /** the kits' lighter tones */
 const KIT_LIGHT: Record<Team, [number, number, number]> = { home: [106, 184, 255], away: [255, 149, 96] };

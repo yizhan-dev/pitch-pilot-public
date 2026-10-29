@@ -1,4 +1,5 @@
 import { useEffect, useMemo } from 'react';
+import { hook, hooked } from '../../dev';
 import * as THREE from 'three';
 import { useFrame, useThree } from '@react-three/fiber';
 import type { Loaded } from '../../data';
@@ -16,7 +17,7 @@ import { TELE } from '../telestration/style';
 // view the viewer had, as a free pose, holds there while the wall comes in, flies to the line (varCamera) and holds the
 // close-up; going back it returns to that view (the camera director blends to a named view; a free pose is flown back).
 
-type CamW = { __camSet?: (...a: number[]) => void; __camScripted?: boolean };
+type CamSet = (...a: number[]) => void;
 /** the close-up a little lower than var.ts sets it, so the attacker and his verdict stand clear of the bottom widgets
  *  (as Explain's VarCam, ExplainLayer.tsx) */
 const LIFT = 1.0;
@@ -51,14 +52,13 @@ export function VarReplay({ data, clock, surface }: { data: Loaded; clock: Clock
   // the camera director's idle return to the broadcast view stays off while the check owns the camera
   useEffect(() => {
     if (v.phase === 'off') return;
-    const W = window as unknown as CamW;
-    st.scripted = W.__camScripted; W.__camScripted = true;
-    return () => { W.__camScripted = st.scripted; };
+    st.scripted = hooked<boolean>('camScripted'); hook('camScripted', true);
+    return () => { hook('camScripted', st.scripted); };
   }, [v.phase === 'off', st]);   // eslint-disable-line react-hooks/exhaustive-deps
 
   // for the headless checks: where the check stands
   useEffect(() => {
-    (window as unknown as { __varState?: () => unknown }).__varState = () => ({ phase: st.phase, wide: st.wide, last: st.last, facts: { on: VAR_FACTS.on, age: VAR_FACTS.age, exit: VAR_FACTS.exit, att: VAR_FACTS.att, close: VAR_FACTS.close } });
+    hook('varState', () => ({ phase: st.phase, wide: st.wide, last: st.last, facts: { on: VAR_FACTS.on, age: VAR_FACTS.age, exit: VAR_FACTS.exit, att: VAR_FACTS.att, close: VAR_FACTS.close } }));
   }, [st]);
   useFrame((_, dt) => {
     // on the way: the clip runs at double speed to the kick (play is paused, so the game's own clock stands still), then
@@ -68,7 +68,7 @@ export function VarReplay({ data, clock, surface }: { data: Loaded; clock: Clock
       if (Math.abs(left) <= step) { clock.t = v.t; varReplay.set({ ...v, phase: 'on' }); } else clock.t += Math.sign(left) * step;
       return;
     }
-    const W = window as unknown as CamW, set = W.__camSet;
+    const set = hooked<CamSet>('camSet');
     if (v.phase !== st.phase) {
       // starting: the view the viewer has, taken over as a free pose; leaving: from wherever the camera is now
       if (v.phase === 'on') { st.wide = poseOf(camera); st.last = st.wide; set?.(...st.wide); }
@@ -94,7 +94,7 @@ export function VarReplay({ data, clock, surface }: { data: Loaded; clock: Clock
  *  (varCamera), held there */
 function VarCam({ st }: { st: { wide: Pose | null; last: Pose | null } }) {
   useFrame(() => {
-    const set = (window as unknown as CamW).__camSet, F = VAR_FACTS, V = TELE.offside.var;
+    const set = hooked<CamSet>('camSet'), F = VAR_FACTS, V = TELE.offside.var;
     // (only while the check is on: a clip change ends it outright, and a frame of this before it unmounts would take the
     // camera back to the close-up, over the change's own view)
     if (!set || !st.wide || !F.on || F.exit !== null || varReplay.get().phase !== 'on') return;

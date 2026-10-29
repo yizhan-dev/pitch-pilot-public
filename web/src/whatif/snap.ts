@@ -1,7 +1,6 @@
-// Where a pause stops in tactics mode (Yi, 2026-10-24): not at once, but when the ball next reaches a player, the moment
-// the what-if starts from ("we wait until B receives the ball ... and stop it right there"), whatever he really did
-// next. A reception is a completed pass's arrival at its receiver, read off the tracking: the first moment after the
-// kick that the ball is within REACH of him on the ground and below head height; failing that, his next event.
+// Where a pause stops in tactics mode: not at once, but when the ball next reaches a player, the moment the what-if
+// starts from (the play waits until B receives the ball and stops right there), whatever he really did next. A
+// reception is a completed pass's arrival at its receiver, read off the tracking: the first moment after the kick that the ball is within REACH of him on the ground and below head height; failing that, his next event.
 import type { ClipEvent } from '../hud/match';
 
 const REACH = 1.3, HEAD = 1.8, LOOK = 4;
@@ -41,7 +40,7 @@ export function receptions(pkg: Pkg): Reception[] {
   return out;
 }
 
-/** an offside pass's real target (Yi, 2026-10-26: the 48:14 offside as a What-if moment): the event names nobody, so
+/** an offside pass's real target (for an offside as a What-if moment, 48:14's): the event names nobody, so
  *  he is read off the tracking, the first teammate the ball comes within REACH of after it leaves the passer (on the
  *  ground, below head height, within LOOK s); and how far he stood beyond the offside line as it left him (the
  *  second-last defender, or the ball if that is further on; metres along the attack, below 0 onside by the tracking).

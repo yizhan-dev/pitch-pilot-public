@@ -1,6 +1,7 @@
 import { clipAddr } from '../../../data/paths';
+import { hook, hooked } from '../../../dev';
 // The telestration sandbox, http://127.0.0.1:5174/tele.html: the game's pitch, players and cameras with only the
-// element under review drawn, so Yi can judge one element at a time on grass and on the board in every view.
+// element under review drawn, so one element at a time can be judged on grass and on the board in every view.
 // Address: ?moment=pel-wil/pass-89-22 &t=<s> (held; default the clip's key moment) &play=1 &tac=1 (board)
 // &view=<broadcast|free|tactical|referee|ar1|ar2|first|third> &sel=<player> &ui=0 (no panel) &stadium=0 &capture=1
 // Hooks for the headless scripts: __setT, __play, __frames (FrameCounter), __tele (the live style), __replay.
@@ -62,13 +63,13 @@ const READOUTS: { key: ReadoutMode; label: string }[] = [{ key: 'off', label: '�
 // &stack=v1|v2|v3|v4 &anchor=m|px &tags=7,20: the head's stack under design (StackTags.tsx: the Show layer's tag and the cue)
 const STACK = (['v1', 'v2', 'v3', 'v4'] as const).find((v) => v === q.get('stack')) as StackLayout | undefined;
 const STACK_TAGS = (q.get('tags') ?? '').split(',').filter(Boolean).map(Number);
-// &drag=8:40,-14: the pen's drag of a player (Yi, 2026-10-25, §22): the running direction's chevrons from his real spot
-// to the drop point, nothing else (Yi: "maybe we do it simple, no ghost, just do the ticks of arrows"); &dragghost=1 his
-// ghost (chat 5's GhostPlayers) at it, &dragring=1 a plain ring in his colour there (both tried, not kept)
+// &drag=8:40,-14: the pen's drag of a player (§22): the running direction's chevrons from his real spot
+// to the drop point, nothing else (kept simple: no ghost, only the arrow's ticks); &dragghost=1 his
+// ghost (GhostPlayers) at it, &dragring=1 a plain ring in his colour there (both tried, not kept)
 // &dragend=fade|hold: the drag's chevrons at the drop point (TELE.heading.toEnd)
 { const v = q.get('dragend'); if (v === 'fade' || v === 'hold') TELE.heading.toEnd = v; }
 const DRAG = ((m) => (m ? { player: +m[1], at: [+m[2], +m[3]] as [number, number] } : null))((q.get('drag') ?? '').match(/^(\d+):(-?[\d.]+),(-?[\d.]+)$/));
-// &dragseq=to|from: the drag as a sequence of his frozen pose from where he is to the drop point (Yi, 2026-10-25), about
+// &dragseq=to|from: the drag as a sequence of his frozen pose from where he is to the drop point, about
 // every DRAG_STEP m, at most DRAG_MAX, fading away from the drop point ('to') or from him ('from'); no chevrons
 const DRAG_SEQ = q.get('dragseq'), DRAG_STEP = 2, DRAG_MAX = 6;
 function dragGhosts(d: Loaded, t: number, g: { player: number; at: [number, number] }) {
@@ -89,7 +90,7 @@ function dragGhosts(d: Loaded, t: number, g: { player: number; at: [number, numb
 // &va=open|eyes: the vision's entrance; &vb=1: its fan of light from his eyes
 { const v = q.get('va'); if (v === 'open' || v === 'eyes') TELE.vision.anim = v; }
 if (q.get('vb') === '1') TELE.vision.beam = true;
-// &bl=<look>: the ball trace's look (round two proposals, BallTrace.tsx)
+// &bl=<look>: the ball trace's look (the proposals in BallTrace.tsx)
 // &gfm=<0..1>: the grass ribbon's far-away widening (TELE.ball.groundFlatMin; 0 off)
 { const v = Number(q.get('gfm')); if (q.get('gfm') && Number.isFinite(v)) TELE.ball.groundFlatMin = v; }
 { const v = q.get('bl'); if (v) TELE.ball.look = v; }
@@ -103,14 +104,14 @@ if (q.get('mp') === '1') TELE.mark.pulse = true;
 const HOVER = q.get('hover') !== null && Number.isInteger(+(q.get('hover') ?? '')) ? +(q.get('hover') ?? -1) : -1;
 // &units=def|att|both: a side's units (back line, midfield, front line); &ul=full|plain|minimal: their look
 { const v = q.get('ul'); if (v && ['full', 'plain', 'minimal'].includes(v)) TELE.unit.look = v as UnitLook; }
-// &nsp=1: the passing network with its round-one welding sparks; &hl=full|plain|calm: the hull's entrance
+// &nsp=1: the passing network with its welding sparks; &hl=full|plain|calm: the hull's entrance
 { const v = q.get('hl'); if (v && ['full', 'plain', 'calm'].includes(v)) TELE.hull.look = v as 'full' | 'plain' | 'calm'; }
 if (q.get('nsp') === '1') TELE.net.sparks = true;
 const UNITS = (q.get('units') ?? '').split(',').filter((x) => x === 'def' || x === 'att' || x === 'both').flatMap((x) => (x === 'both' ? ['def', 'att'] : [x])) as ('def' | 'att')[];
 const ALSO = (q.get('also') ?? '').split(',').filter((x) => x !== '' && Number.isInteger(+x)).map(Number);
 type Pkg = Loaded['pkg'] & { meta: { pass?: { t: number; passer: number; receiver: number }; shot?: { t: number; shooter: number } } };
 
-/** the pitch's change to the board and back, mirroring Stage's TacticalFlip (2026-10-22, its PitchMode is current,
+/** the pitch's change to the board and back, mirroring Stage's TacticalFlip (its PitchMode is current,
  *  origin, reach): 2.4 s, sine in and out, a wave from the ball to the farthest corner */
 /** a pass clip's pass as the orchestrator would draw it (src/orchestrate/draw.ts): the kick at the strike, the
  *  reception at the receiver's next touch, the pass arrow between the ball's two points, the receiver's run between */
@@ -165,7 +166,7 @@ function SurfaceFlip({ data, clock, mode }: { data: Loaded; clock: Clock; mode: 
  *  yaw the short way round); back to the wide view when the sequence starts again (E, or a recording's __replay) */
 /** &pen=1: the Tactics pen's seven tools, one stroke each in the four inks, drawn one after another as by hand over
  *  `PEN_S` s of the animation clock (__teleNow when recording), in a second <Telestration> as the Tactics mode mounts
- *  it; the pointer's points change every frame (chat 3's request) */
+ *  it; the pointer's points change every frame */
 const PEN_S = 4.2;
 const bez = (a: XY, b: XY, c: XY, n: number): XY[] => Array.from({ length: n + 1 }, (_, i) => { const t = i / n, u = 1 - t; return [u * u * a[0] + 2 * u * t * b[0] + t * t * c[0], u * u * a[1] + 2 * u * t * b[1] + t * t * c[1]]; });
 function penStrokes(data: Loaded, t: number): StrokeItem[] {
@@ -188,7 +189,7 @@ function penStrokes(data: Loaded, t: number): StrokeItem[] {
 function PenDemo({ data, clock, mode }: { data: Loaded; clock: Clock; mode: PitchMode }) {
   const [f, setF] = useState(0), all = useMemo(() => penStrokes(data, clock.t), [data, clock]);
   useFrame((state) => {
-    const W = window as unknown as { __teleNow?: number }, now = W.__teleNow ?? state.clock.elapsedTime;
+    const now = hooked<number>('teleNow') ?? state.clock.elapsedTime;
     const nf = Math.min(1, Math.max(0, now / PEN_S));
     if (Math.abs(nf - f) > 0.004 || (nf === 1 && f !== 1)) setF(nf);
   });
@@ -212,7 +213,7 @@ function LinkDemo({ data, clock, mode, spec }: { data: Loaded; clock: Clock; mod
   const all = useMemo(() => spec.replace('c', '').split(',').map(Number), [spec]), closes = spec.endsWith('c');
   const [n, setN] = useState(0);
   useFrame((state) => {
-    const W = window as unknown as { __teleNow?: number }, now = W.__teleNow ?? state.clock.elapsedTime;
+    const now = hooked<number>('teleNow') ?? state.clock.elapsedTime;
     const k = Math.min(all.length + (closes ? 1 : 0), Math.floor(now / LINK_STEP) + 1);
     if (k !== n) setN(k);
   });
@@ -220,7 +221,7 @@ function LinkDemo({ data, clock, mode, spec }: { data: Loaded; clock: Clock; mod
   return <Telestration data={data} clock={clock} items={items} surface={mode} />;
 }
 
-/** &chance=1: the pass chances in the head's stack (Yi, 2026-10-25), the links by width; &stackshow=name,stamina |
+/** &chance=1: the pass chances in the head's stack, the links by width; &stackshow=name,stamina |
  *  stamina | none: which of the Show tag's rows are on; &cpath=hue|lab the colour's path */
 const CHANCE = q.get('chance') === '1';
 const SHOW_ROWS = ((v) => ({ name: v.includes('name'), bar: v.includes('stamina') }))((q.get('stackshow') ?? 'name,stamina').split(','));
@@ -244,7 +245,7 @@ function ChanceTags({ data, clock, looks, hover, mode }: { data: Loaded; clock: 
   </>;
 }
 
-/** &pprob=width|mid|feet|ramp: the pass chances from the player on the ball (chat 3's hud/passProb.ts, their model), as
+/** &pprob=width|mid|feet|ramp: the pass chances from the player on the ball (hud/passProb.ts and its model), as
  *  Tactics will mount them, in a second <Telestration>; recomputed three times a second while the clock moves */
 function PassProbDemo({ data, clock, mode, look }: { data: Loaded; clock: Clock; mode: PitchMode; look: 'width' | 'mid' | 'feet' | 'ramp' }) {
   const [items, setItems] = useState<Item[]>([]);
@@ -262,20 +263,20 @@ function PassProbDemo({ data, clock, mode, look }: { data: Loaded; clock: Clock;
 function VarCam() {
   const st = useMemo(() => ({ wide: null as number[] | null, lastAge: Infinity, set: null as null | ((...a: number[]) => void) }), []);
   useFrame(() => {
-    type CamW = { __camSet?: ((...a: number[]) => void) & { varWrapped?: boolean }; __cam?: () => { pos: number[]; target: number[] } };
-    const W = window as unknown as CamW, F = VAR_FACTS, V = TELE.offside.var;
-    if (!W.__camSet || !W.__cam) return;
+    type CamSet = ((...a: number[]) => void) & { varWrapped?: boolean };
+    const camSet = hooked<CamSet>('camSet'), camGet = hooked<() => { pos: number[]; target: number[] }>('cam'), F = VAR_FACTS, V = TELE.offside.var;
+    if (!camSet || !camGet) return;
     // the wide view is whatever the page (or a recording's setup) last set: catch those calls
-    if (!W.__camSet.varWrapped) {
-      const orig = W.__camSet; st.set = orig;
+    if (!camSet.varWrapped) {
+      const orig = camSet; st.set = orig;
       const wrapped = Object.assign((...a: number[]) => { st.wide = a; orig(...a); }, { varWrapped: true });
-      W.__camSet = wrapped;
+      hook('camSet', wrapped);
     }
     if (!F.on || !st.set) return;
     const restart = F.age < st.lastAge - 0.05;
     st.lastAge = F.age;
     if (!st.wide) {
-      const c = W.__cam(), d = c.pos.map((v, i) => v - c.target[i]), L = Math.hypot(d[0], d[1], d[2]) || 1;
+      const c = camGet(), d = c.pos.map((v, i) => v - c.target[i]), L = Math.hypot(d[0], d[1], d[2]) || 1;
       st.wide = [c.target[0], c.target[1], c.target[2], (Math.atan2(d[0], d[2]) * 180) / Math.PI, (Math.asin(d[1] / L) * 180) / Math.PI, L];
     }
     const w = st.wide, c = varCamera(F, w[3], V.turnDeg);
@@ -296,13 +297,13 @@ function HoldHover({ hover }: { hover: { current: number } }) {
 function Scene({ data, clock, onTick, items, mode }: { data: Loaded; clock: Clock; onTick: (dt: number) => void; items: Item[]; mode: PitchMode }) {
   const game = useGameSettings();
   const hide = useMemo<HideRef>(() => ({ current: -1 }), []), hideOfficial = useMemo<HideRef>(() => ({ current: -1 }), []), hover = useMemo<HideRef>(() => ({ current: -1 }), []);
-  // the shot's freeze (Yi, 2026-10-22): the shooter alone in toon, everyone else in silhouette, no referees, no ball trace
+  // the shot's freeze: the shooter alone in toon, everyone else in silhouette, no referees, no ball trace
   const focus = useMemo<HideRef>(() => ({ current: -1 }), []), shotOn = items.some((it) => it.kind === 'shot');
   const clipPlane = useMemo(() => new THREE.Plane(new THREE.Vector3(0, 0, -1), 1e5), []);
   // the match roster's looks and names by tracking id, as every window now uses (the line-up show's identities)
   const roster = useRoster();
   const looks = useMemo(() => (data.joints ? clipLooks(data.pkg, roster, makeLooks(data.joints.players, data.joints.nAtt, { hair: 1, number: 1, skin: 1 }, keepersOf(data.pkg))) : undefined), [data, roster]);
-  // &nm=0: no names over the pointers (Yi, 2026-10-24: the name over the triangle; the roster's English full name)
+  // &nm=0: no names over the pointers (the name over the triangle: the roster's English full name)
   const names = useMemo(() => {
     if (q.get('nm') === '0' || !roster) return undefined;
     // with the head's stack under design (&stack=), the cue's name in the tag's own form: the number and the shirt name
@@ -403,17 +404,16 @@ export function Sandbox() {
   useEffect(() => {
     loadMoment(MOMENT).then((d) => {
       const pkg = d.pkg as Pkg, key = pkg.meta.pass ?? pkg.meta.shot;
-      // a shot freezes on the boot meeting the ball (Yi, 2026-10-22), not the event feed's tenth of a second
+      // a shot freezes on the boot meeting the ball, not the event feed's tenth of a second
       const shot = pkg.meta.shot, feed = key ? key.t : pkg.meta.decision_frame / pkg.meta.fps;
       // and a pass on its kick (offside is judged there)
       const t = q.get('t') !== null ? +(q.get('t') ?? 0) : shot ? contactTime(d, shot.t) : pkg.meta.pass ? contactTime(d, pkg.meta.pass.t) : feed;
-      (window as unknown as { __contact?: unknown }).__contact = { feed, t };
+      hook('contact', { feed, t });
       // &cam=shot: the low shot camera, once the director is up
       if (q.get('cam') === 'shot' && shot) {
         const c = shotCamera(d, t, shot.shooter);
-        const W = window as unknown as { __camSet?: (...a: number[]) => void; __shotCam?: unknown };
-        W.__shotCam = c;
-        const tryIt = (n: number) => { if (c && W.__camSet) W.__camSet(...c); else if (n > 0) setTimeout(() => tryIt(n - 1), 200); };
+        hook('shotCam', c);
+        const tryIt = (n: number) => { const set = hooked<(...a: number[]) => void>('camSet'); if (c && set) set(...c); else if (n > 0) setTimeout(() => tryIt(n - 1), 200); };
         tryIt(40);
       }
       clock.t = t; st.current.end = (pkg.frames.length - 1) / pkg.meta.fps;
@@ -427,7 +427,7 @@ export function Sandbox() {
     if (st.current.playing) { clock.t += dt; if (clock.t >= st.current.end) clock.t = 0; }
   }, [clock]);
   const replay = useCallback(() => { setHidden(true); setTimeout(() => setHidden(false), 450); }, []);
-  /** Yi's tuning, out of the page: downloaded as tele-style.json, copied to the clipboard, kept in localStorage */
+  /** the tuning, out of the page: downloaded as tele-style.json, copied to the clipboard, kept in localStorage */
   const [saved, setSaved] = useState('');
   const save = useCallback(() => {
     const json = JSON.stringify({ savedAt: new Date().toISOString(), ring: TELE.ring, team: TELE.team, pointer: TELE.pointer, ball: TELE.ball, readout: TELE.readout, unit: TELE.unit, spark: TELE.spark, glow: TELE.glow, minPx: TELE.minPx, viewGain: TELE.viewGain, smoothS: TELE.smoothS, color: TELE.color }, null, 2);
@@ -437,12 +437,11 @@ export function Sandbox() {
     setSaved(new Date().toLocaleTimeString());
   }, []);
   useEffect(() => {
-    const W = window as unknown as Record<string, unknown>;
-    W.__setT = (x: number) => { clock.t = x; play(false); };
-    W.__play = (p: boolean) => play(p);
-    W.__tele = TELE; W.__replay = replay;
-    W.__select = (p: number) => setSettings({ selected: p >= 0 ? p : null });
-    if (q.get('capture') === '1') W.__capture = true;
+    hook('setT', (x: number) => { clock.t = x; play(false); });
+    hook('play', (p: boolean) => play(p));
+    hook('tele', TELE); hook('replay', replay);
+    hook('select', (p: number) => setSettings({ selected: p >= 0 ? p : null }));
+    if (q.get('capture') === '1') hook('capture', true);
     const key = (e: KeyboardEvent) => {
       if (e.key === ' ') { play(!st.current.playing); e.preventDefault(); }
       const v = VIEWS.find((x) => x.hotkey === e.key); if (v) setSettings({ view: v.key });
@@ -468,7 +467,7 @@ export function Sandbox() {
     }).filter((x): x is Item => x !== null),
     // &vis=<player>[,<player>...]|sel: their vision, everything none of them sees darkened
     ...(q.get('vis') ? [{ id: 'vis', kind: 'vision', player: q.get('vis') === 'sel' ? (game.selected ?? 0) : (q.get('vis') ?? '').split(',').map(Number) } as Item] : []),
-    // &spot=<player>[,<player>...]: the highlight, the white column of light on each (Yi, 2026-10-23: for the narration
+    // &spot=<player>[,<player>...]: the highlight, the white column of light on each (for the narration
     // to point at a player, on the ball or off it; it follows him)
     ...(q.get('spot') ? (q.get('spot') ?? '').split(',').filter((x) => x !== '').map((p): Item => ({ id: `spot-${p}`, kind: 'spotlight', at: { player: +p } })) : []),
     // &lb=1: the clip's line-breaking pass
@@ -488,7 +487,7 @@ export function Sandbox() {
     ...(q.get('link') ?? '').split(';').filter(Boolean).map((l, i): Item => ({ id: `link-${i}`, kind: 'link', players: l.replace('c', '').split(',').map(Number), closed: l.endsWith('c') })),
     ...(q.get('pocket') ? [{ id: 'pocket', kind: 'zone', lines: (q.get('pocket') ?? '').split('|').map((g) => g.split(',').map(Number)) as [number[], number[]] } as Item] : []),
     // &pa=barbed|chevrons|line|landing: the pass arrow's look (TELE.passArrow) on the clip's pass, beside the receiver's
-    // run to where he takes it in the running direction's look (the Tactics pen's pass and run, Yi 2026-10-25)
+    // run to where he takes it in the running direction's look (the Tactics pen's pass and run)
     ...(q.get('pa') && data ? penPassRun(data) : []),
     // &off=1: the offside wall (the defending side's line; the clip's receiver's margin); &offall=1 as the Tactics
     // one-click line: every attacker in an offside position ringed, no focus

@@ -45,7 +45,7 @@ commentary is spoken by a synthetic voice and shown as subtitles.
 ## Why, not only what (intentions are guesses)
 - Explain why a player may have done something, but as a guess: "might", "maybe the idea is", "looks
   like". Never "he wanted to", "deliberately", "he knew" (unless the notes support it, and then still hedged).
-- Guess sparingly (Yi: too many "perhaps"): at most one guessed intention in a clip, and with a better option or a
+- Guess sparingly (a run of "perhaps" reads as hedging): at most one guessed intention in a clip, and with a better option or a
   what-if, two guesses at the very most. Never the word "perhaps". Everything else is what happened: say it plainly,
   as a fact, and let the picture make the point ("Reid goes wide, and Lowe comes inside into the space he left").
 - One intention at a time, and only with evidence in the sheet. The intentions you may use, and their evidence:

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef } from 'react';
+import { hook } from '../dev';
 import * as THREE from 'three';
 import { useFrame, useThree, type ThreeEvent } from '@react-three/fiber';
 import type { Clock } from '../clock';
@@ -17,25 +18,25 @@ import {
   strokeId, useStore, type Stroke,
 } from './draft';
 
-// The Tactics pen (Yi with chat 1, 2026-10-25, telestration-notes §22): the pointer's gestures and the marks they make.
+// The Tactics pen (telestration-notes §22): the pointer's gestures and the marks they make.
 // While the pen is on (`drawMode` in the Tactics mode) an unseen plane over the pitch takes the pointer (the camera
 // director leaves it alone, as it did for 画板) and each tool turns a gesture into a stroke (draft.ts); every stroke is
-// drawn as chat 1's items (the Explain tab's accepted elements and their animations):
+// drawn as the telestration items (the Explain tab's accepted elements and their animations):
 // - highlight, vision, speed trail: click players (`spotlight`, one `vision` for all the clicked players, `trail`; the
-//   passing network is not a pen tool, Yi 2026-10-26);
+//   passing network is not a pen tool);
 // - pass: drag from a player to a spot, or to a team-mate (`pass`; along the ground under LOFT_FROM_M, lofted beyond it,
-//   chat 1's arc height from the length: Yi, 2026-10-26, "based on the distance of the pass ... decide if it is lofted");
-// - run: drag a player to where he could run (`heading` with `to`: the chevrons, no ghost; Yi);
+//   the telestration arc's height from the length: the pass's distance decides whether it is lofted);
+// - run: drag a player to where he could run (`heading` with `to`: the chevrons, no ghost);
 // - link: click players in order; the first again closes it (`link`: two opponents the marking pair, team-mates a line,
 //   closed an area with its m²); a click on the grass ends a line;
-// - zone: click a polygon's corners, the first again closes it (`zone` poly; Yi, 2026-10-26: no box or circle); while it is
+// - zone: click a polygon's corners, the first again closes it (`zone` poly; no box or circle); while it is
 //   open its edges so far, the next one following the pointer and the first corner's reach are drawn (ZoneDraft), the
 //   zone itself only once closed;
 // - distance: drag between two points (`stroke` 'measure').
-// Strokes are pinned to the moment they were drawn (`at`). Each drawing is a freeze frame (draft.ts, Yi 2026-10-26):
-// paused on a frame its drawing is opened here to draw on; it leaves (chat 1's exits) when play goes on, the clock moves
+// Strokes are pinned to the moment they were drawn (`at`). Each drawing is a freeze frame (draft.ts):
+// paused on a frame its drawing is opened here to draw on; it leaves (the telestration items' exits) when play goes on, the clock moves
 // away from its moment or its frame is deleted; each clip keeps its own. A drawn mark under the pointer is outlined faintly; a click on
-// it selects it (outlined brightly; the Tactics column shows a delete button by it) instead of drawing (Yi, 2026-10-26).
+// it selects it (outlined brightly; the Tactics column shows a delete button by it) instead of drawing.
 // Mounted by PitchOverlay3D, inside the Stage's canvas.
 
 const L = 105, W = 68;
@@ -47,7 +48,7 @@ const PICK_M = 2;
 const CLOSE_M = 2;
 /** a drag shorter than this is a slip, metres */
 const MIN_DRAG_M = 0.8;
-/** a pass this long or longer is drawn lofted (`loft: true`: chat 1's arc, 18% of the length within 1.5 to 9 m), metres */
+/** a pass this long or longer is drawn lofted (`loft: true`: the telestration arc, 18% of the length within 1.5 to 9 m), metres */
 const LOFT_FROM_M = 25;
 /** a polygon's corners at most */
 const POLY_MAX = 8;
@@ -60,8 +61,8 @@ const OUTLINE_W_M = 0.16, HOVER_ALPHA = 0.4, SELECTED_ALPHA = 0.9;
 const DRAFT_W_M = 0.26, NEXT_W_M = 0.2, NEXT_DASH_M: XY = [1.0, 0.6], DOT_R_M = 0.38, REACH_HZ = 0.8;
 
 /** how high the pen's own marks (outlines, the open polygon) lie, metres: on the grass, where the telestration draws
- *  (ground.ts, y 0), the polygon offset keeping them on top. Higher reads as further from the camera (Yi, 2026-10-27:
- *  at 4.5 cm the hover ring sat off the spotlight column's centre, about 10 cm behind it from the broadcast camera) */
+ *  (ground.ts, y 0), the polygon offset keeping them on top. Higher reads as further from the camera (at
+ *  4.5 cm the hover ring sat off the spotlight column's centre, about 10 cm behind it from the broadcast camera) */
 const MARK_Y = 0.002;
 
 type XY = [number, number];
@@ -141,8 +142,8 @@ const geometryOf = (v: number[], g = new THREE.BufferGeometry()) => {
 const ribbon = (poly: XY[], width: number) => geometryOf(band(poly, width, true));
 const draftMaterial = (opacity: number) => new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity, depthWrite: false, toneMapped: false, polygonOffset: true, polygonOffsetFactor: -6, polygonOffsetUnits: -6 });
 
-/** the polygon still being clicked on (Yi, 2026-10-26: "we need to show each edge being drawn, otherwise we won't know
- *  when and where to close it"): its edges so far, the next one dashed from the last corner to the pointer, a dot at
+/** the polygon still being clicked on, each edge shown as it is drawn so the viewer knows when and where to close it:
+ *  its edges so far, the next one dashed from the last corner to the pointer, a dot at
  *  each corner and, from the third corner, a ring round the first as far as a click there closes it (CLOSE_M), pulsing;
  *  with the pointer inside it the ring fills, the next edge runs to the first corner and the zone it makes shows faintly */
 function ZoneDraft({ pts, pointer }: { pts: XY[]; pointer: { current: XY | null } }) {
@@ -187,7 +188,7 @@ function ZoneDraft({ pts, pointer }: { pts: XY[]; pointer: { current: XY | null 
   );
 }
 
-/** one stroke as chat 1's items: `key` its marks' id, `at` the moment it shows the players at, `alpha` for the distance */
+/** one stroke as the telestration items: `key` its marks' id, `at` the moment it shows the players at, `alpha` for the distance */
 function strokeItems(s: Stroke, key: string, at: number, alpha: number): Item[] {
   const ps = s.players ?? [], end = s.pts[s.pts.length - 1];
   switch (s.tool) {
@@ -229,7 +230,7 @@ export function Pen3D({ data, clock, surface }: { data: Loaded; clock: Clock; su
   }, [t, playing, mode, saved, exiting, clock]);
 
   // ---- the pointer (and, for the headless checks, the clip's clock)
-  useEffect(() => { (window as unknown as { __clipT?: () => number }).__clipT = () => clock.t; }, [clock]);
+  useEffect(() => { hook('clipT', () => clock.t); }, [clock]);
   const planeRef = useRef<THREE.Mesh>(null);
   useEffect(() => {
     const plane = planeRef.current;
@@ -256,8 +257,8 @@ export function Pen3D({ data, clock, surface }: { data: Loaded; clock: Clock; su
     return best;
   };
   // a player's place for the marks' outlines, hit areas and starts: where the telestration draws on him (his hips on the
-  // ground, smoothed over TELE.smoothS; anchors.ts), so the hover ring sits centred on the spotlight's column (Yi,
-  // 2026-10-27: it was off centre: the 10 Hz tracked position is not the hips the column stands on)
+  // ground, smoothed over TELE.smoothS; anchors.ts), so the hover ring sits centred on the spotlight's column (on
+  // the 10 Hz tracked position it sat off centre: that is not the hips the column stands on)
   const anchors = useMemo(() => makeAnchors(data), [data]);
   const posAt = (p: number, at: number): XY | null => { const out: XY = [0, 0]; return anchors.player(p, at, TELE.smoothS, out) ? out : null; };
   const posOf = (p: number): XY => posAt(p, clock.t) ?? (() => { const q = momentAt(pkg, clock.t).pos[p]; return [q[0], q[1]] as XY; })();

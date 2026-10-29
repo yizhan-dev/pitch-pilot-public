@@ -1,4 +1,4 @@
-// Marking links (Yi, 2026-10-22: a must, top priority; who is tracking whom). Two rules, to be chosen by eye:
+// Marking links (who is tracking whom). Two rules, to be chosen by eye:
 //  * engine: the response engine's own (src/response/engine.ts `coupling`, private/response/coupling.py): a defender and
 //    an attacker who are each other's nearest opponent, within 12 m. In the fitted follow gains such a pair copies 0.23
 //    to 0.30 of the other's departure at 2 s and any other pair about 0.1, so these are the defenders that move when a

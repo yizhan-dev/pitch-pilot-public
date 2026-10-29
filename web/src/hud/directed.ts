@@ -5,8 +5,8 @@ import { byMatchTime, type ClipIndex, type ClipPkg, type ClipRow } from './match
 import { MOMENTS } from '../whatif/moments';
 
 // Which clips have a baked Explain script (explain/director.ts loads matches/<match>/director/<clip>.json and plays
-// it): the Explain mode is open only on those (Yi, 2026-10-26: Watch is every clip's way in; Explain lights up where we
-// have commentary). One probe per clip, shared by the mode menu and the Explain replay plate's list.
+// it): the Explain mode is open only on those (Watch is every clip's way in; Explain lights up where there is
+// commentary). One probe per clip, shared by the mode menu and the Explain replay plate's list.
 
 const cache = new Map<string, Promise<boolean>>(), listed = new Map<string, Promise<Set<string> | null>>();
 const isJson = (r: Response) => r.ok && (r.headers.get('content-type') ?? '').includes('json');
@@ -48,14 +48,12 @@ export const momentOf = (pkg: ClipPkg) => clipAddr(pkg.meta.id, pkg.teams?.match
 /** the clip on screen has a director script; null while it is being checked. Kept by the HUD */
 export const explainable = store<boolean | null>(null);
 
-/** the What-if clips Yi has approved (2026-10-26: "there is only one clip I approved for what if, we will examine other
- *  ones before uploading them"): 26:40, the chip over the back line. Add a clip here once he approves it. Then (Yi, the
- *  same day, to the What-if chat: "let's make the 48:14 Offside another What if moment", "and 74:34"): 48:14's offside
- *  and 74:33's blocked shot. 48:14 dropped again 2026-10-27 night (Yi, to the What-if chat: the real man was offside,
- *  so it had one option; "let's just remove this"; this line changed by the What-if chat at his word) */
-export const WHATIF_APPROVED = new Set(['pass-26-40', 'shot-74-33', 'shot-17-30', 'shot-90-04']);   // + 17:28's lay-off and 90:10's cross (Yi, 2026-10-27 night, to the What-if chat)
-/** the clips the What-if mode is open on, and the replay plate tags: a moment in whatif/moments.ts (the What-if chat's
- *  list) that Yi has approved (Yi, 2026-10-26: as Explain) */
+/** the What-if clips approved for the release, each examined before it goes in: 26:40, the chip over the back line, and
+ *  74:33's blocked shot. Add a clip here once it is approved. 48:14's offside is left out: the real man was offside,
+ *  so it had one option */
+export const WHATIF_APPROVED = new Set(['pass-26-40', 'shot-74-33', 'shot-17-30', 'shot-90-04']);   // + 17:28's lay-off and 90:10's cross
+/** the clips the What-if mode is open on, and the replay plate tags: a moment in whatif/moments.ts (the What-if mode's
+ *  list) that is approved (as Explain is open only where a script exists) */
 export const WHATIF_CLIPS = new Set(MOMENTS.map((m) => m.clip).filter((c) => WHATIF_APPROVED.has(c)));
 /** the clip on screen has a What-if moment. Kept by the HUD */
 export const whatifable = store<boolean>(false);

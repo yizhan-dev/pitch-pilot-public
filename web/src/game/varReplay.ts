@@ -3,11 +3,11 @@ import type { Loaded } from '../data';
 import type { ViewMode } from './settings';
 import { contactTime } from '../three/telestration/contact';
 
-// The VAR check in the Watch mode (Yi, 2026-10-26: on the 48:14 offside clip, from the pass to the clip's end, a pulsing
+// The VAR check in the Watch mode (on the 48:14 offside clip, from the pass to the clip's end, a pulsing
 // VAR button left of Radar). A press runs the clip at double speed to the kick, back from where it was paused or on from
-// a little before (Yi: "we will do a 2x speed rewind, and then show audience the actual offside moment"), stops there,
+// a little before (a 2x rewind, then the actual offside moment for the audience), stops there,
 // where offside is judged, and runs the offside close-up
-// Animation designed for Explain (the wall on the view the viewer had, then the flight to the line, the marks and the
+// animation designed for Explain (the wall on the view the viewer had, then the flight to the line, the marks and the
 // verdict: telestration/var.ts), holding at its end. Play, or the button again, takes the camera back to the view the
 // viewer had; play also plays on from the kick. The HUD sets this store; three/layers/VarReplay.tsx draws and flies.
 
@@ -32,7 +32,7 @@ export function startVar(check: { t: number; focus: number | null }, view: ViewM
   play(false);
   varReplay.set({ phase: 'seeking', t: check.t, focus: check.focus, back: { view }, resume: false });
 }
-/** how fast the clip runs to the kick, back or on (Yi: double speed) */
+/** how fast the clip runs to the kick, back or on (double speed) */
 export const VAR_SEEK_RATE = 2;
 /** the check is under way (running to the kick, or on it) */
 export const varActive = (s: VarState = varReplay.get()) => s.phase === 'seeking' || s.phase === 'on';
@@ -47,7 +47,7 @@ export function endVar(play?: (p: boolean) => void) {
 
 /** the pass's kick near the feed's time t: the ball's sharpest gain in speed from 0.3 s before to 0.8 s after, then the
  *  exact touch there (telestration/contact.ts). contactTime alone takes the first strong touch, and at 48:14 that was
- *  the passer's last dribble at 7.8 s, 0.45 s before the pass (48:14), with the attacker still onside (Yi, 2026-10-26) */
+ *  the passer's last dribble at 7.8 s, 0.45 s before the pass (48:14), with the attacker still onside */
 function kickOf(data: Pick<Loaded, 'pkg'>, t: number) {
   const B = data.pkg.ball25;
   if (!B) return t;

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef } from 'react';
+import { hook, hooked } from '../../dev';
 import * as THREE from 'three';
 import { useFrame, useThree } from '@react-three/fiber';
 import type { Loaded, Joints } from '../../data';
@@ -16,10 +17,10 @@ import { summaryOpen } from '../../summary/summary';
 import { HEAD, SHARE, axes, broadcastShot, groundOf, tanOf, type FramePoint } from './broadcastFrame';
 import { nightOutside } from '../stadium/night';
 
-// The game's camera (?ui=game, 2026-10-22): one camera, seven views, smooth changes between them. Scene axes: x along
+// The game's camera (?ui=game): one camera, seven views, smooth changes between them. Scene axes: x along
 // the pitch (the attackers towards +x), y up, z across (the package's y). The views:
-//  - broadcast: a TV match's main camera (Yi, 2026-10-27: "more like 云台, we turn left and right and zoom in and
-//    out"): a head fixed in the main stand over the halfway line that only pans, tilts and zooms. The shot it wants
+//  - broadcast: a TV match's main camera, a pan-tilt head rather than a rail: a head fixed in the main stand over the
+//    halfway line that only pans, tilts and zooms. The shot it wants
 //    holds the ball well inside the frame, where it is heading, the room in front of the man on the ball, the goal he
 //    attacks once it is near (with the box's men: a corner shows the taker and the box) and the men round the ball,
 //    centred as near the play as that allows (broadcastFrame.ts). The operator's lag on top: the head turns only once
@@ -27,12 +28,12 @@ import { nightOutside } from '../stadium/night';
 //    and moves with a critically damped spring capped in speed; the zoom changes past 6%, out faster than in; the
 //    ball never goes past 80% of the half-frame (the head turns with it) and nothing the shot must hold leaves it
 //  - free: the spidercam. Drag to orbit, right drag or shift drag to pan, wheel to zoom, double click a player to
-//    follow him. It flies anywhere in the stadium's air (Yi, 2026-10-22: the old box, 6 m beyond the lines and 40 m up,
+//    follow him. It flies anywhere in the stadium's air (the old box, 6 m beyond the lines and 40 m up,
 //    pulled the camera in long before it neared anything): over the pitch up to the roof's opening (70 m), over the
 //    stands 2.5 m clear of the seats and 2 m under the roof (the shell's own underside), short of the third tier's
 //    front; never inside a player (0.75 m capsules up to 2.05 m) or a goal (the frame and net as a box). Where the arm
 //    from the orbit centre would leave that, it shortens (a spring arm)
-//  - third: 1.5-person, 3.6 m behind the selected player at about 2.35 m (Yi, 2026-10-23: a little higher and further
+//  - third: 1.5-person, 3.6 m behind the selected player at about 2.35 m (a little higher and further
 //    back than 2.8 m at 1.95 m), along his smoothed head direction
 //  - first: at the selected player's eyes; position, head direction and pitch smoothed apart (0.12 s, 0.25 s and
 //    0.5 s), no roll, so the horizon stays level; the player is hidden once the camera is in his head
@@ -41,9 +42,9 @@ import { nightOutside } from '../stadium/night';
 //    pitch and 5 m round it fill the middle 85% of the height, clear of the HUD bars; goals left and right; the wheel
 //    zooms in (down to 25 m) and the view then follows the broadcast focus; a drag pans and stops the follow, which
 //    comes back when zoomed out to the whole pitch
-//  - aerialNear, aerialFar (外景, Yi 2026-10-22): the stadium from outside, as from a drone, a slow orbit round its centre
-//    on render time (so it keeps turning while play is paused). 近景 flies low, about 240 m out and 50 m up, the facade
-//    with the roof's edge and the sky; 远景 high, about 420 m out, for the whole stadium and its grounds. A drag turns and tilts it, the
+//  - aerialNear, aerialFar: the stadium from outside, as from a drone, a slow orbit round its centre
+//    on render time (so it keeps turning while play is paused). aerialNear flies low, about 240 m out and 50 m up, the facade
+//    with the roof's edge and the sky; aerialFar high, about 420 m out, for the whole stadium and its grounds. A drag turns and tilts it, the
 //    wheel moves in or out, and the orbit picks up again 4 s after the last touch. The fog is pushed out while there,
 //    the near stand is never cut, and changes to and from them take 1.8 s, a flight out or back in
 // Dragging or zooming in the broadcast view hands over to the free view from where the camera is.
@@ -72,9 +73,8 @@ interface Damp { v: number }
 const damp = (): Damp => ({ v: 0 });
 /** the return to the broadcast view: seconds without the viewer's touch, and seconds of the ball out of the frame */
 const IDLE = { s: 6, outS: 1.5 };
-/** the broadcast camera on a goal (Yi, 2026-10-26: "a bit of camera shaking for broadcast camera angle when there is a
- *  goal ... not for mimicking the ball going in, but actually mimic audience dancing, jumping, celebrating"): the stand
- *  the camera sits in bouncing as the crowd jumps together. A beat of `hz` jumps a second (a crowd jumping in time is
+/** the broadcast camera on a goal: a little shake that mimics not the ball going in but the crowd dancing, jumping and
+ *  celebrating, so the stand the camera sits in bounces as the crowd jumps together. A beat of `hz` jumps a second (a crowd jumping in time is
  *  about 2 to 2.3), each landing a small drop of the camera (`dropM` metres) and its aim (`pitch` degrees), the stand
  *  swaying a little side to side at half the beat (`roll`, `yaw` degrees) and a faint rumble under it all. It starts
  *  `delayS` after the ball crosses the line, swells over `riseS`, holds to `holdS` and settles by `endS`. On clip time,
@@ -107,7 +107,7 @@ function goalCrossings(pkg: Loaded['pkg']): number[] {
     return e.t;
   });
 }
-/** which way the camera looks across the pitch, for the radar (hud/Minimap.tsx; Yi, 2026-10-25: from the other side the
+/** which way the camera looks across the pitch, for the radar (hud/Minimap.tsx; from the other side the
  *  radar must turn round too): sign 1 while it looks towards -z (from the main stand's side, as the radar is drawn), -1
  *  towards +z. Judged from the screen's up and the view's direction on the ground, so the top-down view and the
  *  player's eyes count too, with a margin so a view along the pitch does not flicker; live once a director runs */
@@ -321,7 +321,7 @@ export function CameraDirector({ data, clock, onTick, hide, hideOfficial, clipPl
   };
   const free = (t: number, dt: number, out: Pose) => {
     const fr = st.fr;
-    // a scripted eye (window.__camEye: an Explain script's ball camera, chat 4 2026-10-26): where it is put, none of the
+    // a scripted eye (window.__camEye: an Explain script's ball camera): where it is put, none of the
     // orbit's floors, until the next __camSet or the viewer's own drag, wheel or double click
     if (fr.eye) { out.pos.copy(fr.eye.pos); out.look.copy(fr.eye.look); out.fov = fr.eye.fov; out.near = 0.05; return; }
     if (fr.follow !== null && hips[fr.follow]) {
@@ -400,18 +400,17 @@ export function CameraDirector({ data, clock, onTick, hide, hideOfficial, clipPl
     tc.cx -= dx * m; tc.cz -= dy * m;
   };
 
-  // ---- into the top-down view (Yi, 2026-10-27: "the player cam to top down view is still not optimized, not smooth
-  // enough, and when we switch, it feels that for a while we can not see the pitch in the frame fully"). The plain blend
+  // ---- into the top-down view, smooth, with the whole pitch in frame as early as possible. The plain blend
   // moved the camera in a line and turned it from level to straight down in 0.8 s: the pitch's 8 edge points all in
   // frame only from 0.63 s, the turn peaking at 437 degrees a second (measured, and simulated at 240 Hz from a player
   // cam's pose). Here the camera rises, what it looks at slides from where it was looking to the pitch's centre and it
   // is turned to look there each frame (so it always faces the pitch), and the lens closes to the view's own; every
-  // curve starts and ends at rest, so nothing jolts. One zoom out, then still (Yi, 2026-10-27, of two earlier tunings that opened the lens on the way: "it still feels
-  // like zoom out and in, can we just feel like zoom out once and set there?"). What the eye reads as the zoom, how
+  // curve starts and ends at rest, so nothing jolts. One zoom out, then still (two earlier tunings that opened the
+  // lens on the way read as a zoom out and back in). What the eye reads as the zoom, how
   // large the ground at the frame's middle is drawn (1 / (its distance x tan(lens / 2))), only falls, to the view's
   // own: the camera rises and the lens closes over the first half, the look reaches the centre by three quarters.
   // Simulated at 240 Hz from a player cam's pose: past the end by 0.3 % at most (the earlier tunings 30 % and 128 %,
-  // the zoom back in Yi felt), the pitch all in frame from 0.78 s, the turn's peak about 320 degrees a second
+  // the visible zoom back in), the pitch all in frame from 0.78 s, the turn's peak about 320 degrees a second
   const TO_TOP = { dur: 1.8, rise: 0.5, glance: 0.75, lens: 0.5 };
   const tt = useMemo(() => ({ pos: new THREE.Vector3(), look: new THREE.Vector3(), up: new THREE.Vector3(), m: new THREE.Matrix4(), q: new THREE.Quaternion() }), []);
   const toTop = (from: { pos: THREE.Vector3; fov: number; look: THREE.Vector3 }, out: Pose, b: number) => {
@@ -427,14 +426,14 @@ export function CameraDirector({ data, clock, onTick, hide, hideOfficial, clipPl
   /** seed the free view from wherever the camera is now */
   // headless shots: put the free camera somewhere (orbit centre, yaw, pitch, distance), e.g. over a stand
   useEffect(() => {
-    (window as unknown as { __setFree: (o: { x?: number; z?: number; yaw?: number; pitch?: number; dist?: number }) => void }).__setFree = (o) => {
+    hook('setFree', (o: { x?: number; z?: number; yaw?: number; pitch?: number; dist?: number }) => {
       const fr = st.fr;
       if (o.x !== undefined) fr.target.x = o.x;
       if (o.z !== undefined) fr.target.z = o.z;
       if (o.yaw !== undefined) fr.yaw = o.yaw;
       if (o.pitch !== undefined) fr.pitch = o.pitch;
       if (o.dist !== undefined) fr.dist = o.dist;
-    };
+    });
   }, [st]);
   const seedFree = () => {
     const fr = st.fr, dir = tmp.w.set(0, 0, -1).applyQuaternion(camera.quaternion), o = camera.position;
@@ -462,7 +461,7 @@ export function CameraDirector({ data, clock, onTick, hide, hideOfficial, clipPl
     // inside: an ellipse over the pitch's own outline (dist along it, 0.7 of that across), IN_H up in the roof's
     // opening (the air goes to 70 m there; over the stands the roof comes down to about 30 m), looking at the centre
     // spot through one lens, IN_FOV
-    aerialIn: { dist: 48, pitch: 0, fov: 50, turn: 220, look: 0, dMin: 36, dMax: 56, inside: true },   // (220 s a turn: Yi, "rotate slower")
+    aerialIn: { dist: 48, pitch: 0, fov: 50, turn: 220, look: 0, dMin: 36, dMax: 56, inside: true },   // (220 s a turn: a slow rotation)
   };
   const aerialOrbit = (dx: number, dy: number) => { const a = st.ae; a.yaw -= dx * 0.004; a.pitch = clamp(a.pitch + dy * 0.003, 0.08, 1.15); a.idle = 0; };
   const aerialZoom = (dy: number, k: NonNullable<(typeof AERIAL)[ViewMode]>) => { const a = st.ae; a.dist = clamp(a.dist * Math.exp(dy * 0.0012), k.dMin, k.dMax); a.idle = 0; };
@@ -472,7 +471,7 @@ export function CameraDirector({ data, clock, onTick, hide, hideOfficial, clipPl
     a.yaw += dt * a.spd * (2 * Math.PI / k.turn);
     if (k.inside) {
       out.pos.set(a.dist * Math.sin(a.yaw), IN_H, 0.7 * a.dist * Math.cos(a.yaw)); out.look.set(0, 0, 0); out.near = 1;
-      // one lens all the way round (Yi, 2026-10-27: "at around the touchline, the camera will feel like hit a bump"): the
+      // one lens all the way round (a fitted lens felt like a bump at each touchline): the
       // lens that fitted the four corners sat at its widest for most of the turn (over an end the near corners are under
       // the camera) and dipped to 67 degrees and back in a few seconds as it crossed each touchline, a zoom pulse
       out.fov = IN_FOV;
@@ -501,18 +500,18 @@ export function CameraDirector({ data, clock, onTick, hide, hideOfficial, clipPl
     // in the HUD's 画板 mode the pointer draws on the pitch (hud/PitchOverlay3D.tsx): no orbit, pan, pick or follow; the
     // wheel still zooms
     // while the What-if picks a pass the pitch's clicks are the picker's (three/whatif/TargetPicker.tsx), but drags and
-    // the wheel still move the camera (Yi, 2026-10-25: "we can not freely change our perspective, is that intentional?");
+    // the wheel still move the camera, so the viewer can still change the perspective;
     // the game's own hover cue and click-to-select stay off then
     const down = (e: PointerEvent) => { if (drawMode.get()) return; st.drag = { x: e.clientX, y: e.clientY, moved: 0, pan: e.button === 2 || e.shiftKey, id: e.pointerId }; el.setPointerCapture(e.pointerId); };
     // the hovered player: the cue's (hover) and, in every mode, the HUD's (hud/draft.ts hoveredPlayer: the Tactics pen
-    // draws on the player the triangle points at; chat 3's request 14, 2026-10-25)
+    // draws on the player the triangle points at)
     const setHover = (p: number) => { if (hover) hover.current = p; hoveredPlayer.set(p); };
     const move = (e: PointerEvent) => {
       const d = st.drag;
-      // (no hover cue and no pick while the match summary is open: Yi, 2026-10-27, "at this page, any selected players will
-      // be deselected")
+      // (no hover cue and no pick while the match summary is open: on that page every selected player is
+      // deselected)
       if ((picking() || summaryOpen.get()) && !d) { setHover(-1); el.style.cursor = 'default'; return; }
-      // with the pen on, the hovered player is still picked, so his triangle shows what the pen will draw on (Yi); the
+      // with the pen on, the hovered player is still picked, so his triangle shows what the pen will draw on; the
       // orbit, the pan, the click to select and the follow stay off
       if (drawMode.get()) { const [x, y] = local(e); setHover(pick(x, y) ?? -1); el.style.cursor = 'crosshair'; return; }
       if (!d) {
@@ -566,14 +565,13 @@ export function CameraDirector({ data, clock, onTick, hide, hideOfficial, clipPl
 
   // for the headless checks: drive the free camera without a mouse, read where the camera is
   useEffect(() => {
-    const W = window as unknown as Record<string, unknown>;
     // quat: where it looks (the line-up show ends on this very camera, LineupShow.tsx)
-    W.__cam = () => ({ mode: st.mode, pos: camera.position.toArray(), quat: camera.quaternion.toArray(), fov: cam.fov, target: st.fr.target.toArray(), follow: st.fr.follow, dist: st.fr.dist, blend: st.blend });
-    W.__camDrive = (dx: number, dy: number, pan = false, wheel = 0) => { if (getSettings().view !== 'free') toFree(); orbit(dx, dy, pan); if (wheel) zoom(wheel); };
-    W.__camFollow = (p: number | null) => { if (getSettings().view !== 'free') toFree(); if (st.fr.eye) { st.fr.eye = null; seedFree(); } st.fr.follow = p; };
-    W.__camBodies = () => [...hips, ...ohips].map((h) => h.toArray());
+    hook('cam', () => ({ mode: st.mode, pos: camera.position.toArray(), quat: camera.quaternion.toArray(), fov: cam.fov, target: st.fr.target.toArray(), follow: st.fr.follow, dist: st.fr.dist, blend: st.blend }));
+    hook('camDrive', (dx: number, dy: number, pan = false, wheel = 0) => { if (getSettings().view !== 'free') toFree(); orbit(dx, dy, pan); if (wheel) zoom(wheel); });
+    hook('camFollow', (p: number | null) => { if (getSettings().view !== 'free') toFree(); if (st.fr.eye) { st.fr.eye = null; seedFree(); } st.fr.follow = p; });
+    hook('camBodies', () => [...hips, ...ohips].map((h) => h.toArray()));
     // triangles per top-level part of the scene (instanced meshes count every instance), the biggest first
-    W.__triangles = () => {
+    hook('triangles', () => {
       const out: Record<string, number> = {};
       scene.children.forEach((top, i) => {
         let n = 0;
@@ -587,39 +585,39 @@ export function CameraDirector({ data, clock, onTick, hide, hideOfficial, clipPl
         if (n > 0) out[name] = Math.round(n);
       });
       return Object.entries(out).sort((a, b) => b[1] - a[1]).slice(0, 12);
-    };
-    W.__hover = (p: number) => { if (hover) hover.current = p; hoveredPlayer.set(p); };
+    });
+    hook('hover', (p: number) => { if (hover) hover.current = p; hoveredPlayer.set(p); });
     // set the free view outright (for the headless checks): orbit centre, yaw and pitch in degrees, distance
-    W.__camSet = (x: number, y: number, z: number, yawDeg: number, pitchDeg: number, dist: number) => {
+    hook('camSet', (x: number, y: number, z: number, yawDeg: number, pitchDeg: number, dist: number) => {
       if (getSettings().view !== 'free') toFree();
       st.fr.target.set(x, y, z); st.fr.yaw = THREE.MathUtils.degToRad(yawDeg); st.fr.pitch = THREE.MathUtils.degToRad(pitchDeg); st.fr.dist = dist; st.fr.follow = null; st.fr.eye = null;
-    };
+    });
     // a camera put straight at a point looking at another (scene metres), past the free view's floors: an Explain
-    // script's ball camera, set every frame (chat 4, Yi 2026-10-26: "a ball perspective ... through #13's legs")
-    W.__camEye = (px: number, py: number, pz: number, lx: number, ly: number, lz: number, fov = 50) => {
+    // script's ball camera, set every frame (a ball's-eye view, such as one through #13's legs)
+    hook('camEye', (px: number, py: number, pz: number, lx: number, ly: number, lz: number, fov = 50) => {
       if (getSettings().view !== 'free') toFree();
       const e = st.fr.eye ?? { pos: new THREE.Vector3(), look: new THREE.Vector3(), fov };
       e.pos.set(px, py, pz); e.look.set(lx, ly, lz); e.fov = fov; st.fr.eye = e; st.fr.follow = null;
-    };
-    // for director scripts (chat 4's request, 2026-10-25: cut between cameras far apart, never fly): the next change of
+    });
+    // for director scripts (cut between cameras far apart, never fly): the next change of
     // view cuts, with no blend; the viewer's own changes keep the blend
-    W.__camCut = () => { st.cutNext = true; };
-    // (chat 4, Yi 2026-10-27: Explain taking the camera over and giving it back travels up to 70 m, too far for 0.8 s):
+    hook('camCut', () => { st.cutNext = true; });
+    // (Explain taking the camera over and giving it back travels up to 70 m, too far for 0.8 s):
     // the next change of view blends over s seconds
-    W.__camBlend = (s: number) => { st.blendNext = s; };
-    W.__glInfo = () => ({ triangles: gl.info.render.triangles, calls: gl.info.render.calls, points: gl.info.render.points, geometries: gl.info.memory.geometries, textures: gl.info.memory.textures });
-    W.__tacZoom = (dy: number) => tacZoom(dy);
-    W.__tacPan = (dx: number, dy: number) => tacPan(dx, dy);
+    hook('camBlend', (s: number) => { st.blendNext = s; });
+    hook('glInfo', () => ({ triangles: gl.info.render.triangles, calls: gl.info.render.calls, points: gl.info.render.points, geometries: gl.info.memory.geometries, textures: gl.info.memory.textures }));
+    hook('tacZoom', (dy: number) => tacZoom(dy));
+    hook('tacPan', (dx: number, dy: number) => tacPan(dx, dy));
   });
 
   useFrame((_, raw) => {
     onTick(Math.min(raw, 0.1));
-    // two clocks for the camera (Yi, 2026-10-22: a pause must stop the camera too). What follows the play (the lazy
+    // two clocks for the camera (a pause must stop the camera too). What follows the play (the lazy
     // broadcast follow, the eyes and the 1.5-person view, the free view's follow) runs on the clip's time, so it
     // freezes on pause and slows with slow motion; what the user does (a change of view, the tactical view's zoom and
     // pan) runs on render time, so it still moves while paused. Recording (window.__capture, ?capture=1) holds frames
     // one at a time, so there everything runs on the clip's time.
-    const capture = !!(window as unknown as { __capture?: boolean }).__capture;
+    const capture = !!hooked<boolean>('capture');
     // (a clip changing in place: the clock stands still, so its flight runs on render time even when recording)
     const t = clock.t, dtPlay = clamp(t - st.lastT, 0, 0.1), dtUser = capture && clipSwap.get() === 'off' ? dtPlay : Math.min(raw, 0.1);
     const snap = st.lastT < 0 || Math.abs(t - st.lastT) > 0.5;
@@ -702,8 +700,8 @@ export function CameraDirector({ data, clock, onTick, hide, hideOfficial, clipPl
     hide.current = view === 'first' && s.selected !== null && inHead(st.head.pos) ? s.selected : -1;
     hideOfficial.current = oi !== undefined && inHead(st.head.pos) ? oi : -1;
     // (never from outside the stadium: the drone would see the near stand cut away). Not for the free camera in the
-    // stadium's air either (Yi, 2026-10-23: over the main stand the cut left a bare grey floor under it, "like the scene
-    // had not loaded"): the air is clear of the seats and the roof, so nothing of the stand stands between it and the
+    // stadium's air either (over the main stand the cut left a bare grey floor under it, as if the scene
+    // had not loaded): the air is clear of the seats and the roof, so nothing of the stand stands between it and the
     // pitch; the same while blending out of the free view until the camera leaves the air (the broadcast camera sits in
     // the main stand and keeps the cut)
     const inside = Math.abs(camera.position.x) < 105 && Math.abs(camera.position.z) < 85;
@@ -711,11 +709,11 @@ export function CameraDirector({ data, clock, onTick, hide, hideOfficial, clipPl
     // (the near stand is on the camera's side, so on the other touchline when the stadium is turned round)
     clipPlane.normal.set(0, 0, -orient);
     clipPlane.constant = !ak && inside && !freeAir && orient * camera.position.z > HY - 0.5 ? HY + 0.1 : 1e5;
-    // back to the broadcast view on its own (Yi, 2026-10-24): while the clip plays, once nobody has touched the mouse,
+    // back to the broadcast view on its own: while the clip plays, once nobody has touched the mouse,
     // the wheel or a key for IDLE.s seconds and the ball has been out of the frame for IDLE.outS seconds (not from the
     // broadcast view itself, nor the top-down one, which holds the pitch); never while a director script drives the camera
-    // (window.__camScripted = true, chat 4's request, 2026-10-25)
-    const ballNow = ballAt(data.pkg, t), scripted = (window as unknown as { __camScripted?: boolean }).__camScripted === true;
+    // (window.__camScripted = true)
+    const ballNow = ballAt(data.pkg, t), scripted = hooked<boolean>('camScripted') === true;
     if (view !== 'broadcast' && view !== 'tactical' && dtPlay > 0 && ballNow && !scripted) {
       const v = tmp.v.set(ballNow[0], Math.max(0.11, ballNow[2]), ballNow[1]).project(camera);
       st.outFor = v.z > 1 || Math.abs(v.x) > 1 || Math.abs(v.y) > 1 ? st.outFor + dtPlay : 0;

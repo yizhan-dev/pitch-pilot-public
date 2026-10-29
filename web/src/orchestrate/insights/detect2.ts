@@ -1,9 +1,9 @@
-// The insight library's second batch (Yi agreed 2026-10-23, from the dictionary's brainstorm, docs/research/
+// The insight library's second batch (from the dictionary's brainstorm, docs/research/
 // insight-dictionary.md §五): crosses and cut-backs with the box runners, runs timed on the offside line, the second
 // ball, one-on-ones, the shooter's look at the keeper, no-look passes, an unpressured shot, a lost marker, and three
 // 本场 habits (pressed receptions, one-touch play, the favourite pass pair). The keeper's state at the strike is a
 // helper the outcome beat uses (plan.ts). Same contract as detect.ts: deterministic, thresholds in the open, the
-// measured numbers in `why`, praise or "如果……会更好" with the duty rule (criticism only on whoever was responsible).
+// measured numbers in `why`, praise or "it would be better if ..." with the duty rule (criticism only on whoever was responsible).
 import { fact, runSpan } from '../detect';
 import { offsideX, goalSide, nearestOpp, dist, kmh, unitsAt, lineX, GOAL_X, type XY } from '../geom';
 import { draw, LEAD, type DrawItem } from '../draw';
@@ -67,7 +67,7 @@ export function crossing(c: Ctx): Insight[] {
     const rollZh = (['near', 'spot', 'far'] as const).map((z) => { const ps = roll.filter((r) => r.zone === z); return ps.length ? `${ZONE_ZH[z]} ${ps.map((r) => n(r.p)).join('、')}` : ''; }).filter(Boolean).join('；');
     const praise = kind === 'cut-back' && received ? `${n(a.player)} 沉底倒三角，${n(a.to!)} 在点球点一带，身边 ${recvFree.toFixed(0)} 米没人`
       : zones.size >= 3 ? `${roll.length} 人包抄：${rollZh}，三个点都有人` : zones.size === 2 && received ? `${kindZh}找到了 ${n(a.to!)}，包抄的有${rollZh}` : undefined;
-    // (the alternative pass to a free mate is a what-if: the 战术 mode's, not 讲解's, Yi 2026-10-23; kept as a fact)
+    // (the alternative pass to a free mate is a what-if: the Tactics mode's, not Explain's; kept as a fact)
     const improve = kind !== 'cut-back' && zones.size <= 1 && defIn >= attIn + 2 ? `禁区里 ${attIn} 打 ${defIn}；如果${zones.has('far') ? '前点' : '后点'}再多一个人包抄，这脚${kindZh}就有落点` : undefined;
     const items: DrawItem[] = [draw.pass(`pass-${r1(a.t)}`, [b0[0], b0[1]], [b1[0], b1[1]], a.t, a.tTo, a.peak ?? 0, [a.t - 0.05, a.tTo + 0.8])];
     for (const r of roll.slice(0, 2)) { const s = runSpan(g, r.p, a.t, tA); items.push(draw.run(`run-${r.p}-${r1(a.t)}`, r.p, s?.from ?? a.t - 1.5, tA, [a.t - LEAD, a.tTo + 0.8])); }
@@ -390,7 +390,7 @@ export function passPair(c: Ctx): Insight[] {
 
 // ---- 防线被扯开: a back-line defender steps out (4 m or more in front of the rest of the line), and within 3 s an
 // attacker runs, or the ball goes, into the space behind where he stood. Stepping out to press is often right; the
-// duty (Yi) is the cover's: did the neighbouring defender slide across?
+// duty is the cover's: did the neighbouring defender slide across?
 export function jumpedLine(c: Ctx): Insight[] {
   const out: Insight[] = [], { g } = c, seen = new Set<number>();
   for (let t = c.t0; t <= c.t1 + 1e-6; t += 0.2) {
@@ -432,7 +432,7 @@ export function jumpedLine(c: Ctx): Insight[] {
   return out;
 }
 
-// ---- 举手要球 (Yi, 2026-10-24: "Lowe raised his hand… he is actively asking for the ball"): an attacker off the ball
+// ---- 举手要球 (a raised hand: actively asking for the ball, as Lowe at 15:53): an attacker off the ball
 // with a wrist above his nose for 0.3 to 2 s, no opponent within 5 m; the more space round him, and a ball that then comes to him, the more
 // it matters. The skeleton shows the arm; what it means is the read every viewer makes of a raised arm, so it is said.
 export function handUp(c: Ctx): Insight[] {
@@ -469,8 +469,8 @@ export function handUp(c: Ctx): Insight[] {
   return out;
 }
 
-// ---- 交叉换位 (Yi, 2026-10-24, 15:53: "he receives in the wing area… they did a 交叉换位, we cannot say he is in the
-// half-space"): two attackers swap lanes within 4 s — one from inside to outside, the other from outside to inside,
+// ---- 交叉换位 (a lane swap, as at 15:53: after it the receiver takes the ball in the wing area, so he cannot be said
+// to be in the half-space): two attackers swap lanes within 4 s — one from inside to outside, the other from outside to inside,
 // their distances from the centre line crossing, each changing lane (the outside one ending where the other began),
 // each moving 6 m or more across, within 12 m of each other, outside the central lane
 export function laneSwap(c: Ctx): Insight[] {

@@ -7,7 +7,7 @@
   --ink: #f2f4f7;
   --ink-2: #b9c0cc;
   --ink-3: #7d8696;
-  /* the teams' kit colours, the same in every clip (Yi, 2026-10-23): home (Team A) blue, away (Team B) orange; as
+  /* the teams' kit colours, the same in every clip: home (Team A) blue, away (Team B) orange; as
      TEAM_KIT in src/three/coords.ts */
   --home: #3987e5;
   --away: #d95926;

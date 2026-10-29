@@ -14,10 +14,10 @@ import nl from './flags/nl.svg?url';
 import no from './flags/no.svg?url';
 import pt from './flags/pt.svg?url';
 
-// The line-up show's flags (Yi, 2026-10-23: each player's nationality beside his name). Since the same evening the squads
+// The line-up show's flags (each player's nationality beside his name). The squads
 // read like the Premier League's (mostly British, the rest from Ireland, Norway, the Netherlands, France, Denmark,
 // Portugal, Brazil); the earlier six stay for older rosters. The flags themselves are flag-icons' 4:3 SVGs (MIT, see
-// ./flags/README.md; Yi: the hand-drawn ones, the Welsh dragon above all, were too simplified), by ISO 3166-1 code, or
+// ./flags/README.md; the hand-drawn ones, the Welsh dragon above all, were too simplified), by ISO 3166-1 code, or
 // ISO 3166-2 for the home nations (gb-eng, gb-sct, gb-wls).
 
 export const NATION_ZH: Record<string, string> = { cn: '中国', br: '巴西', ar: '阿根廷', hr: '克罗地亚', pt: '葡萄牙', al: '阿尔巴尼亚', 'gb-eng': '英格兰', 'gb-sct': '苏格兰', 'gb-wls': '威尔士', ie: '爱尔兰', no: '挪威', nl: '荷兰', fr: '法国', dk: '丹麦' };

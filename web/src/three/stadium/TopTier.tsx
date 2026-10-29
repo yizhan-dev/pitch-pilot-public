@@ -1,4 +1,5 @@
 import { useEffect, useMemo } from 'react';
+import { hook } from '../../dev';
 import * as THREE from 'three';
 import { withBreaks, type PathPt } from './path';
 import { HX, HY, RC, ROOF, TOP, GREY_BAND, VOM_TIER, VOM_GATES, vomRange, gangwayRanges, inGangway } from './layout';
@@ -11,11 +12,11 @@ import { shellCeiling } from './shellCeiling';
 // the roof wherever the roof leaves room: full on the long sides, where the roof is high, and stepping down into the
 // corners, where the roof comes down. Each row is kept only if a standing spectator clears the shell above it. At the
 // ends the back rows stop first, one row every 1.8 m, down to a single row: an even diagonal staircase under the
-// descending roof (Yi, 2026-10-22, option B of four; before it the rows dropped from 10 to 4 within 6 m and stopped at a
-// flat grey end, which "just stops suddenly". The other options, a sweep and an end wall, are kept in
+// descending roof (option B of four; before it the rows dropped from 10 to 4 within 6 m and stopped at a
+// flat grey end, too sudden a stop. The other options, a sweep and an end wall, are kept in
 // <private-workspace>). Past the last row the tier's front runs on round the
-// goal ends as a ring with no seats (Yi, same day: "make the third floor's grey ring continue ... but for the north and
-// south do not add any seats"): the same fascia and grey band on a wedge-shaped beam, dipping under the lower roof there.
+// goal ends as a ring with no seats (the third tier's grey ring continues all round, with no seats at the north and
+// south ends): the same fascia and grey band on a wedge-shaped beam, dipping under the lower roof there.
 const dRow = (j: number) => TOP.d0 + j * TOP.tread;
 const hRow = (j: number) => TOP.h0 + j * TOP.rise;          // the riser of row j starts here; its tread is at hRow(j + 1)
 const soffit = (d: number) => TOP.h0 - TOP.fascia + (d - TOP.d0) * TOP.rise / TOP.tread;
@@ -41,7 +42,7 @@ function rowCounts(path: PathPt[], crystal: CrystalParams) {
   // the lower of each mirrored pair so the tier ends at the same place north and south. (The path starts at the middle
   // of the north side, so sample i mirrors to n/2 - i.) An asymmetric shell (v0) differs on long stretches; leave it.
   const mir = (i: number) => (((n / 2 - i) % n) + n) % n, same = raw.filter((k, i) => k === raw[mir(i)]).length / n;
-  (window as unknown as { __topMirror?: number }).__topMirror = +same.toFixed(3);
+  hook('topMirror', +same.toFixed(3));
   if (n % 2 === 0 && same > 0.95) raw.forEach((k, i) => { raw[i] = Math.min(k, raw[mir(i)]); });
   const rows = rakeCounts(raw, 2), top = ringTop(path, rows, ceil.at);
   ceil.dispose();
@@ -172,7 +173,7 @@ export function TopTier({ path, clip, crowdMat, seatMat, crystal = STADIUM_CURRE
 }) {
   const parts = useMemo(() => {
     const t0 = performance.now(), { rows, top } = rowCounts(path, crystal);
-    (window as unknown as { __topRows?: unknown }).__topRows = { max: Math.max(...rows), share: +(rows.filter((k) => k > 0).length / rows.length).toFixed(2), ms: Math.round(performance.now() - t0) };
+    hook('topRows', { max: Math.max(...rows), share: +(rows.filter((k) => k > 0).length / rows.length).toFixed(2), ms: Math.round(performance.now() - t0) });
     // a gate fits where every sample across its box, a metre either side, has the box's rows and the one its roof meets
     const n = path.length, step = path[1].s, need = VOM_TOP.r0 + VOM_TOP.rows + 1;
     const gates = VOM_GATES.filter((g) => {

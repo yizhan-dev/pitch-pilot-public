@@ -5,8 +5,8 @@
 // unfolds as the ball arrives; everything retracts EXIT s after its beat.
 import type { Item, XY } from '../three/telestration/Telestration';
 
-/** the telestration's items; the pass and run arrows are built since 2026-10-22 (telestration-notes §13) in the shapes
- *  the narration and orchestrator sessions drafted: `{ kind: 'pass', from, to, t?: [kick, reception], loft?, whatif? }`
+/** the telestration's items; the pass and run arrows are built (telestration-notes §13) in the shapes
+ *  the narration and the orchestrator share: `{ kind: 'pass', from, to, t?: [kick, reception], loft?, whatif? }`
  *  (the loft drawn flat until the 3D arc) and `{ kind: 'run', path: { player, from, to } }` */
 export type DrawItem = Item;
 export type PassArrow = Extract<Item, { kind: 'pass' }>;

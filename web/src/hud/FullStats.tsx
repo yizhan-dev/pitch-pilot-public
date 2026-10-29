@@ -2,7 +2,7 @@ import { fullGroups, type Role, type StatEntry, type StatKey } from './playerSta
 import { tr } from '../i18n';
 
 // The full stats (全部数据) inside the expanded player card, one page below the portrait and the eight default entries
-// (Yi, 2026-10-22). Four groups of four, by what the player is doing: 跑动 (his body), 持球 (on the ball), 进攻 (making
+// Four groups of four, by what the player is doing: 跑动 (his body), 持球 (on the ball), 进攻 (making
 // chances and finishing), 防守 (winning the ball back); keepers get 门将 in place of 进攻 (playerStats.fullGroups).
 // Sixteen entries fit the height of the portrait page, so the card keeps its size when the page scrolls. Parked for the
 // post-match report: speed bands, crosses, long balls for outfield players, blocks, fouls. Example values for now (see

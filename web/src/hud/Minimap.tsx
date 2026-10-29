@@ -9,15 +9,15 @@ import { camFacing } from '../three/camera/Director';
 import { clipSwap } from '../game/clipSwap';
 import { useStore } from './draft';
 
-// The minimap, bottom centre (Yi, 2026-10-22: where games put it), shown while the settings' `map` layer is on (the top
+// The minimap, bottom centre (where games put it), shown while the settings' `map` layer is on (the top
 // bar's 小地图 switch, or M). A top-down pitch in metres: the attackers attack +x (left to right) and +y is the near touchline,
 // as the broadcast camera sees it; turned round whenever the camera looks across from the other side (the match's ends,
-// coords.ts viewSign, or any view from there: Director's camFacing, Yi 2026-10-25; viewSign where no camera runs). All 22 players and the ball, at the clock's time, interpolated between the package's
+// coords.ts viewSign, or any view from there: Director's camFacing; viewSign where no camera runs). All 22 players and the ball, at the clock's time, interpolated between the package's
 // 10 Hz frames; the positions are written straight into the SVG every frame, without re-rendering React. On white frosted
-// glass, no green (Yi); the teams in lighter blue and orange (#6ab8ff, #ff9560), home blue and away orange in every clip
-// as their kits (coords.ts, Yi 2026-10-23), the keepers in their keeper kits as on the pitch; the selected player has a
-// soft white ring and no number (Yi). Clicking a player selects him.
-// The 战术 mode's tools are not round it any more (Yi, 2026-10-22: it looked messy); they are the rail down the left edge
+// glass, no green; the teams in lighter blue and orange (#6ab8ff, #ff9560), home blue and away orange in every clip
+// as their kits (coords.ts), the keepers in their keeper kits as on the pitch; the selected player has a
+// soft white ring and no number. Clicking a player selects him.
+// The 战术 mode's tools are not round it any more (it looked messy); they are the rail down the left edge
 // (TacticsRail.tsx), and the minimap stays itself in every mode (the HUD preview draws the 战术 mode's maps on its stand-in
 // pitch, PreviewStage.tsx, as ?ui=game will on the 3D pitch).
 
@@ -31,7 +31,7 @@ export function Minimap({ pkg, clock, looks }: MinimapProps) {
   const swapOut = useStore(clipSwap) === 'out';
   const { layers, selected, mode } = useGameSettings();
   const dots = useRef<(SVGGElement | null)[]>([]), ball = useRef<SVGCircleElement>(null);
-  // not in 战术 (Yi, 2026-10-25: the analysis legend needs the bottom centre); its switch is kept for the other modes
+  // not in 战术 (the analysis legend needs the bottom centre); its switch is kept for the other modes
   const shown = layers.includes('map') && mode !== 'tactics';
 
   useEffect(() => {
@@ -65,9 +65,9 @@ export function Minimap({ pkg, clock, looks }: MinimapProps) {
   const order = Array.from({ length: P }, (_, p) => p).sort((a, b) => (a === selected ? 1 : b === selected ? -1 : 0));
   return (
     // a clip changing in place (game/clipSwap.ts): the radar fades out as the board comes down and back in with the next
-    // clip as it turns back (Yi, 2026-10-26: "fade out, and then fade in, instead of ... a blink of shift")
+    // clip as it turns back (a fade out and in, not a blink)
     <div className={swapOut ? 'hud-minimap swap-out' : 'hud-minimap'} aria-label="Radar">
-      {/* the slight blur, behind the pitch only: no box round the minimap (Yi) */}
+      {/* the slight blur, behind the pitch only: no box round the minimap */}
       <span className="hud-mm-blur" style={{ left: `${(100 * M) / (L + 2 * M)}%`, top: `${(100 * M) / (W + 2 * M)}%`, width: `${(100 * L) / (L + 2 * M)}%`, height: `${(100 * W) / (W + 2 * M)}%` }} />
       <svg viewBox={`${-L / 2 - M} ${-W / 2 - M} ${L + 2 * M} ${W + 2 * M}`} role="group" aria-label="Radar: select a player">
         <g className="hud-mm-pitch">

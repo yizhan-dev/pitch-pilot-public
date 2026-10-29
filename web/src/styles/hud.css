@@ -7,18 +7,18 @@
   --hud-font: 'Inter', 'Noto Sans CJK SC', 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', system-ui, sans-serif;
   --hud-edge: 20px;
   --hud-h: 40px;
-  /* the score bug at 1.2 times the top bar's buttons, so the crests, the score and the clock read at a glance (Yi,
-     2026-10-23); see .hud-bug */
+  /* the score bug at 1.2 times the top bar's buttons, so the crests, the score and the clock read at a glance; see
+     .hud-bug */
   --hud-bug-zoom: 1.2;
   /* the bottom widgets' distance from the bottom edge (card, minimap, replay plate); 92px while ?ui=game had its own
-     timeline bar under them, 20px since the replay plate took playback over (2026-10-22) */
+     timeline bar under them, 20px since the replay plate took playback over */
   --hud-bottom: 20px;
-  /* the UI standards (2026-10-26, Yi: "all buttons we created, or text we made, will have a font tier and margin, size
-     check"), measured from what the HUD used and clustered by role. Text in Inter: xs group labels, tags, badges, key
+  /* the UI standards: every button and every text has a font tier, a margin and a size from this scale, measured from
+     what the HUD used and clustered by role. Text in Inter: xs group labels, tags, badges, key
      caps, footnotes; sm secondary lines (hints, descriptions, sub-labels, the dense list rows); md primary labels (tabs,
      menu items, body); lg the top bar's buttons and the plates' titles. Numerals and titles in Barlow Condensed, one tier
      per role up to the score and the shirt number. Spacing on a 2 px base. The Tactics rail's and legend's own rules
-     keep their values for the Tactics chat to move onto these */
+     keep their values until they are moved onto these */
   --fs-xs: 11px; --fs-sm: 12.5px; --fs-md: 14px; --fs-lg: 15px;
   --fd-xs: 12px; --fd-sm: 14px; --fd-md: 16px; --fd-lg: 18px; --fd-xl: 20px; --fd-2xl: 22px; --fd-score: 26px; --fd-3xl: 28px; --fd-no: 32px; --fd-4xl: 34px;
   --s1: 2px; --s2: 4px; --s3: 6px; --s4: 8px; --s5: 10px; --s6: 12px; --s7: 16px; --s8: 24px;
@@ -48,7 +48,7 @@
 .hud-mode svg { color: var(--ink-2); transition: color .15s; }
 .hud-mode[aria-pressed="true"] { border-color: rgba(255, 255, 255, .62); background: var(--glass-strong); }
 .hud-mode[aria-pressed="true"] svg { color: var(--ink); }
-/* a top-bar button that does nothing here (the radar in 战术, Yi 2026-10-25): greyed, no hover */
+/* a top-bar button that does nothing here (the radar in 战术): greyed, no hover */
 .hud-btn:disabled { color: rgba(242, 244, 247, .34); border-color: var(--hairline); cursor: default; }
 .hud-btn:disabled svg { color: rgba(242, 244, 247, .34); }
 .hud-val { display: inline-flex; align-items: center; gap: var(--s4); font-weight: 400; color: var(--ink-2); padding-left: var(--s4); border-left: 1px solid var(--hairline-strong); }
@@ -57,14 +57,14 @@
 
 /* score bug: [crest PEL][| 1 : 0 |][WIL crest][15:52], every cell the full height. --hud-bug-dy moves the contents up
    or down together: at 0 the ink of the figures, the Chinese and the clock is centred on the bar to 0.25 px (measured on
-   2x screenshots, 2026-10-22), which Yi saw as slightly high, so it sits 1 px lower. The colon is two drawn dots, since
+   2x screenshots), which still reads slightly high by eye, so it sits 1 px lower. The colon is two drawn dots, since
    the face's colon sits at x-height, 3 px below the figures' centre. */
 .hud-bug { --hud-bug-dy: 1px; display: flex; align-items: stretch; height: var(--hud-h); white-space: nowrap; }
 /* zoom scales the bug's whole layout (the text and the crests re-rendered, not stretched), so the sizes and the 1x
    measurements here hold as they are, 1.2 times larger on screen */
 .hud-bug { zoom: var(--hud-bug-zoom); }
 .hud-bug > * { display: flex; align-items: center; justify-content: center; }
-/* a team's cell: the crest on the outside and the short name beside it, as broadcasts show them (Yi, 2026-10-23) */
+/* a team's cell: the crest on the outside and the short name beside it, as broadcasts show them */
 .hud-team { min-width: 62px; padding: 0 var(--s6); gap: var(--s4); }
 .hud-team b { font: 700 var(--fd-xl)/1 var(--font-display); letter-spacing: .04em; }
 .hud-team svg { flex: none; display: block; }
@@ -79,12 +79,12 @@
 .hud-strip { width: 4px; align-self: stretch; flex: none; }
 .hud-strip:first-child { margin-right: var(--s4); }
 .hud-strip:last-child { margin-left: var(--s4); }
-/* each team's strip in its kit colour, home blue and away orange in every clip (Yi, 2026-10-23; it was the attacking
-   team's blue) */
+/* each team's strip in its kit colour, home blue and away orange in every clip (not blue for whichever team
+   attacks) */
 .hud-strip.home { background: var(--home); }
 .hud-strip.away { background: var(--away); }
 .hud-clock { min-width: 66px; padding: 0 var(--s6); border-left: 1px solid var(--hairline); font: 600 var(--fd-xl)/1 var(--font-display); letter-spacing: .02em; font-variant-numeric: tabular-nums; color: var(--ink); }
-/* added time (Yi, 2026-10-23): the minutes announced for the half, +3, in a box of its own after the clock, light on the
+/* added time: the minutes announced for the half, +3, in a box of its own after the clock, light on the
    dark bar like the fourth official's board, so it is seen at once; it opens out from the clock as added time begins */
 .hud-added { padding: 0 var(--s4); background: var(--ink); color: #0b0f15; font: 700 var(--fd-xl)/1 var(--font-display); letter-spacing: .02em; font-variant-numeric: tabular-nums; animation: hud-added-in .4s var(--ease) both; }
 @keyframes hud-added-in { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0); } }
@@ -94,7 +94,7 @@
 
 /* player card, bottom left: a grey tag with nobody selected, else the nameplate */
 .hud-card { position: absolute; left: var(--hud-edge); bottom: var(--hud-bottom); }
-/* nobody selected (Yi): the nameplate greyed, same size; a grey top line, a person outline in the number's place, a hint in
+/* nobody selected: the nameplate greyed, same size; a grey top line, a person outline in the number's place, a hint in
    the name's, the expand button off, an empty stamina bar */
 .hud-plate.empty { --team: rgba(255, 255, 255, .22); color: var(--ink-3); }
 .hud-empty-icon { display: grid; align-self: center; place-items: center start; color: var(--ink-3); }
@@ -103,23 +103,23 @@
 /* the name's overflow clip cut the English hint's descenders (p, y) below the shifted line; it fits on one line, so no
    clip is needed */
 .hud-plate-name.hud-empty-name { overflow: visible; }
-/* the hint sits a little lower under the title (Yi); a shift, so the row keeps its 32 px */
+/* the hint sits a little lower under the title; a shift, so the row keeps its 32 px */
 .hud-plate-name.hud-empty-name small { font-size: var(--fs-xs); line-height: 14px; font-weight: 400; color: var(--ink-3); letter-spacing: 0; transform: translateY(2px); }
 .hud-plate.empty .hud-plate-toggle:disabled { color: var(--ink-3); opacity: .45; cursor: default; background: transparent; }
 .hud-plate.empty .hud-stam b { color: var(--ink-3); }
 .hud-plate { --team: var(--home); --pad: 14px; position: relative; pointer-events: auto; width: 300px; padding: var(--s5) var(--pad) var(--s7); display: flex; flex-direction: column; border-top: 3px solid var(--team); }
 /* the plate in its team's kit colour, .home (the default) blue, .away orange: the card's player's team, the replay's
-   clip team (by team in every clip, Yi 2026-10-23; the classes were .att and .def, by role) */
+   clip team (by team in every clip; the classes were .att and .def, by role) */
 .hud-plate.away { --team: var(--away); }
 /* a cut corner at the top right (--cut from tokens.css), so the team-colour line reads as trim, not as a bar that means
-   something (Yi); the diagonal gets its own hairline, drawn just inside the cut */
+   something; the diagonal gets its own hairline, drawn just inside the cut */
 .hud-plate { clip-path: polygon(0 0, calc(100% - var(--cut)) 0, 100% var(--cut), 100% 100%, 0 100%); }
 .hud-plate::after {
   content: ""; position: absolute; top: -3px; right: -1px; width: var(--cut); height: var(--cut); pointer-events: none;
   background: linear-gradient(to top right, transparent calc(50% - 1.2px), var(--hairline-strong) calc(50% - 1.2px), var(--hairline-strong) 50%, transparent 50%);
 }
-/* number and name share a baseline, so their bottoms line up (Yi). The row sits 2 px higher than the padding alone
-   would put it (Yi): the figures had 18 px above them and 13 px down to the rule, now 16 and 15 */
+/* number and name share a baseline, so their bottoms line up. The row sits 2 px higher than the padding alone
+   would put it: the figures had 18 px above them and 13 px down to the rule, now 16 and 15 */
 .hud-plate-head { display: flex; align-items: baseline; gap: var(--s5); margin-bottom: var(--s6); }
 /* the rule between the name and the stamina runs to both edges of the card */
 .hud-plate-rule { display: block; height: 1px; margin: 0 calc(-1 * var(--pad)) var(--s5); background: var(--hairline); flex: none; }
@@ -135,9 +135,9 @@
 }
 .hud-portrait img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .hud-portrait-sil { position: absolute; left: 50%; bottom: 0; width: 116px; height: 116px; transform: translateX(-50%); fill: rgba(255, 255, 255, .13); }
-/* the role, large and on the portrait itself (Yi: bigger, no dark box); a soft shadow keeps it legible on a photo */
+/* the role, large and on the portrait itself (no dark box); a soft shadow keeps it legible on a photo */
 .hud-portrait-role { position: absolute; left: 12px; top: 9px; font-size: 18px; font-weight: 700; letter-spacing: .06em; text-shadow: 0 1px 3px rgba(0, 0, 0, .55); display: flex; align-items: center; gap: var(--s4); }
-/* cards to the right of the role (Yi): small upright cards, a second yellow as yellow with red over it */
+/* cards to the right of the role: small upright cards, a second yellow as yellow with red over it */
 .hud-bookings { display: inline-flex; gap: var(--s2); }
 .hud-booking { display: block; position: relative; width: 11px; height: 15px; border-radius: 1.5px; box-shadow: 0 1px 3px rgba(0, 0, 0, .45); }
 .hud-booking.yellow { background: #ffd23f; }
@@ -149,13 +149,13 @@
 .hud-portrait-speed small { font-size: var(--fs-xs); color: var(--ink-2); }
 
 /* the card's middle as two pages of one height, scrolled one page up for the full stats (PageScroll); the window keeps
-   its height, so the card does not change size (Yi); inner boxes contain their margins (flow-root) so the measure is exact */
+   its height, so the card does not change size; inner boxes contain their margins (flow-root) so the measure is exact */
 .hud-pages { overflow: hidden; }
 .hud-pages-track { transition: transform .32s var(--ease); }
 .hud-page { overflow: hidden; }
 .hud-page-inner { display: flow-root; }
 
-/* FM-style trend arrows at the left of every entry (Yi): a fixed 9 px slot, green up or red down, one to three stacked */
+/* FM-style trend arrows at the left of every entry: a fixed 9 px slot, green up or red down, one to three stacked */
 .hud-trend { width: 9px; height: 14px; flex: none; align-self: center; display: grid; place-items: center; }
 .hud-trend.up { color: #5ad18a; }
 .hud-trend.down { color: #ff5a52; }
@@ -169,7 +169,7 @@
 /* the full stats inside the card: four groups two by two */
 .hud-full { margin-bottom: var(--s6); }
 .hud-full-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s6) var(--s8); }
-/* group titles in the team colour, so they stand apart from the rows (Yi) */
+/* group titles in the team colour, so they stand apart from the rows */
 .hud-full-group h3 { margin: 0 0 var(--s4); font-size: var(--fs-sm); font-weight: 700; color: var(--team); letter-spacing: .08em; }
 .hud-full-group dl { margin: 0; display: grid; row-gap: var(--s4); }
 .hud-full-group dl div { display: flex; align-items: baseline; gap: var(--s2); }
@@ -178,7 +178,7 @@
 .hud-full-group dd { margin: 0; font: 600 var(--fd-md)/1 var(--font-display); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .hud-full-group dd small { margin-left: var(--s1); font: 400 var(--fs-xs) var(--hud-font); color: var(--ink-3); }
 .hud-stats { margin: 0 0 var(--s6); display: grid; grid-template-columns: 1fr 1fr; column-gap: var(--s7); row-gap: var(--s4); }
-/* English labels run longer than the Chinese: each column as wide as its content, the space between them (Yi, 2026-10-23) */
+/* English labels run longer than the Chinese: each column as wide as its content, the space between them */
 html:lang(en) .hud-stats { grid-template-columns: auto auto; justify-content: space-between; column-gap: var(--s5); }
 .hud-portrait-what { display: flex; flex-direction: column; gap: var(--s2); }
 .hud-stats div { display: flex; align-items: baseline; gap: var(--s2); }
@@ -188,20 +188,20 @@ html:lang(en) .hud-stats { grid-template-columns: auto auto; justify-content: sp
 .hud-stats dd small { margin-left: var(--s2); font: 400 var(--fs-xs) var(--hud-font); color: var(--ink-3); }
 .hud-plate-head .hud-tag { align-self: center; }
 /* the button is as tall as the number's figures and starts where they start (measured: the 32 px figures' ink runs
-   from 6 px to 29 px below the line's top), so their top and bottom edges line up (Yi) */
+   from 6 px to 29 px below the line's top), so their top and bottom edges line up */
 .hud-plate-head .hud-plate-toggle { align-self: flex-start; margin-top: var(--s3); }
 .hud-plate-no { width: 40px; flex: none; font: 700 var(--fd-no)/1 var(--font-display); color: var(--team); font-variant-numeric: tabular-nums; }
-/* on the shared baseline the name read 1 px low beside the larger number (Yi), hence the lift */
+/* on the shared baseline the name read 1 px low beside the larger number, hence the lift */
 .hud-plate-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; font: 600 var(--fd-2xl)/1 var(--font-display); letter-spacing: .05em; transform: translateY(-1px); }
-/* the expand button: a bare chevron (Yi picked it over a box, a circle and a filled square), a faint ground on hover */
+/* the expand button: a bare chevron (chosen over a box, a circle and a filled square), a faint ground on hover */
 .hud-plate-toggle { width: 23px; height: 23px; display: grid; place-items: center; padding: 0; margin-left: auto; background: transparent; border: 0; color: var(--ink); cursor: pointer; transition: background-color .15s; }
 .hud-plate-toggle:hover { background: rgba(255, 255, 255, .08); }
 .hud-plate-toggle svg { width: 20px; height: 20px; transition: transform .2s var(--ease); }
 .hud-plate-toggle[aria-expanded="true"] svg { transform: rotate(180deg); }
 /* columns match the head: the number's 40 px, then the bar from the name's left edge, the value centred under the button */
 .hud-stam { display: grid; grid-template-columns: 40px 1fr 23px; align-items: center; gap: var(--s5); }
-/* the label's ink sat 0.9 px above the bar's centre line (measured, 2026-10-22); Yi still saw it high at 1 px, so 2 px */
-.hud-stam-label { font-size: var(--fs-sm); color: var(--ink-2); white-space: nowrap; transform: translate(-3px, 1px); }   /* level with the bar, a little left (Yi, 2026-10-25) */
+/* the label's ink sat 0.9 px above the bar's centre line (measured); it still read high at 1 px, so 2 px */
+.hud-stam-label { font-size: var(--fs-sm); color: var(--ink-2); white-space: nowrap; transform: translate(-3px, 1px); }   /* level with the bar, a little left */
 .hud-stam-bar { position: relative; height: 6px; background: rgba(255, 255, 255, .12); overflow: hidden; }
 .hud-stam-bar i { position: absolute; left: 0; top: 0; bottom: 0; transition: width .15s linear, background-color .3s; }
 .hud-stam-bar i.ok { background: #5ad18a; }
@@ -216,7 +216,7 @@ html:lang(en) .hud-stats { grid-template-columns: auto auto; justify-content: sp
 .hud-plate-instant i.bad { background: #ff5a52; }
 
 /* the replay plate, bottom right: the nameplate's design mirrored about the screen's vertical centre line, the cut
-   corner at its top left (Yi); play button in the number's place, the clip title in the name's, the event track in the
+   corner at its top left; play button in the number's place, the clip title in the name's, the event track in the
    stamina bar's, the playback progress along the bottom edge (ReplayPlate.tsx) */
 .hud-replay { position: absolute; right: var(--hud-edge); bottom: var(--hud-bottom); }
 /* the clip reaches 8 px below the box so the progress knob, centred on the bottom line, is not cut */
@@ -242,19 +242,19 @@ html:lang(en) .hud-stats { grid-template-columns: auto auto; justify-content: sp
 .hud-replay-speed { justify-self: center; width: 40px; margin: 0 calc(-1 * var(--s4)); padding: var(--s1) 0; background: transparent; border: 0; color: var(--ink-2); font: 600 var(--fd-md) var(--font-display); font-variant-numeric: tabular-nums; cursor: pointer; }
 .hud-replay-speed.on { color: var(--ink); }
 .hud-replay-speed:hover { background: rgba(255, 255, 255, .08); }
-/* the expanded replay plate's tabs, 事件 and 片段 (Yi), each a list of about eight rows that scrolls */
+/* the expanded replay plate's tabs, 事件 and 片段, each a list of about eight rows that scrolls */
 .hud-rtabs { margin-bottom: var(--s6); }
 .hud-rtabs-head { display: flex; gap: var(--s7); margin-bottom: var(--s4); }
 .hud-rtabs-head button { display: inline-flex; align-items: baseline; gap: var(--s3); padding: 0 0 var(--s2); background: none; border: 0; border-bottom: 2px solid transparent; font-size: var(--fs-md); font-weight: 600; color: var(--ink-3); cursor: pointer; }
 .hud-rtabs-head button small { font: 600 var(--fd-xs) var(--font-display); color: var(--ink-3); }
 .hud-rtabs-head button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--team); }
 .hud-rtabs-head button:hover { color: var(--ink); }
-/* the team filter at the head's right: one click per step, all, A, B (Yi); its label in the team's colour */
+/* the team filter at the head's right: one click per step, all, A, B; its label in the team's colour */
 .hud-rtabs-head .hud-rside { margin-left: auto; align-self: center; display: inline-flex; align-items: center; gap: var(--s3); padding: 1px var(--s4); border: 1px solid var(--hairline-strong); font-size: var(--fs-sm); font-weight: 600; color: var(--ink-2); }
 .hud-rtabs-head .hud-rside.home { color: #6ab8ff; border-color: rgba(106, 184, 255, .5); }
 .hud-rtabs-head .hud-rside.away { color: #ff9560; border-color: rgba(255, 149, 96, .5); }
 .hud-rtabs-head .hud-rside:hover { border-color: var(--ink-2); }
-/* the list's height makes the expanded replay plate exactly as tall as the expanded player card (Yi; both tops at 405 px
+/* the list's height makes the expanded replay plate exactly as tall as the expanded player card (both tops at 405 px
    at 1600 x 900, measured) */
 .hud-rtabs-list { height: 236.8px; overflow-y: auto; margin: 0 calc(-1 * var(--s3)); padding: 0 var(--s1); scrollbar-width: thin; scrollbar-color: rgba(255, 255, 255, .2) transparent; }
 .hud-rtabs-list::-webkit-scrollbar { width: 5px; }
@@ -281,25 +281,25 @@ html:lang(en) .hud-stats { grid-template-columns: auto auto; justify-content: sp
 .hud-rbadges b.goal { color: #0b1f12; background: #5ad18a; border-color: #5ad18a; }
 .hud-rbadges b.key { color: var(--ink); border-color: var(--team); }
 .hud-rbadges b.muted { color: var(--ink-3); border-color: var(--hairline); }
-.hud-rbadges b.explain { color: var(--ink); border-color: rgba(255, 255, 255, .62); }   /* a clip with commentary (Yi, 2026-10-26) */
-.hud-rbadges b.whatif { color: #ffd166; border-color: rgba(255, 209, 102, .75); }   /* a clip with a What-if moment: yellow, apart from Explain (Yi, 2026-10-26) */
+.hud-rbadges b.explain { color: var(--ink); border-color: rgba(255, 255, 255, .62); }   /* a clip with commentary */
+.hud-rbadges b.whatif { color: #ffd166; border-color: rgba(255, 209, 102, .75); }   /* a clip with a What-if moment: yellow, apart from Explain */
 .hud-rgroup p { margin: 6px 6px 2px; display: flex; gap: 5px; align-items: baseline; font-size: 12px; font-weight: 700; color: var(--team); letter-spacing: .06em; }
 .hud-rgroup p small { font: 600 12px var(--font-display); color: var(--ink-3); }
 
-/* the progress bar on the plate's bottom edge (Yi): 3 px at rest, 5 px with a knob on hover or while dragging; a 14 px
+/* the progress bar on the plate's bottom edge: 3 px at rest, 5 px with a knob on hover or while dragging; a 14 px
    hit strip over the plate's bottom padding makes it easy to catch */
 .hud-scrub { position: absolute; left: 0; right: 0; bottom: 0; height: 14px; cursor: pointer; touch-action: none; }
 .hud-scrub:focus-visible { outline: none; }
 .hud-scrub-line { position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: rgba(255, 255, 255, .1); transition: height .12s var(--ease); }
 .hud-scrub-line i { position: absolute; left: 0; top: 0; bottom: 0; background: rgba(255, 255, 255, .85); }
 .hud-scrub:hover .hud-scrub-line, .hud-scrub.drag .hud-scrub-line, .hud-scrub:focus-visible .hud-scrub-line { height: 5px; }
-/* the knob's centre on the 5 px bar's centre line (2.5 px up), so it hangs 3.5 px below the box (Yi) */
+/* the knob's centre on the 5 px bar's centre line (2.5 px up), so it hangs 3.5 px below the box */
 .hud-scrub-knob { position: absolute; bottom: -3.5px; width: 12px; height: 12px; margin-left: calc(-1 * var(--s3)); border-radius: 50%; background: #fff; box-shadow: 0 0 0 2px rgba(4, 6, 10, .45); opacity: 0; transform: scale(.5); transform-origin: 50% 50%; transition: opacity .12s, transform .12s var(--ease); pointer-events: none; }
 .hud-scrub:hover .hud-scrub-knob, .hud-scrub.drag .hud-scrub-knob, .hud-scrub:focus-visible .hud-scrub-knob { opacity: 1; transform: scale(1); }
 
 /* the minimap, bottom centre on the bottom widgets' baseline; a top-down pitch in metres (Minimap.tsx). All but
-   transparent, only a slight blur behind it, so the dots read clearly over the pitch (Yi, 2026-10-22; it was white frosted
-   glass); the teams in lighter blue and orange than the kits (Yi's values), home blue and away orange */
+   transparent, only a slight blur behind it, so the dots read clearly over the pitch (white frosted glass
+   hid them); the teams in lighter blue and orange than the kits (tuned by eye), home blue and away orange */
 .hud-minimap {
   --mm-home: #6ab8ff; --mm-away: #ff9560;
   position: absolute; left: 50%; bottom: var(--hud-bottom); transform: translateX(-50%); width: 320px; pointer-events: auto;
@@ -307,7 +307,7 @@ html:lang(en) .hud-stats { grid-template-columns: auto auto; justify-content: sp
 }
 /* a clip changing in place: out with the old clip, in with the next (Minimap.tsx) */
 .hud-minimap.swap-out { opacity: 0; transition-duration: .45s; pointer-events: none; }
-/* no box round it (Yi): the blur sits behind the pitch's own rectangle only */
+/* no box round it: the blur sits behind the pitch's own rectangle only */
 .hud-mm-blur { position: absolute; backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); pointer-events: none; }
 .hud-minimap svg { position: relative; }
 /* the draft's analysis layer under the dots: a 35 x 23 cell picture, smoothed as the browser scales it */
@@ -322,11 +322,11 @@ html:lang(en) .hud-stats { grid-template-columns: auto auto; justify-content: sp
 /* keyboard focus on a radar player or a stand-in player: a gold outline instead of the browser's box (review F10) */
 .hud-mm-dot:focus, .hud-stage-p:focus { outline: none; }
 .hud-mm-dot:focus-visible .hud-mm-body, .hud-stage-p:focus-visible .hud-stage-body { stroke: #ffd166; stroke-width: .6; }
-/* the selected player: a soft white ring, a little inside the old one, thicker and more transparent (Yi) */
+/* the selected player: a soft white ring, a little inside the old one, thicker and more transparent */
 .hud-mm-ring { fill: none; stroke: rgba(255, 255, 255, .6); stroke-width: .85; }
 .hud-mm-ball { fill: #fff; stroke: #0b0f15; stroke-width: .35; pointer-events: none; }
 
-/* the 战术 mode's tools (TacticsRail.tsx; Yi, 2026-10-22): one glass column down the left edge, under the score; out of
+/* the 战术 mode's tools (TacticsRail.tsx): one glass column down the left edge, under the score; out of
    sight in the other modes, it slides in from the left with its buttons one after another when the mode is entered */
 .hud-rail {
   --rb: 34px;
@@ -342,7 +342,7 @@ html:lang(en) .hud-stats { grid-template-columns: auto auto; justify-content: sp
 /* (hud-tgroup, not hud-rgroup: that is the replay plate's) */
 .hud-rail > .hud-tgroup:first-child { padding-top: 0; border-top: 0; }
 .hud-tgroup { display: grid; gap: var(--s2); padding-top: var(--s3); border-top: 1px solid var(--hairline); }
-/* a title never widens the column (Yi): the column is the buttons' width. On the standards' xs tier (2026-10-27) the
+/* a title never widens the column: the column is the buttons' width. On the standards' xs tier the
    titles are in title case: four capitals (MARK) no longer fit the 34 px column at 11 px */
 .hud-tgroup-label { width: var(--rb); margin: 0; padding-left: var(--s2); overflow: hidden; white-space: nowrap; font-size: var(--fs-xs); font-weight: 400; line-height: 1; letter-spacing: .04em; color: var(--ink-3); }
 .hud-tgrid { display: grid; grid-template-columns: var(--rb); gap: var(--s1); }
@@ -424,9 +424,9 @@ html:lang(en) .hud-stats { grid-template-columns: auto auto; justify-content: sp
 .hud-mtext b { display: flex; align-items: center; gap: var(--s4); font-size: var(--fs-lg); font-weight: 600; color: var(--ink); }
 .hud-mtext small { font-size: var(--fs-sm); line-height: 1.35; color: var(--ink-3); }
 .hud-mrow[aria-checked="true"] .hud-mtext small { color: var(--ink-2); }
-/* 制作中: the boxed tag of 门将, a little brighter, beside the name (Yi to judge) */
+/* 制作中: the boxed tag of 门将, a little brighter, beside the name */
 .hud-wip { color: var(--ink-2); }
-.hud-beta { color: #ffd166; border-color: rgba(255, 209, 102, .75); }   /* What-if's Beta (TopBar.tsx BETA; Yi, 2026-10-26: "make beta in yellow"), the plate's What-if yellow */
+.hud-beta { color: #ffd166; border-color: rgba(255, 209, 102, .75); }   /* What-if's Beta (TopBar.tsx BETA) in yellow, the plate's What-if yellow */
 .hud-mpick .hud-vfoot { margin: 4px -6px 0; align-items: center; color: var(--ink-3); }
 .hud-mpick .hud-kbd { font-family: var(--font-body); font-size: var(--fs-xs); }   /* Q in the condensed face reads as 0 */
 
@@ -562,7 +562,7 @@ html:lang(en) .hud-stats { grid-template-columns: auto auto; justify-content: sp
 .hud-stage-fov { fill: rgba(242, 244, 247, .1); stroke: rgba(242, 244, 247, .4); stroke-width: .12; pointer-events: none; }
 .hud-stage-fade { opacity: 0; transition: opacity 1.1s var(--ease); }
 
-/* the VAR check's button (TopBar, game/varReplay.ts; Yi, 2026-10-26): left of Radar on an offside clip from the pass on,
+/* the VAR check's button (TopBar, game/varReplay.ts): left of Radar on an offside clip from the pass on,
    breathing a white glow until pressed, lit while the check runs */
 .hud-var { font-weight: 700; letter-spacing: .1em; }
 .hud-var.pulse { animation: hud-var-pulse 1.6s ease-in-out infinite; }
@@ -572,7 +572,7 @@ html:lang(en) .hud-stats { grid-template-columns: auto auto; justify-content: sp
 }
 @media (prefers-reduced-motion: reduce) { .hud-var.pulse { animation: none; border-color: rgba(255, 255, 255, .85); } }
 
-/* a clip played to its end (Yi, 2026-10-26): the plate's arrows breathe a glow (.hud-attn: the next-clip arrow in the open
+/* a clip played to its end: the plate's arrows breathe a glow (.hud-attn: the next-clip arrow in the open
    list, else the button that opens it, the next explained clip in Explain), and a button at the top centre plays the next
    clip, where the pause pill shows while the clip runs */
 .hud-attn { animation: hud-attn 1.5s ease-in-out infinite; }
@@ -586,11 +586,11 @@ html:lang(en) .hud-stats { grid-template-columns: auto auto; justify-content: sp
 .hud-nextclip span { color: var(--ink-2); font-size: var(--fs-sm); letter-spacing: .04em; }
 .hud-nextclip b { font: 700 var(--fd-md)/1.2 var(--font-display, 'Barlow Condensed', sans-serif); letter-spacing: .02em; }
 .hud-nextclip:hover { background: rgba(255, 255, 255, .1); }
-/* "Play Next Clip" breathes like the VAR and Back to Watch buttons (Yi, 2026-10-26) */
+/* "Play Next Clip" breathes like the VAR and Back to Watch buttons */
 .hud-nextclip { animation: hud-var-pulse 1.6s ease-in-out infinite; }
 @media (prefers-reduced-motion: reduce) { .hud-nextclip { animation: none; } }
 /* at a clip's end outside Watch: "Back to Watch" right under the mode button, as wide and as tall, breathing like the VAR
-   button (Yi, 2026-10-26) */
+   button */
 .hud-back { position: absolute; top: calc(100% + 8px); left: 0; right: 0; justify-content: center; animation: hud-var-pulse 1.6s ease-in-out infinite; }
 @media (prefers-reduced-motion: reduce) { .hud-back { animation: none; border-color: rgba(255, 255, 255, .85); } }
 
@@ -598,15 +598,9 @@ html:lang(en) .hud-stats { grid-template-columns: auto auto; justify-content: sp
    away while the board is down; play starts on the next clip as it ends */
 .hud-swapping .pw { visibility: hidden; }
 
-/* the top bar's shortcut keys, before each button's label (Yi, 2026-10-26: "(R) Radar"): the views menu's key caps */
+/* the top bar's shortcut keys, before each button's label ("(R) Radar"): the views menu's key caps */
 .hud-key { font-size: var(--fs-xs); line-height: 15px; padding: 0 var(--s2); min-width: 16px; color: var(--ink-2); margin-right: var(--s1); }
 
-/* the credits (TopBar, src/credits/): a square button left of the score bug, exactly as tall as the bug (its 40 px at the
-   bug's zoom) and as wide; a fixed size, so its anchor holds its width and the bug never sits over it */
-.hud-info { flex: none; width: calc(var(--hud-h) * var(--hud-bug-zoom)); height: calc(var(--hud-h) * var(--hud-bug-zoom)); padding: 0; justify-content: center; }
-.hud-info svg { width: 22px; height: 22px; }
-.hud-creditspop { z-index: 60; left: 0; right: auto; width: 400px; max-height: calc(100vh - 120px); overflow-y: auto; padding: var(--s7) var(--s7) var(--s7); }
-.hud-creditspop-h { margin: 0 0 var(--s2); font: 700 var(--fd-xl)/1.1 var(--font-display); letter-spacing: .03em; text-transform: uppercase; }
 .hud-credits section { padding: var(--s4) 0 var(--s3); border-top: 1px solid var(--hairline); }
 .hud-credits section:first-child { border-top: 0; padding-top: var(--s2); }
 .hud-credits-h { margin: 0 0 var(--s3); font: 600 var(--fs-xs)/1 var(--hud-font); letter-spacing: .1em; text-transform: uppercase; color: var(--ink-3); }
@@ -641,7 +635,6 @@ html:lang(en) .hud-stats { grid-template-columns: auto auto; justify-content: sp
   .hud-tl, .hud-tr { top: 10px; gap: var(--s3); }
   .hud-tr { top: calc(10px + var(--hud-h) * var(--hud-bug-zoom) + 8px); left: var(--hud-edge); right: var(--hud-edge); flex-wrap: wrap; justify-content: flex-start; }
   .hud-rail { top: calc(10px + var(--hud-h) * var(--hud-bug-zoom) + 8px + 2 * var(--hud-h) + 6px + 12px); }
-  .hud-creditspop { width: min(400px, calc(100vw - 2 * var(--hud-edge))); }
 }
 
 /* the Show menu's three groups (Show, Player style, On) read as groups: about 16 px between a group's chips and the

@@ -7,7 +7,7 @@ import type { PassState } from './passProb';
 // What the 战术 annotations, 画板's strokes and auto lines and 观赛's speed rings put on the pitch, described once as simple
 // shapes in pitch metres (x along, y across, y down the screen from above), and drawn twice: as SVG on the HUD preview's
 // stand-in pitch (ShapesSvg) and onto a canvas laid on the 3D pitch in ?ui=game (drawShapes, PitchOverlay3D.tsx), so the
-// two never drift apart (2026-10-23, wiring the draft into the game).
+// two never drift apart.
 
 export type Shape =
   | { kind: 'arrow'; pts: XY[]; color: string; width: number; dash?: number[]; alpha?: number }
@@ -28,8 +28,8 @@ const arrow = (from: XY, to: XY, color: string, opts: { width?: number; dash?: b
   ({ kind: 'arrow', pts: [from, to], color, width: opts.width ?? 0.38, dash: opts.dash ? DASH : undefined, alpha: opts.alpha });
 const tag = (at: XY, text: string, color?: string, alpha?: number): Shape => ({ kind: 'tag', at, text, color, alpha });
 
-/** threat: the last n passes and carries (or the latest), each an arrow with its ΔxT. Off the Tactics marks since Yi's
- *  2026-10-25 cut; kept for the pen's showing options (Yi: "we can add xT as one showing option there") */
+/** threat: the last n passes and carries (or the latest), each an arrow with its ΔxT. Cut from the Tactics marks;
+ *  kept so the pen can offer xT as one of its showing options */
 export function threatShapes(all: Move[], t: number, chain: boolean): Shape[] {
   const out: Shape[] = [], list = threatAt(all, t, chain ? 5 : 1);
   list.forEach((x, i) => {
@@ -40,15 +40,15 @@ export function threatShapes(all: Move[], t: number, chain: boolean): Shape[] {
 }
 
 /** the 战术 mode's annotation of the moment (analysis.ts gives the numbers). The name and the selection are no longer
- *  used (they served the runs' SOG / SGG, retired 2026-10-24) but stay in the signature for the HUD preview's call.
+ *  used (they served the runs' SOG / SGG, now retired) but stay in the signature for the HUD preview's call.
  *  `real`: the pass probability from the What-if's model (passProb.ts); the HUD preview leaves it out and keeps the
  *  stand-in */
 export function annotationShapes(pkg: ClipPkg, t: number, key: AnnotKey, sub: string, m: MomentT, all: Move[], xg: XgFreezeModel | null, _name: (p: number) => string, _selected: number | null, real?: PassState): Shape[] {
   const out: Shape[] = [];
-  // the offside line is chat 1's item (TacticsItems.tsx), not a canvas shape
+  // the offside line is a telestration item (TacticsItems.tsx), not a canvas shape
   if (key === 'pass' && real) {
-    // The pass probability is drawn by chat 1's passing network with a tag over each team-mate's head (TacticsItems.tsx,
-    // telestration-notes.md item 5; Yi 2026-10-25: the lines looked terrible). Here only a temporary check for Yi's eye,
+    // The pass probability is drawn by the telestration passing network with a tag over each team-mate's head (TacticsItems.tsx,
+    // telestration-notes.md item 5; canvas lines looked poor). Here only a temporary check by eye,
     // ?ptags=1: each team-mate's chance on the grass beside him, no lines
     const from = real.carrier !== null ? m.pos[real.carrier] : null;
     if (from && real.opts) for (const o of real.opts) out.push(tag([o.at[0], o.at[1] - 2.4], o.offside ? 'Offside' : `${Math.min(99, Math.round(o.prob * 100))}%`, o.offside ? 'rgba(242, 244, 247, .6)' : undefined));

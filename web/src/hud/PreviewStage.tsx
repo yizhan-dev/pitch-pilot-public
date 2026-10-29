@@ -13,8 +13,8 @@ import { GRID, momentAt, baseMap, moves, type XY } from './analysis';
 import { annotationShapes, aidShapes, strokeShapes, ShapesSvg } from './overlayShapes';
 import { drawMode, base, annot, annotSub, tool, ink, aids, strokes, frames, addStroke, drawingFading, frameAlpha as frameAlphaAt, type Stroke, useStore } from './draft';
 
-// The HUD preview's stand-in for the 3D pitch (2026-10-23): the clip from straight above, all 22 players and the ball at
-// the clock's time, with what ?ui=game would draw on the grass once Yi accepts the designs (docs/plans/hud-notes.md):
+// The HUD preview's stand-in for the 3D pitch: the clip from straight above, all 22 players and the ball at
+// the clock's time, with what ?ui=game would draw on the grass once the designs are accepted (docs/plans/hud-notes.md):
 // the Show menu's stamina bars and names (every mode) and the hover name; the 战术 mode's base map and
 // annotations; 画板's drawings, guides and saved freeze frames. Only in the preview, under the HUD as the 3D canvas is in the game; it takes the clicks the HUD
 // lets through (select a player; draw). Pitch metres, the clip's attackers attacking +x, y down the screen.
@@ -92,7 +92,7 @@ export function PreviewStage({ pkg, clock, looks, playback }: PreviewStageProps)
   };
   const up = () => { if (cur && Math.hypot(cur.pts[cur.pts.length - 1][0] - cur.pts[0][0], cur.pts[cur.pts.length - 1][1] - cur.pts[0][1]) > MIN_STROKE_M) addStroke(cur); setCur(null); };
 
-  // the strokes on the frozen picture fade when play resumes and are dropped unless saved (Yi; the HUD runs it, draft.ts)
+  // the strokes on the frozen picture fade when play resumes and are dropped unless saved (the HUD runs it, draft.ts)
   const st = useStore(strokes), fr = useStore(frames), playing = !!playback?.playing, fading = useStore(drawingFading);
   // a saved frame shows while the clock is at it, and fades over the play after it
   const frameAlpha = (ft: number) => frameAlphaAt(ft, t, playing);

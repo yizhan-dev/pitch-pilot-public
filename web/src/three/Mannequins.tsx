@@ -26,7 +26,7 @@ const BALLS: [string, number, Part][] = [
 ];
 const UP = new THREE.Vector3(0, 1, 0);
 
-/** attacking: the team of players 0..nAtt-1, so each team wears its own kit (coords.ts, Yi 2026-10-23) */
+/** attacking: the team of players 0..nAtt-1, so each team wears its own kit (coords.ts) */
 export function Mannequins({ joints, clock, attacking = 'home' }: { joints: Joints; clock: Clock; attacking?: Team }) {
   const idx = useMemo(() => Object.fromEntries(joints.names.map((n, i) => [n, i])), [joints]);
   const counts = useMemo(() => {

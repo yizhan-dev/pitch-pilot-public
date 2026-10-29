@@ -9,12 +9,12 @@ import { drawMode, useStore } from './draft';
 import { explainable, whatifable } from './directed';
 import { VIEW_UI, VIEW_GROUPS, VIEW_GROUP_LABEL, viewUI, viewBlocked } from './views';
 import { tr } from '../i18n';
-import { CreditsList } from '../credits/Credits';
 import { summaryOpen } from '../summary/summary';
 import { startTour } from '../tour/tour';
+import { QualityChip } from './QualityChip';
 
 // The top bar: top left the score bug, top right the minimap switch, the mode button and the view button. Only designed
-// parts are shown (Yi, 2026-10-22): the level, display and games buttons come back as their panels are designed. One
+// parts are shown: the level, display and games buttons come back as their panels are designed. One
 // panel is open at a time (./panel.ts).
 
 export interface ScoreBugProps {
@@ -30,15 +30,15 @@ export interface ScoreBugProps {
   added?: number | null;
 }
 
-/** a team's cell: its crest on the outside, its short name beside it (Yi, 2026-10-23: crest and code, as broadcasts do) */
+/** a team's cell: its crest on the outside, its short name beside it (crest and code, as broadcasts do) */
 function TeamCell({ team }: { team: Team }) {
   const crest = <Crest team={team} size={24} />, code = <b>{TEAM_CODE[team]}</b>;
   return <span className={`hud-team ${team}`}>{team === 'home' ? <>{crest}{code}</> : <>{code}{crest}</>}</span>;
 }
 
 /** the score bug, laid out like a broadcast one: two team cells (crest and code), the score in its own lighter cell framed
- *  by the two kit colours (home blue, away orange in every clip, Yi 2026-10-23; until then the attacking team's strip
- *  was the blue one), and the clock in a cell of its own */
+ *  by the two kit colours (home blue, away orange in every clip; not the attacking team's strip
+ *  blue), and the clock in a cell of its own */
 export function ScoreBug({ home, away, score, clock, added = null, label }: ScoreBugProps) {
   return (
     <div className="hud-bug hud-glass" aria-label={tr(`${home} ${score[0]} 比 ${score[1]} ${away}，比赛时间 ${fmtClock(clock)}${added != null ? `，补时 ${added} 分钟` : ''}`, `${home} ${score[0]}, ${away} ${score[1]}, match time ${fmtClock(clock)}${added != null ? `, ${added} minutes added` : ''}`)}>
@@ -56,8 +56,8 @@ export function ScoreBug({ home, away, score, clock, added = null, label }: Scor
 }
 
 /** the view picker under the view button: icon tiles in three groups, and a line under them for the hovered or current
- *  view (Yi chose this over a list, 2026-10-22). It only sets settings.view; the camera is the 3D side's. */
-/** the view menu: one narrow column, the groups one under another (Yi, 2026-10-22: with 近景 and 远景 the row of tiles
+ *  view (chosen over a list). It only sets settings.view; the camera is the 3D side's. */
+/** the view menu: one narrow column, the groups one under another (with 近景 and 远景 a row of tiles
  *  reached across to the pause window at the top centre); each row the icon, the name, the key */
 export function ViewMenu({ hasOfficials }: { hasOfficials: boolean }) {
   const { view, selected, tactical } = useGameSettings();
@@ -90,22 +90,21 @@ export function ViewMenu({ hasOfficials }: { hasOfficials: boolean }) {
 }
 
 
-/** a mode still being finished, tagged so in the mode menu (Yi, 2026-10-26, to the What-if chat: "add a 'beta' tag for
- *  the what if mode shall we? so judge knows that it is not stable yet"; not on the mode button: "it will make the top
- *  three button position shifts") */
+/** a mode still being finished, tagged so in the mode menu, so a judge knows it is not yet stable (not on the mode
+ *  button, where the tag would shift the top bar's three buttons) */
 const BETA: Partial<Record<GameMode, string>> = { whatif: 'Beta' };
 
-/** the mode menu under the mode button (Yi, 2026-10-22; four modes since 2026-10-24: 观赛 · 讲解 · 战术 · What-if, 画板 folded
+/** the mode menu under the mode button (four modes: 观赛 · 讲解 · 战术 · What-if, 画板 folded
  *  into 战术 as its pen), from watching to changing, each with its icon,
  *  name and the line under it from MODES. A list rather than the view menu's tiles, so the lines read in full; the same
  *  pop-over, hover and checked look as the view menu. It only calls setMode; what each mode shows is the pitch's and the
  *  panels' business. */
 export function ModeMenu() {
   const { mode } = useGameSettings();
-  // a pick puts the pen away (drawMode: the 战术 pen once chat 3 has it; leaving or changing mode ends the drawing)
+  // a pick puts the pen away (drawMode: the 战术 pen; leaving or changing mode ends the drawing)
   const pick = (m: GameMode) => { drawMode.set(false); setMode(m); setPanel(null); };
-  // Explain greyed on a clip without commentary (hud/directed.ts; Yi, 2026-10-26)
-  // and What-if on a clip without a What-if moment (Yi, the same day)
+  // Explain greyed on a clip without commentary (hud/directed.ts)
+  // and What-if on a clip without a What-if moment
   const ok = useStore(explainable), wiOk = useStore(whatifable);
   const off = (m: GameMode) => m !== mode && (m === 'explain' ? ok !== true : m === 'whatif' ? !wiOk : false);
   // the reason only once it is known: while the clip's commentary is still being looked up the row is greyed, untagged
@@ -132,7 +131,7 @@ export interface TopBarProps {
   hasOfficials: boolean;
   /** the VAR check's button (game/varReplay.ts), shown on an offside clip from the pass on; pulsing until pressed */
   varBtn?: { on: boolean; toggle: () => void } | null;
-  /** at a clip's end outside Watch: a pulsing "Back to Watch" right under the mode button, as wide as it (Yi, 2026-10-26) */
+  /** at a clip's end outside Watch: a pulsing "Back to Watch" right under the mode button, as wide as it */
   backToWatch?: (() => void) | null;
 }
 
@@ -141,30 +140,25 @@ export function TopBar({ bug, hasOfficials, varBtn, backToWatch }: TopBarProps) 
   const open = usePanel();
   const map = layers.includes('map');
   const cur = viewUI(view), curMode = MODES.find((m) => m.key === mode)!;
-  // over the match summary the radar, the mode and the view are off (Yi, 2026-10-27: "for summary page, mode is disabled,
-  // and radar is disabled", "view is disabled too"): its camera and its panel own the screen; the credits stay
+  // over the match summary the radar, the mode and the view are off: its camera and its panel own the screen
   const sum = useStore(summaryOpen);
   useEffect(() => { if (sum && (open === 'mode' || open === 'view')) setPanel(null); }, [sum, open]);
   return (
     <>
       <div className="hud-tl">
-        {/* the credits (Yi, 2026-10-26; src/credits/): left of the score bug, "so it is more obvious", as tall as it and square */}
-        <div className="hud-anchor">
-          <button type="button" className="hud-btn hud-glass hud-info" aria-haspopup="dialog" aria-expanded={open === 'credits'} aria-label="Credits" title="Credits" data-hud-toggle onClick={() => togglePanel('credits')}>
-            <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><circle cx="9" cy="9" r="7.5" fill="none" stroke="currentColor" strokeWidth="1.5" /><path d="M9 8 V13" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" /><circle cx="9" cy="5.2" r="1.05" fill="currentColor" /></svg>
-          </button>
-          {open === 'credits' && <div className="hud-pop hud-creditspop" role="dialog" aria-label="Credits" data-hud-pop><p className="hud-creditspop-h">Credits</p><CreditsList /></div>}
-        </div>
+        {/* (no credits button left of the bug: the providers' names are a commercial matter, so the README carries
+            the credits) */}
         {bug && <ScoreBug {...bug} />}
       </div>
       <div className="hud-tr">
-        {/* the judges' tour, again at any time (Yi, 2026-10-28; src/tour/) */}
+        <QualityChip />
+        {/* the judges' tour, again at any time (src/tour/) */}
         <button type="button" className="hud-btn hud-glass" data-tour="tutorial" title="A guided tour of the four modes, about three minutes" onClick={() => startTour(1)}>Tutorial</button>
         {varBtn && (
           <button type="button" className={`hud-btn hud-glass hud-var${varBtn.on ? '' : ' pulse'}`} aria-pressed={varBtn.on}
             title={varBtn.on ? 'Leave the VAR check (or press play)' : 'VAR check: the offside line at the moment of the pass'} onClick={varBtn.toggle}>VAR</button>
         )}
-        {/* "Radar", as EA FC and eFootball name the pitch from above in their HUD settings (雷达图; Yi, 2026-10-23: not "Minimap") */}
+        {/* "Radar", as EA FC and eFootball name the pitch from above in their HUD settings (雷达图; not "Minimap") */}
         <button type="button" className="hud-btn hud-glass hud-mode" aria-pressed={map && mode !== 'tactics' && !sum} disabled={mode === 'tactics' || sum}
           title={sum ? 'No radar over the match summary' : mode === 'tactics' ? 'No radar in Tactics: the legend has its place' : 'Radar: show or hide (R)'} onClick={() => toggleLayer('map')}>
           <kbd className="hud-kbd hud-key" aria-hidden="true">R</kbd><MapIcon size={18} />Radar

@@ -9,7 +9,7 @@ import fontUrl from '@fontsource/barlow-condensed/files/barlow-condensed-latin-6
 import { TELE } from './style';
 import { VAR_FACTS } from './var';
 
-// the target on a deciding body part (Yi, 2026-10-24: the first dot and its ring were so big they hid the part): a thin
+// the target on a deciding body part (a bigger dot and ring hid the part): a thin
 // ring round it and a small dot at it, sized in pixels at its depth, with a faint dark edge for contrast
 const RET_VERT = /* glsl */ `
 varying vec2 vQ;

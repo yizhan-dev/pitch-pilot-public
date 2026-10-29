@@ -1,8 +1,8 @@
 // A top-down sketch of one beat for the debug view and the storyboard: the pitch, every player and the ball at a
 // clip time, and the beat's drawings in the telestration's meaning colours (white the ball and passes, amber runs,
 // team colours for units, blocks and marking). It is a diagram of the plan, not the telestration itself: it also
-// sketches the primitives the telestration session has not built yet (pass and run arrows), so Yi can judge the plan
-// before they exist. Returns an SVG string (no DOM), so a page or a script can use it.
+// sketches primitives the telestration did not have when it was written (pass and run arrows), so the plan can be
+// judged without them. Returns an SVG string (no DOM), so a page or a script can use it.
 import type { Geo, XY } from './geom';
 import { unitsAt, nearestOpp } from './geom';
 import type { DrawItem } from './draw';

@@ -3,22 +3,22 @@ import { useGameSettings, toggleShow, setShowStyle, setShowWho, toggleLayer, SHO
 import { usePanel, togglePanel } from './panel';
 import { StyleIcon, BallIcon } from './icons';
 
-// The Show menu (Yi, 2026-10-24): one button at the bottom of every mode's left column (the column is chat 3's
+// The Show menu: one button at the bottom of every mode's left column (the column is
 // TacticsRail; it mounts <ShowMenu /> beside the player-style button) and its panel, opening upward to the right. What:
-// name, stamina (multi; the MVP's two, Yi 2026-10-25); the player style (Toon, Skeleton, Silhouette, Ghost, one at a
-// time); on whom, for all three (Yi: "they share the same condition"): the player on the ball, the selected one, either
-// team, all (one at a time, Yi 2026-10-26). The button wears the player-style figure (Yi: the first icon was confusing).
+// name, stamina (multi; the MVP's two); the player style (Toon, Skeleton, Silhouette, Ghost, one at a
+// time); on whom, one condition shared by all three: the player on the ball, the selected one, either
+// team, all (one at a time). The button wears the player-style figure (the first icon was confusing).
 // The choices live in settings.ts `show`, shared by every mode and kept across them; the 3D side draws them
 // (three/layers/ShowLayer.tsx: one tag over the head, the stamina bar under the name; Stage: the chosen players in the
 // style, the rest toon).
 
 /** `tabIndex`: the column's, so the button leaves the tab order while the column is hidden. Under it, a switch of its own
- *  for the ball's trail (Yi, 2026-10-26: "a separate button under the Show button", a ball for its icon): the 'ball' layer,
+ *  for the ball's trail (a separate button under the Show button, a ball for its icon): the 'ball' layer,
  *  drawn by three/layers/GameLayers.tsx */
 export function ShowMenu({ tabIndex = 0 }: { tabIndex?: number }) {
   const { show, layers } = useGameSettings(), open = usePanel() === 'show', trail = layers.includes('ball');
-  // which way the panel opens, decided on the press from where the button is (one render, no flip after measuring; Yi,
-  // 2026-10-25: it lagged): in the screen's lower half (Tactics, the column's bottom) upward, its bottom edge on the
+  // which way the panel opens, decided on the press from where the button is (one render, no flip after measuring,
+  // which lagged): in the screen's lower half (Tactics, the column's bottom) upward, its bottom edge on the
   // button's; in the upper half (Watch, the column's only button) downward, its top edge on the button's
   const btn = useRef<HTMLButtonElement>(null), [up, setUp] = useState(true);
   const press = () => { const r = btn.current?.getBoundingClientRect(); if (r) setUp(r.top > window.innerHeight / 2); togglePanel('show'); };

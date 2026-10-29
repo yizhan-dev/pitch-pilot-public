@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 
-// Pitch-side people and television (Yi, 2026-10-22: candidates 6 and 9 of docs/research/stadium-vivid.md). The people
+// Pitch-side people and television (candidates 6 and 9 of docs/research/stadium-vivid.md). The people
 // are drawn in the toon players' language (three-tone toon shading, a dark outline that fades out from 35 to 70 m), as
 // simple static figures, all merged into one mesh and one outline: two draw calls. Where they stand follows match-day
 // rules:
@@ -13,7 +13,7 @@ import * as THREE from 'three';
 // - television cameras on tripods behind the goals and the main-side boards at the penalty-area lines, and a reverse
 //   angle at halfway on the far side, each with its operator.
 // - the benches: coaches, staff and substitutes seated.
-// (The spidercam was removed: too detailed, not needed. Yi, 2026-10-22. Its code: stadium-vivid2/PitchSide.with-spidercam.tsx)
+// (The spidercam was removed: too detailed, not needed. Its code: stadium-vivid2/PitchSide.with-spidercam.tsx)
 
 type V3 = [number, number, number];
 /** a capsule from a to b; c2 colours the part beyond `split` (0..1 along a to b): a hand, a sock, a shoe */
@@ -96,9 +96,9 @@ function figures() {
   const kid = () => look('#d9dde3', '#d9dde3', '#2b3140');   // light grey tracksuit tops, dark bottoms
   for (const sx of [1, -1]) for (const sz of [1, -1]) out.push({ parts: seated(kid(), [[0.12, 0.58, 0.36], [-0.12, 0.58, 0.36]], 0.38), x: sx * 56.9, z: sz * 20.2, face: [-sx, 0], s: 0.86 });
   for (const [x, z] of [[-30, -37.3], [30, -37.3], [-51, 37.3], [51, 37.3]]) out.push({ parts: seated(kid(), [[0.12, 0.58, 0.36], [-0.12, 0.58, 0.36]], 0.38), x, z, face: [0, -Math.sign(z)], s: 0.86 });
-  // (no substitutes warming up: standing still, they read as dead, not alive; Yi, 2026-10-22)
+  // (no substitutes warming up: standing still, they read as dead, not alive)
   // the benches (Furniture's Dugout: 21 seats a row, 0.5 m apart, the front row's pans at 0.84 m over a 0.35 m plinth,
-  // the back row's at 1.19 m over a 0.75 m step). Seated as people do (Yi: "make them sit more randomly"): the head
+  // the back row's at 1.19 m over a 0.75 m step). Seated as people do, not in a regular pattern: the head
   // coach and two assistant coaches near the middle of the front row with a seat or two between them, two staff and a
   // couple of substitutes further along it, the other substitutes spread over the back row in loose groups with gaps;
   // each sits his own way (upright, elbows on knees, arms folded, leaning back, knees apart) and turns a little towards

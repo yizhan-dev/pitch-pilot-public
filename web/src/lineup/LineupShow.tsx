@@ -1,4 +1,5 @@
 import { animFile } from '../data/paths';
+import { hook, hooked, unhook } from '../dev';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
@@ -22,10 +23,15 @@ import { rosterLooks, looksFor, fullName, type Roster } from './roster';
 import { tr, pick } from '../i18n';
 import { nightOutside } from '../three/stadium/night';
 import { BootFrame } from '../three/BootFrame';
+import { AA_OFF_AT_LOAD, appliedShow, calibrated, lowHas, showCeil, wantsCalibration } from '../three/quality';
+import { GpuMeter } from '../three/gpuMeter';
+import { QualityChip } from '../hud/QualityChip';
+import { AdaptiveQuality, ApplyScale } from '../three/AdaptiveQuality';
+import { PerfProbe } from '../three/PerfProbe';
 import './lineup.css';
 
-/** the teams' names (Yi, 2026-10-23: invented names and crests; working names, not confirmed), as the HUD's TEAM_CODE
- *  (PEL / WIL) and Crest have them. Here until match.ts has a full-name constant beside TEAM_CODE (asked in
+/** the teams' names (invented, as are the crests; working names), as the HUD's TEAM_CODE
+ *  (PEL / WIL) and Crest have them. Here until match.ts has a full-name constant beside TEAM_CODE (requested in
  *  docs/plans/lineup-notes.md) */
 const TEAM_NAME = { home: tr('鹈鹕', 'Pelicans'), away: tr('野猫', 'Wildcats') } as const;
 /** a team's name split after its score-bug code when it starts with it (Pelicans: Pel | icans, shown in capitals), so the
@@ -35,20 +41,20 @@ const codeSplit = (side: 'home' | 'away'): [string, string] => {
   return name.toUpperCase().startsWith(code.toUpperCase()) ? [name.slice(0, code.length), name.slice(code.length)] : [name, ''];
 };
 
-// The pre-match line-up show (Yi, 2026-10-23), a cartoon take on the broadcast routine, in one scene with both teams
-// warming up in their halves. A sweep inside the stadium with the title, crest against crest (the HUD's score bug built
+// The pre-match line-up show, a cartoon take on the broadcast routine, in one scene with both teams
+// warming up in their halves. A drone shot from outside the stadium with the title, crest against crest (the HUD's score bug built
 // large). Then the Pelicans in full: their formation board (the grass turns into the dark board, the eleven at their
-// places with number and position); the players one at a time, as a film camera would take them (Yi: go to one, stop,
+// places with number and position); the players one at a time, as a film camera would take them (go to one, stop,
 // show his tags, move on quickly, a bit dramatic): a quick move to the next man (a whip along the line, a rise and a
 // turn between lines), a stop in a low hero framing with him on the left third and a slow push in, and his card: the
 // number, the flag and the name, the position and the nationality, then his tags one by one (from the match's numbers,
-// export_clips.py --lineup); the screen in letterbox for this part. Then the Wildcats, short (agreed with Yi): the camera
+// export_clips.py --lineup); the screen in letterbox for this part. Then the Wildcats, short: the camera
 // crosses the halfway line to their board (number and name over each man), drops to their back line and tracks along
-// each line from above with a plate over every head (number, flag, name). Then the hand-off to the match (Yi,
-// 2026-10-23, as a broadcast does it): a crane up and back to the game's broadcast camera over both teams; a ring of
+// each line from above with a plate over every head (number, flag, name). Then the hand-off to the match,
+// as a broadcast does it: a crane up and back to the game's broadcast camera over both teams; a ring of
 // light grows from the kick-off spot and, as it reaches each man, he is teleported from his staged spot to where he
 // really stood at the kick-off (the kick-off clip's first frame, Hawk-Eye tracking), white and sparks as a superhero
-// cartoon does it; the HUD's score bug builds itself at the top left at 0:00 (Yi, 2026-10-24: not the title again in
+// cartoon does it; the HUD's score bug builds itself at the top left at 0:00 (not the title again in
 // the middle); the game takes over there and plays the kick-off (watch mode's first clip). Each player in his own warm-up animation (Mixamo, baked to our joints
 // by scripts/mixamo_joints.mjs). The camera is scripted (no user control) and every overlay is driven from the show's
 // clock, so a recording frame by frame shows what plays live. This page (/lineup.html) is the prototype; the game takes
@@ -65,7 +71,7 @@ const FPS = 25;
  *  wingers up level with the striker as a front three; all but the keeper 3 m further back than in the one-team
  *  version, so with both teams out the two front lines stand outside the centre circle, not nose to nose. The y here is
  *  the team's left (+) and right (-); on the pitch a team attacking +x has its right at +y (the near side from the main
- *  stand, checked against the kick-off's tracking, 2026-10-24: until then the staged line-up stood mirrored, the right
+ *  stand, checked against the kick-off's tracking: without the turn the staged line-up stood mirrored, the right
  *  back on the left), so spot() turns it over */
 const PLACE: Record<number, [number, number]> = {
   1: [-46, 0], 2: [-36, -13.5], 5: [-38.5, -5], 6: [-38.5, 5], 3: [-36, 13.5], 8: [-26.5, -5], 4: [-26.5, 5], 10: [-18, 0], 7: [-10.5, -9], 9: [-7.5, 0], 11: [-10.5, 9],
@@ -74,9 +80,9 @@ const PLACE: Record<number, [number, number]> = {
  *  centre spot (attacking -x, its right at -y) */
 const spot = (side: Side, place: number): [number, number] => { const [x, y] = PLACE[place] ?? [0, 0]; return side === 'home' ? [x, -y] : [-x, y]; };
 /** who does what: the keeper squares up, the rest a mix, never two neighbours alike; the boxer's warm-up on one man only
- *  (Yi, 2026-10-23: on more it makes the team look like it wants a fight). The right winger had Mixamo's taunt, which
- *  holds both fists forward through its whole loop (measured, 100% of frames); Yi chose happy idle over warrior idle
- *  for him (2026-10-23) */
+ *  (on more, the team looks as if it wants a fight). The right winger is on happy idle, not Mixamo's taunt, which
+ *  holds both fists forward through its whole loop (measured, 100% of frames), and not warrior idle
+ *  either */
 const MOVE: Record<number, string> = {
   1: 'warrior-idle', 2: 'offensive-idle', 5: 'orc-idle', 6: 'warrior-idle', 3: 'happy-idle', 8: 'orc-idle', 4: 'offensive-idle',
   10: 'happy-idle', 7: 'happy-idle', 9: 'offensive-idle', 11: 'warming-up',
@@ -139,7 +145,7 @@ function travel(a: Cam, b: Cam, u: number, line: boolean): Cam {
   return { pos, look: lerp3(a.look, b.look, el), fov: lerp(a.fov, b.fov, e) + arc * (line ? 12 : 6), roll: line ? 0 : arc * 2.5 * DEG * Math.sign(b.pos[2] - a.pos[2]) };
 }
 
-/** an away line's shot at u (Yi, 2026-10-24: a camera tracking sideways along the line was dizzying to read, even
+/** an away line's shot at u (held still, as a camera tracking sideways along the line was dizzying to read, even
  *  slowed down): the whole line in one still frame, from in front of it and above, pushing in only PUSH metres. Back
  *  far enough that every man of the line stands within the middle FILL of the frame's width (his plate is centred on
  *  him, so it stays on the screen; reckoned at 16:9, on his distance with the camera's height), and at least NEAR in
@@ -156,25 +162,25 @@ function track(g: number, u: number): Cam {
   return { pos: [x, H, 0], look: [mid + AHEAD[g], 1.2, 0], fov: TRACK_FOV };
 }
 
-/** the opening (Yi, 2026-10-25: show off the stadium): T_AERIAL s from outside, as the drone sees it, the title over
- *  it; then T_RISE s straight over the roof and down into the home board, tipping to look straight down (Yi, the same
- *  evening: no stop over the whole stadium on the way, "so the beginning can be more compact"). The rise leaves the drone
- *  shot slowly and gathers speed (Yi, 2026-10-26: it set off too fast): slowIn over 2.6 s (it was inOut3 over 2 s) */
+/** the opening, which shows off the stadium: T_AERIAL s from outside, as the drone sees it, the title over
+ *  it; then T_RISE s straight over the roof and down into the home board, tipping to look straight down (no stop over
+ *  the whole stadium on the way, so the opening stays compact). The rise leaves the drone
+ *  shot slowly and gathers speed: slowIn over 2.6 s (inOut3 over 2 s set off too fast) */
 const T_AERIAL = 2.0, T_RISE = 2.6, T_TITLE = T_AERIAL + T_RISE;
-/** the drone shot (Yi, 2026-10-25: the first one, square on to the main stand, read too flat, "too 正"; of three angled
- *  ones he chose this, from the far corner with a longer lens, as framed; pulled back with the title low, he kept this).
+/** the drone shot: angled, from the far corner with a longer lens, pulled back with the title low (square on to the
+ *  main stand it read too flat; this is the best of three angled framings).
  *  It turns from yaw0 to yaw1 and pushes in from dist0 to dist1 */
 const DRONE = { dist0: 330, dist1: 300, pitch: 0.36, fov: 25, look: 6, yaw0: -0.80, yaw1: -0.64 };
 const T_BOARD = 6.0, T_SWOOP = 2.4, T_HOLD = 2.7, T_STEP = 0.75, T_LINE = 1.5;
 const T_CROSS = 2.8, T_TMOVE = 1.0, T_TRACK = [5.5, 4.5, 4.5], T_FINAL = 5.5, T_SCAN = 3.2, T_END = 0.8;
 /** the board: both teams' formations on one board over the whole pitch, straight down with the frame's top towards -z
- *  (Yi, 2026-10-26: one board for both right after the drone shot, then the home players, then the away lines; until
- *  then a board over each half, the away one before its lines). The camera comes down from BOARD_H0 to BOARD_H1 m through
+ *  (one board for both right after the drone shot, then the home players, then the away lines, rather than a board
+ *  over each half with the away one before its lines). The camera comes down from BOARD_H0 to BOARD_H1 m through
  *  the shot, high enough for both halves and the plates over the rings at 16:9, the frame BOARD_UP m off the middle
  *  towards its top */
 const board = (h: number): Cam => ({ pos: [0, h, 0.01 - BOARD_UP], look: [0, 0, -BOARD_UP], fov: 40, up: [0, 0, -1] });
 const BOARD_H0 = 89, BOARD_H1 = 87, BOARD_UP = 1.5;
-/** the grass turning over into the board and back (Yi, 2026-10-24: "the hexagon is switching too fast"): the wave runs
+/** the grass turning over into the board and back, slow enough that the hexagons do not flip too fast: the wave runs
  *  from the centre spot BOARD_REACH m, just past the pitch's corners, in FLIP_IN s and back in FLIP_OUT */
 const BOARD_REACH = 66, FLIP_IN = 2.0, FLIP_OUT = 1.2;
 /** the game's broadcast camera on the kick-off clip's first frame: the show ends exactly there, so the game takes over
@@ -183,28 +189,28 @@ const BOARD_REACH = 66, FLIP_IN = 2.0, FLIP_OUT = 1.2;
  *  1600 x 900) */
 const BROADCAST: Cam = { pos: [0, 24, 60], look: [-3.218, 1.765, 4.365], fov: 28 };
 const HY = 34;
-/** the hand-off to the real positions (Yi, 2026-10-24): a ring of light spreads from the kick-off spot (he chose it over
- *  the line sweeping left to right, which was 生硬); where it passes, the men are teleported, as in a superhero cartoon
- *  (Yi: no gliding, no trails; "first pure white, then the texture, maybe with particles", for the arrival): a staged
+/** the hand-off to the real positions: a ring of light spreads from the kick-off spot (chosen over a line sweeping
+ *  left to right, which looked stiff); where it passes, the men are teleported, as in a superhero cartoon
+ *  (no gliding, no trails; on arrival first pure white, then the texture, with particles): a staged
  *  man goes in a little burst of sparks as the ring reaches his staged place; at his real spot sparks gather into a white
  *  figure, which colours in */
 const SWEEP = 2.2, RING_MAX = 64;
-/** the white figure of a man arriving (Yi, 2026-10-24: the white is for the moment he appears, not when he goes): white
+/** the white figure of a man arriving (the white marks the moment he appears, not when he goes): white
  *  for WHITE_HOLD, then his colours come through over WHITE_FADE */
 const WHITE_HOLD = 0.35, WHITE_FADE = 0.7;
-/** a man out of sight: far off the pitch, not under it (Yi, 2026-10-24: kit-coloured balls in front of men: under the
- *  pitch the pose sampler lifted the feet back to the grass, so the hidden men left their socks and boots on it) */
+/** a man out of sight: far off the pitch, not under it (under the pitch the pose sampler lifted the feet back to the
+ *  grass, so the hidden men left their socks and boots on it, kit-coloured balls in front of the men) */
 const AWAY_X = 1e4;
 /** before the kick-off: each real man stands in his pose from the kick-off's first frame as he arrives, the ball where it
- *  is then (just struck), and the game holds that frame a moment before it plays on (Yi, 2026-10-24: a staged warm-up
- *  before the kick, tried in fix4, turned the men to face the wrong way as they set off; he chose this, the freeze on
- *  the kick, over blending the motions) */
+ *  is then (just struck), and the game holds that frame a moment before it plays on (a staged warm-up
+ *  before the kick turned the men to face the wrong way as they set off; the freeze on
+ *  the kick reads better than blending the motions) */
 
 function buildBeats(): Beat[] {
   const beats: Beat[] = [];
   let t = 0;
   const add = (len: number, kind: Kind, cam: Beat['cam'], i?: number) => { beats.push({ t0: t, t1: t + len, kind, i, cam }); t += len; };
-  // the opening (Yi, 2026-10-25; until then a sweep inside the bowl): the stadium from outside with the title, a slow
+  // the opening (not a sweep inside the bowl): the stadium from outside with the title, a slow
   // drone orbit from the main stand's side; then up over the roof to straight down on the whole stadium (the frame's top
   // turning to -z, the boards' way round), and down into the home board
   const drone = (u: number): Cam => {
@@ -228,8 +234,8 @@ function buildBeats(): Beat[] {
     if (i > 0) { const line = o.group !== ORDER[i - 1].group; add(line ? T_LINE : T_STEP, line ? 'line' : 'step', (u) => travel(hero(i - 1, 1), hero(i, 0), u, line), i); }
     add(T_HOLD, 'hold', (u) => hero(i, u), i);
   });
-  // over the halfway line: up from the last home man and across, straight to the away back line's frame (2026-10-26:
-  // their formation was on the one board already, so no away board in between)
+  // over the halfway line: up from the last home man and across, straight to the away back line's frame (their
+  // formation is on the one board already, so no away board in between)
   add(T_CROSS, 'cross', (u) => {
     const a = hero(ORDER.length - 1, 1), b = track(0, 0), e = inOut3(u);
     return { pos: curve3(a.pos, [lerp(a.pos[0], b.pos[0], 0.5), Math.max(a.pos[1], b.pos[1]) + 10, lerp(a.pos[2], b.pos[2], 0.5) + 6], b.pos, e), look: lerp3(a.look, b.look, inOut3(Math.min(1, u * 1.15))), fov: lerp(a.fov, b.fov, e) };
@@ -475,14 +481,14 @@ function Sparks({ clock, slots, officials }: { clock: Clock; slots: Slot[]; offi
 
 /** the wave: a ring of light on the grass spreading from the kick-off spot, a low curtain on its edge, eased in and
  *  out, fading at its end */
-/** the boards as a tactics board (Yi, 2026-10-24: the hexagons turning the grass dark only to look at the men from above
- *  were "a little meaningless"; the flip is the game's own way into tactics mode, so the board now does what a tactics
+/** the boards as a tactics board (the hexagons turning the grass dark only to look at the men from above meant
+ *  little on their own; the flip is the game's own way into tactics mode, so the board does what a tactics
  *  board does): once the grass has turned, a ring at each man's feet in his team's colour, then each line of the
  *  formation (GROUPS: the back four, the midfield, the front three) drawn man to man across the pitch, back to front;
  *  gone before the grass turns back. Times from the board's start (RINGS_AT, LINES_AT, a line every LINE_EVERY, each
  *  drawn over LINE_DRAW) and to its end (GONE) */
 const TEAM_HEX: Record<Side, string> = { home: '#3987e5', away: '#d95926' };   // tokens.css --home, --away
-const RING_R = 1.1, RING_W = 0.16, LINK_W = 0.16, RINGS_AT = 1.7, LINES_AT = 2.0, LINE_EVERY = 0.24, LINE_DRAW = 0.55, GONE = 1.7;   // (lines every 0.24 s, was 0.3: the boards a second shorter, Yi 2026-10-25)
+const RING_R = 1.1, RING_W = 0.16, LINK_W = 0.16, RINGS_AT = 1.7, LINES_AT = 2.0, LINE_EVERY = 0.24, LINE_DRAW = 0.55, GONE = 1.7;   // (lines every 0.24 s, not 0.3: the boards a second shorter)
 function TacticsBoard({ clock }: { clock: Clock }) {
   const parts = useMemo(() => (['home', 'away'] as const).map((side) => {
     const units = GROUPS.map((g) => [...g.places].sort((a, b) => spot(side, a)[1] - spot(side, b)[1]).map((p) => spot(side, p)));
@@ -537,6 +543,75 @@ function TacticsBoard({ clock }: { clock: Clock }) {
   );
 }
 
+/** the show's later parts made ready in its first half second (three/quality.ts xOn 'showprewarm'): the scan's ring, the
+ *  sparks, the flashes, the board are mounted from the start but hidden, and their shaders were compiled as each first
+ *  showed, mid-show: up to 60 ms as the ring spread, a visible stutter in the hexagons' fan-out and the growing
+ *  centre ring before the kick-off. Shown for one synchronous call and hidden again, so nothing is
+ *  drawn; the compile is the driver's, in parallel where it can */
+/** the show's own first frames timed (three/gpuMeter.ts, three/quality.ts calibrated): the first two drawn plain (the
+ *  programs linked, the textures up), the next three timed, the best of them the GPU's time for the title's shot at
+ *  this scale; then the level that fits is the show's ceiling (showCeil), and this gives the render back */
+function ShowMeter({ onDone }: { onDone: () => void }) {
+  const gl = useThree((s) => s.gl);
+  const st = useMemo(() => ({ meter: new GpuMeter(gl), n: 0, got: [] as (number | null)[], over: false }), [gl]);
+  useFrame(({ gl, scene, camera }) => {
+    const s = st; s.meter.poll(); s.n++;
+    if (s.over) { gl.render(scene, camera); return; }
+    if (!s.meter.available || !wantsCalibration()) { gl.render(scene, camera); s.over = true; onDone(); return; }
+    if (s.n <= 2 || s.n > 5) { gl.render(scene, camera); return; }
+    const at = gl.getPixelRatio();
+    void s.meter.time(() => gl.render(scene, camera)).then((ms) => {
+      s.got.push(ms);
+      if (s.got.length < 3) return;
+      const ok = s.got.filter((x): x is number => x !== null);
+      if (ok.length) calibrated('show', Math.min(...ok), at);
+      s.over = true; onDone();
+    });
+  }, 1);
+  return null;
+}
+
+/** the shadows by shot (three/quality.ts xOn 'showshadow'): in the far shots (the title's orbit and rise, the board,
+ *  the final, the scan, the end) the map is drawn every third frame and read with the plain PCF filter; in the close
+ *  ones (the men one by one) every frame and soft, as before. Measured on the Ryzen's radeonsi path at 0.75: the soft
+ *  filter costs 21% of the title's frame, the pass 9%; a shadow a few pixels across shows neither. Both program sets
+ *  are compiled in the show's first two frames, under the loader, so a switch later compiles nothing */
+const FAR_BEATS = new Set<Kind>(['title', 'board', 'final', 'scan', 'end']);
+function ShadowPolicy({ clock, onFar }: { clock: Clock; onFar?: (far: boolean) => void }) {
+  const gl = useThree((s) => s.gl), scene = useThree((s) => s.scene);
+  const st = useMemo(() => ({ far: null as boolean | null, beatFar: null as boolean | null, n: 0 }), []);
+  useFrame(() => {
+    st.n++;
+    const beatFar = FAR_BEATS.has(beatAt(clock.t).kind);
+    if (beatFar !== st.beatFar) { st.beatFar = beatFar; onFar?.(beatFar); }
+    const far = st.n === 1 ? true : st.n === 2 ? false : beatFar;
+    if (far !== st.far) {
+      gl.shadowMap.type = far ? THREE.PCFShadowMap : THREE.PCFSoftShadowMap;
+      scene.traverse((o) => { const m = (o as THREE.Mesh).material; for (const x of Array.isArray(m) ? m : m ? [m] : []) x.needsUpdate = true; });
+      st.far = far;
+    }
+    gl.shadowMap.autoUpdate = false;
+    gl.shadowMap.needsUpdate = !far || st.n % 3 === 0 || st.n <= 2;
+  });
+  return null;
+}
+
+function Prewarm() {
+  const gl = useThree((s) => s.gl), scene = useThree((s) => s.scene), camera = useThree((s) => s.camera);
+  useEffect(() => {
+    let n = 0, id = 0;
+    const run = () => {
+      if (++n < 30) { id = requestAnimationFrame(run); return; }
+      const hidden: THREE.Object3D[] = [];
+      scene.traverse((o) => { if (!o.visible) { hidden.push(o); o.visible = true; } });
+      try { void gl.compileAsync(scene, camera).catch(() => undefined); } finally { for (const o of hidden) o.visible = false; }
+    };
+    id = requestAnimationFrame(run);
+    return () => cancelAnimationFrame(id);
+  }, [gl, scene, camera]);
+  return null;
+}
+
 function Scan({ clock }: { clock: Clock }) {
   const ring = useRef<THREE.Group>(null);
   const mats = useMemo(() => {
@@ -580,9 +655,9 @@ function Director({ clock, mode, clipPlane, ball, ballAt0, kickoff, onDone, onPr
   const gq = useMemo(() => ({ q: new THREE.Quaternion(), f: new THREE.Vector3() }), []);
   useFrame((_, dt) => {
     // in the game, its own camera behind the show once it is there: the show's broadcast shot is that very pose, so
-    // the show ends exactly where the game's camera is (Yi, 2026-10-24: the kick-off came in at another camera angle;
+    // the show ends exactly where the game's camera is (otherwise the kick-off comes in at another camera angle;
     // broadcastPose above is a copy of the game's formula, kept for the page on its own)
-    const g = (window as unknown as { __cam?: () => { mode: string | null; pos: number[]; quat?: number[]; fov: number; blend: number } }).__cam?.();
+    const g = hooked<() => { mode: string | null; pos: number[]; quat?: number[]; fov: number; blend: number }>('cam')?.();
     if (g?.quat && g.mode === 'broadcast' && g.blend >= 1) {
       gq.f.set(0, 0, -1).applyQuaternion(gq.q.fromArray(g.quat)).multiplyScalar(60);
       BROADCAST.pos = [g.pos[0], g.pos[1], g.pos[2]]; BROADCAST.look = [g.pos[0] + gq.f.x, g.pos[1] + gq.f.y, g.pos[2] + gq.f.z]; BROADCAST.fov = g.fov;
@@ -595,8 +670,8 @@ function Director({ clock, mode, clipPlane, ball, ballAt0, kickoff, onDone, onPr
       else clock.t = next % LENGTH;
     }
     // the game gets ready behind the show on the board (a near still shot, where its first frames' stall does not show),
-    // early enough that Skip, which waits for it (canSkip), comes soon after the opening (Yi, 2026-10-26: a Skip pressed
-    // before the game had started behind the show stalled the hand-off; until then from the away back line's frame on)
+    // early enough that Skip, which waits for it (canSkip), comes soon after the opening (a Skip pressed before the
+    // game had started behind the show stalled the hand-off; starting at the away back line's frame was too late)
     if (onPrepare && !prepared.current && clock.t >= beatOf('board').t0 + 0.3) { prepared.current = true; onPrepare(); }
     // and draws at full size behind it from the score bug's build on
     if (onNearEnd && !near.current && clock.t >= buildAt()) { near.current = true; onNearEnd(); }
@@ -642,8 +717,8 @@ function drive(el: HTMLElement, lt: number) {
   });
 }
 
-/** the score bug built where the game has it (Yi, 2026-10-24: the title coming back in the middle and flying to the
- *  corner repeated the opening's banner): during the scan the HUD's own score bug at the top left assembles itself the
+/** the score bug built where the game has it (the title coming back in the middle and flying to the
+ *  corner would repeat the opening's banner): during the scan the HUD's own score bug at the top left assembles itself the
  *  way the title did, the glass opening from the left, the home crest and code, the score between the kit strips, the
  *  away code and crest, then the clock cell; lt, seconds into the build. Once it is done every part is handed back to
  *  the HUD's own styles, so the game's bug takes over on the same pixels */
@@ -652,8 +727,8 @@ const BUILD: [string, number, string][] = [
   ['.hud-score-sep', 0.42, 'fade'], ['.hud-team.away b', 0.48, 'rise'], ['.hud-team.away svg', 0.56, 'right'], ['.hud-clock', 0.72, 'wipe'],
 ];
 const BUILD_DONE = 0.72 + 0.55;
-/** when the bug starts to build: with the ring, as the men are put on their kick-off spots (Yi, 2026-10-24: "make the
- *  scoreboard animate the same time as we place the players to their positions"; it waited for the ring before) */
+/** when the bug starts to build: with the ring, as the men are put on their kick-off spots, so the scoreboard and the
+ *  placing animate together (not after the ring) */
 const BUILD_AT = 0.2;
 const buildAt = () => beatOf('scan').t0 + BUILD_AT;
 function build(bug: HTMLElement, lt: number) {
@@ -682,7 +757,7 @@ function Overlays({ clock, men, refs, canSkip }: { clock: Clock; men: Man[]; ref
     if (!R) return;
     const show = (el: HTMLElement | null, o: number, transform = '') => { if (!el) return; el.style.opacity = o.toFixed(3); el.style.visibility = o > 0.001 ? 'visible' : 'hidden'; el.style.transform = transform; };
     const hb = beatOf('board'), cross = beatOf('cross'), fin = beatOf('final');
-    // the plates: on the board both teams' numbers and positions (Yi, 2026-10-23: too short to read names there; the
+    // the plates: on the board both teams' numbers and positions (too short to read names there; the
     // names wait for the home players' own shots and the away lines' frames); on an away track the large plate, number,
     // flag and full name, over the men of that line
     const onBoard = (bd: Beat) => ramp(t, bd.t0 + 1.2, bd.t0 + 1.8) * (1 - ramp(t, bd.t1 - 0.6, bd.t1 - 0.2));
@@ -697,16 +772,16 @@ function Overlays({ clock, men, refs, canSkip }: { clock: Clock; men: Man[]; ref
       const o = b.kind === 'board' ? onBoard(hb)
         : b.kind === 'track' && side === 'away' && AWAY_GROUPS[b.i!].places.includes(pl.place) ? onLine(b, pl.place) : 0;
       if (o <= 0) { show(el, 0); return; }
-      // above him on the screen with a gap (Yi, 2026-10-23: on the board the plates covered the players; from straight
+      // above him on the screen with a gap (on the board the plates covered the players; from straight
       // above, a point over his head lands on him): the higher of his feet and his head on screen, 10 px more; on the
-      // boards also above the tactics board's ring at his feet (Yi, 2026-10-24: the plates stood on the rings)
+      // boards also above the tactics board's ring at his feet (else the plates stand on the rings)
       const [x, y] = spot(side, pl.place);
       v.set(x, 0, y).project(camera);
       let fy = v.y;
       if (b.kind === 'board') for (const d of [-1, 1]) { v.set(x, 0, y + d * (RING_R + RING_W)).project(camera); fy = Math.max(fy, v.y); }
       v.set(x, 2.0, y).project(camera);
       const off = v.z > 1 || Math.abs(v.x) > 1.1 || Math.abs(v.y) > 1.1;
-      // placed by a transform, to the sub-pixel (Yi, 2026-10-24: set by left/top they snapped to whole pixels and the
+      // placed by a transform, to the sub-pixel (set by left/top they snapped to whole pixels and the
       // text shook as the camera tracked)
       const px = (v.x * 0.5 + 0.5) * size.width, py = (-Math.max(v.y, fy) * 0.5 + 0.5) * size.height - 10;
       show(el, off ? 0 : o, `translate3d(${px.toFixed(2)}px, ${py.toFixed(2)}px, 0) translate(-50%, -100%)`);
@@ -714,7 +789,7 @@ function Overlays({ clock, men, refs, canSkip }: { clock: Clock; men: Man[]; ref
       el.classList.toggle('big', b.kind === 'track');
     });
     // the title: the bar opens, the crests come in from their sides, VS between, the names rise; out before the board
-    // (2026-10-25: over the drone shot, out as the camera starts up over the roof)
+    // (over the drone shot, out as the camera starts up over the roof)
     const titleOn = b.kind === 'title' ? 1 - ramp(t, T_AERIAL + 0.6, T_AERIAL + 1.1) : 0;
     show(R.title, titleOn);
     if (R.title && titleOn > 0) drive(R.title, t);
@@ -767,7 +842,7 @@ function Overlays({ clock, men, refs, canSkip }: { clock: Clock; men: Man[]; ref
  *  holds its last frame); onPrepare: called once when the game should get ready behind it
  *  (small); onNearEnd: called once as the score bug starts to build, for the game to draw at full size behind it, so
  *  the switch at the end is on a picture already drawn; handingOver: the game has taken over (no longer used: the
- *  show's picture now fades out with its overlays over the game's held first frame, Yi 2026-10-24, rather than going
+ *  show's picture now fades out with its overlays over the game's held first frame, rather than going
  *  at once); embedded: in the game, so the page's window.__setT is the game's (the show's is window.__introSetT) */
 export function LineupShow({ lineup, roster = null, kickoff = null, onDone, onPrepare, onNearEnd, embedded = false, canSkip = true }: { lineup: LineupFile; roster?: Roster | null; kickoff?: Loaded | null; onDone?: () => void; onPrepare?: () => void; onNearEnd?: () => void; handingOver?: boolean; embedded?: boolean;
   /** the game behind the show is ready to take over: Skip shows (and Esc works) only then (the page on its own: always) */ canSkip?: boolean }) {
@@ -783,9 +858,8 @@ export function LineupShow({ lineup, roster = null, kickoff = null, onDone, onPr
   const hold = useMemo(() => { const q = new URLSearchParams(location.search).get('t'); return q === null ? null : +q; }, []);
   const clock = useMemo<Clock>(() => ({ t: hold ?? 0, playing: hold === null, rate: 1 }), [hold]);
   useEffect(() => {
-    const W = window as unknown as Record<string, unknown>;
-    W[embedded ? '__introSetT' : '__setT'] = (t: number, play = false) => { clock.playing = play; clock.t = t % LENGTH; };
-    W.__length = LENGTH;
+    hook(embedded ? 'introSetT' : 'setT', (t: number, play = false) => { clock.playing = play; clock.t = t % LENGTH; });
+    hook('length', LENGTH);
   }, [clock, embedded]);
   const mode = useMemo<PitchMode>(() => ({ current: 0, origin: new THREE.Vector2(0, 0), reach: BOARD_REACH }), []);
   // the real players at the kick-off by tracking id, and every slot the scene draws (staged and real)
@@ -813,18 +887,26 @@ export function LineupShow({ lineup, roster = null, kickoff = null, onDone, onPr
   const ballAt0: [number, number] | null = b0 ? [b0[0], b0[1]] : null;
   // Skip (and Esc): straight to the broadcast picture, the scan and the score bug's build
   const skipOk = useRef(canSkip); skipOk.current = canSkip;
+  const [metered, setMetered] = useState(false);
+  // the men at the figures' level of detail by distance in the far shots (the title, the board, the final, the scan:
+  // 3.3 M triangles at full detail there, for figures a few pixels tall, and the shadow pass's too), full in the close
+  // ones as before (the switch itself falls at a shot's start, the camera far)
+  const [far, setFar] = useState(true);
+  const lod = far;
   const skip = () => { if (!skipOk.current) return; clock.t = Math.max(clock.t, beatOf('final').t1 - 1.6); clock.playing = true; onPrepare?.(); };
+  // (for the checks and ?diag=1: where the show stands)
+  useEffect(() => { hook('lu', { t: () => clock.t, beat: () => beatAt(clock.t).kind, skip, set: (t: number, play = true) => { clock.t = t; clock.playing = play; } }); return () => { unhook('lu'); }; });
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') skip(); };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   });
-  // the card's and the large plates' name: the roster's full name (Yi, 2026-10-23: plausible for his nationality),
+  // the card's and the large plates' name: the roster's full name (invented, plausible for his nationality),
   // else the shirt's
   const fullNames = useMemo(() => new Map((roster?.players ?? []).map((r) => [r.pid, fullName(r)])), [roster]);
   const nameOf = (m: Man, p: number) => (m.pl.pid && fullNames.get(m.pl.pid)) || looks[p]?.name;
-  // his nationality (the flag and the card's second line): the roster's, which goes with his invented name (Yi,
-  // 2026-10-23: the squads read like the Premier League's, mostly British), not the real one in lineup.json
+  // his nationality (the flag and the card's second line): the roster's, which goes with his invented name (the
+  // squads read like the Premier League's, mostly British), not the real one in lineup.json
   const nats = useMemo(() => new Map((roster?.players ?? []).map((r) => [r.pid, r.nat])), [roster]);
   const natOf = (m: Man) => (m.pl.pid && nats.get(m.pl.pid)) || m.pl.nat || null;
   const refs = useRef<OverlayRefs>({ plates: [], cards: [], lines: [], alines: [], words: [], crossWord: null, title: null, team: null, teamAway: null, bars: [], scrim: null, lock: null, bug: null, skip: null });
@@ -832,7 +914,11 @@ export function LineupShow({ lineup, roster = null, kickoff = null, onDone, onPr
   const formation = { home: lineup.home.formation.split('').join('-'), away: lineup.away.formation.split('').join('-') };
   return (
     <>
-      <Canvas shadows dpr={[1, 1.5]} camera={{ fov: 34, position: [0, 60, 60], near: 0.1, far: 3000 }} gl={{ antialias: true }}>
+      {/* the game's graphics quality (three/quality.ts): its render scale, applied inside a frame (ApplyScale), and no
+          antialiasing for a device kept on the low tier */}
+      <Canvas shadows dpr={appliedShow.scale} camera={{ fov: 34, position: [0, 60, 60], near: 0.1, far: 3000 }} gl={{ antialias: !(AA_OFF_AT_LOAD && lowHas('aa')) }}>
+        <ApplyScale ceil={() => showCeil.get()} record={appliedShow} />
+        <AdaptiveQuality show />
         <color attach="background" args={['#05070b']} />
         <fog attach="fog" args={['#05070b', 160, 420]} />
         <BootFrame />
@@ -846,12 +932,12 @@ export function LineupShow({ lineup, roster = null, kickoff = null, onDone, onPr
         <TacticsBoard clock={clock} />
         <Furniture />
         {/* the stadium's clock (the crowd's motion, the boards' banners) reaches the game's at the kick-off as the show
-            ends: clip time 0 there (Yi, 2026-10-24: at the hand-off the scene shifted; on render time the stands and
-            boards jumped to another state as the game took over) */}
+            ends: clip time 0 there (on render time the stands and boards jumped to another state as the game took
+            over, a visible shift at the hand-off) */}
         <ProceduralStadium shell="crystal" clipPlane={clipPlane} time={stadiumTime} />
         {/* the home eleven fill the joints' attacking slots, so with attacking="home" they wear the home kit and the away
-            eleven the away kit (Yi, 2026-10-23: each team its own colours) */}
-        <Players J={J} clock={clock} style="toon" looks={slotLooks} lod={false} attacking="home" />
+            eleven the away kit (each team its own colours) */}
+        <Players J={J} clock={clock} style="toon" looks={slotLooks} lod={lod} attacking="home" />
         {flashes.map((f, i) => <Flash key={i} clock={clock} spec={f} />)}
         {kickoff && <Sparks clock={clock} slots={slots} officials={officialReal} />}
         <group ref={ball} visible={false}>{ballTrack && <StyledBall pkg={ballTrack} clock={clock} style="modern" />}</group>
@@ -860,7 +946,12 @@ export function LineupShow({ lineup, roster = null, kickoff = null, onDone, onPr
         <Director clock={clock} mode={mode} clipPlane={clipPlane} ball={ball} ballAt0={ballAt0} kickoff={kickoff} onDone={onDone} onPrepare={onPrepare} onNearEnd={onNearEnd} />
         <Overlays clock={clock} men={men} refs={refs} canSkip={skipOk} />
         <FrameCounter />
+        <Prewarm />
+        <ShadowPolicy clock={clock} onFar={setFar} />
+        {!metered && <ShowMeter onDone={() => setMetered(true)} />}
+        <PerfProbe name="perfShow" />
       </Canvas>
+      <QualityChip className="lu-qchip" />
       <div className="lu-vignette" />
       <div className="lu-scrim" ref={(el) => { refs.current.scrim = el; }} />
       {/* the overlays, each in its team's colour (--team: home blue, away orange) */}
@@ -880,7 +971,7 @@ export function LineupShow({ lineup, roster = null, kickoff = null, onDone, onPr
         {ORDER.map((o, i) => {
           const p = home.findIndex((pl) => pl.place === o.place), pl = home[p], look = looks[p], nat = pl && natOf(men[p]);
           if (!pl || !look) return null;
-          // the card: free text over the scene (Yi, 2026-10-23: he prefers it to the HUD's glass card, "more gamified"),
+          // the card: free text over the scene (more game-like than the HUD's glass card),
           // the big number in the team's colour, the flag and the name, the position and the nationality, a rule drawn
           // out, then the tags, each a small chip whose glass blurs what is behind it (the boards' lettering)
           return (
@@ -899,7 +990,7 @@ export function LineupShow({ lineup, roster = null, kickoff = null, onDone, onPr
             </div>
           );
         })}
-        {/* the title: the score bug's own build, large (Yi chose it, 2026-10-23): a team cell each side (crest outside,
+        {/* the title: the score bug's own build, large: a team cell each side (crest outside,
             name inside), and the middle cell, lighter, between the two kit-colour strips; the glass opens from the
             middle, then the crests come in from their sides and the names rise */}
         <div className="lu-title" ref={(el) => { refs.current.title = el; }}>
@@ -916,11 +1007,11 @@ export function LineupShow({ lineup, roster = null, kickoff = null, onDone, onPr
         <div className="lu-team away" ref={(el) => { refs.current.teamAway = el; }}><Crest team="away" size={30} /><b>{TEAM_NAME.away}</b><span>{tr('首发', 'Starting XI')} · {formation.away}</span></div>
         <button type="button" className="lu-skip" ref={(el) => { refs.current.skip = el; }} onClick={skip}>{tr('跳过', 'Skip')} <span aria-hidden="true">›</span></button>
       </div>
-      {/* the HUD's own score bug where the game has it, built there at the end: kick-off, 0 : 0; after the credits' "i",
-          as the HUD has it (drawn only: the HUD's own takes over at the hand-off), so the two bugs meet exactly (the
-          Trailer capture chat, 2026-10-27: the show's sat 45 px left of the HUD's since the "i" came) */}
+      {/* the HUD's own score bug where the game has it, built there at the end: kick-off, 0 : 0; laid out
+          as the HUD has it (drawn only: the HUD's own takes over at the hand-off), so the two bugs meet exactly (a
+          button before the bug in one of them only, as the credits' "i" was, set the show's 45 px left of the HUD's;
+          the "i" is gone from both) */}
       <div className="hud lu-hud" ref={(el) => { refs.current.bug = el; }}><div className="hud-tl">
-        <span className="hud-btn hud-glass hud-info" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 18 18"><circle cx="9" cy="9" r="7.5" fill="none" stroke="currentColor" strokeWidth="1.5" /><path d="M9 8 V13" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" /><circle cx="9" cy="5.2" r="1.05" fill="currentColor" /></svg></span>
         <ScoreBug home={TEAM_CODE.home} away={TEAM_CODE.away} score={[0, 0]} clock={0} />
       </div></div>
     </>

@@ -1,4 +1,4 @@
-// The spotlight (pitch_prism's locked design, freeze/spotlight.py, ported to real geometry; Yi, 2026-10-22: the pressed
+// The spotlight (pitch_prism's locked design, freeze/spotlight.py, ported to real geometry; the pressed
 // player is lit by a column of light rising from the ground instead of a ring): a light cylinder standing on the pitch
 // over a player, drawn with light only. Constant width top to bottom, soft feathered walls (10% of the radius), brightest
 // at the base and fading upwards as exp(-(h / 1.58 r)^1.15) with no top cap; a gentle additive glow (intensity 0.5,
@@ -13,7 +13,7 @@ import { TELE } from './style';
 
 /** one column: the feet (scene x, z), the entrance's scale 0..1, an alpha */
 export interface SpotReq { x: number; z: number; scale: number; alpha: number }
-const POOL = 8, H = 9;   // columns (8: a carrier's passing options all lit, the What-if chat); the cylinder's height in units of the radius
+const POOL = 8, H = 9;   // columns (8: a carrier's passing options all lit, as the What-if mode does); the cylinder's height in units of the radius
 
 const SCREEN = { blending: THREE.CustomBlending, blendEquation: THREE.AddEquation, blendSrc: THREE.OneFactor, blendDst: THREE.OneMinusSrcColorFactor } as const;
 

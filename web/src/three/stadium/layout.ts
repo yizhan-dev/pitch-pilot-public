@@ -5,7 +5,7 @@ export const HX = 61, HY = 42.5, RC = 20;
 export const LOWER = steps(0, 2.2, 24, 0.85, 0.38);            // lower tier: 24 rows, about 20 m deep, 9 m rise
 export const LOWER_END = LOWER[LOWER.length - 1];
 // between the tiers: a cross-aisle, then the upper tier's front: a band of hospitality boxes and a light grey parapet
-/** every tier's front carries the same light grey band, this tall (Yi, 2026-10-21) */
+/** every tier's front carries the same light grey band, this tall */
 export const GREY_BAND = 1.1;
 export const BOX_BAND = { d: LOWER_END.d + 1.2, h0: LOWER_END.h + 0.5, h1: LOWER_END.h + 3.2 - GREY_BAND };
 export const FASCIA: Profile = [
@@ -37,7 +37,7 @@ export const SIDES: { s0: number; s1: number; kind: 'long' | 'end' | 'corner' }[
   return out;
 })();
 
-/** The gangways (Yi, 2026-10-22: the seat blocks were not centred). They used to run every BOWL_PERIM / 28 from the middle
+/** The gangways, laid out so the seat blocks are centred. They used to run every BOWL_PERIM / 28 from the middle
  *  of the main stand, which centred nothing else: the end blocks sat 0.6-1.2 m off the goal axis, and on a corner one
  *  gangway fell at its start and the next 4 m before its end. Now each side is laid out about its own middle and each
  *  corner about its diagonal: a gangway at every joint between a straight and a corner, one on each corner's diagonal,
@@ -67,8 +67,8 @@ export const gangwayRanges = (dRef: number): [number, number][] => {
 export const gangwayBreaks = (r: [number, number][]) => r.flatMap(([lo, hi]) => [lo - 0.01, lo, hi, hi + 0.01]);
 export const inGangway = (s: number, r: [number, number][]) => r.some((x) => inRange(s, x));
 
-/** Vomitories, fourth version (Yi, 2026-10-22: "now it looks perfect"). The third version, light grey box portals on the
- *  lower tier only, was rejected ("keep it simplified"); this one follows Yi's terms: slightly smaller, on every tier, a
+/** Vomitories, fourth version. The third version, light grey box portals on the
+ *  lower tier only, was too much for a stand kept simple; this one is slightly smaller, on every tier, a
  *  slightly darker colour so they blend in. Each is a box at the head of a gangway: its floor is row r0's tread, its
  *  level roof runs back until it meets the tread `rows` rows behind, which leaves a 2.1 m doorway under a 0.5-0.6 m
  *  lintel on each tier's rake. Same positions on every tier, stacked. */

@@ -1,4 +1,5 @@
 import { matchFile, parseClip } from '../../data/paths';
+import { hook, hooked } from '../../dev';
 import { useEffect, useMemo, useState } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { Html, OrbitControls } from '@react-three/drei';
@@ -75,7 +76,7 @@ function Focus({ at, az, dist = 3.6, h = 0.95, el }: { at: [number, number, numb
 }
 
 function Tick({ clock, live, end }: { clock: Clock; live: boolean; end: number }) {
-  useFrame((_, dt) => { if (live) { clock.t += Math.min(dt, 0.1); if (clock.t > end) clock.t = 0; } (window as unknown as { __frames?: number }).__frames = ((window as unknown as { __frames?: number }).__frames ?? 0) + 1; });
+  useFrame((_, dt) => { if (live) { clock.t += Math.min(dt, 0.1); if (clock.t > end) clock.t = 0; } hook('frames', (hooked<number>('frames') ?? 0) + 1); });
   return null;
 }
 
@@ -88,7 +89,7 @@ export function PlayerViewer() {
   const clock = useMemo(makeClock, []);
   useEffect(() => { history.replaceState(null, '', '#' + encodeURIComponent(JSON.stringify(st))); }, [st]);
   useEffect(() => {
-    // one of the match's clips (?moment=<id> or its address), 15:53 by default, at its key moment (since 2026-10-26: the
+    // one of the match's clips (?moment=<id> or its address), 15:53 by default, at its key moment (the
     // prototype moments it used to show were archived with their pages)
     (async () => {
       const idx = (await (await fetch(matchFile('index.json'))).json() as { clips: { id: string; moment: string }[] }).clips;

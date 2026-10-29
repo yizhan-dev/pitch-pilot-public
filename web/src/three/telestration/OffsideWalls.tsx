@@ -1,6 +1,6 @@
 // The offside wall (pitch_prism's locked design, ported to real geometry): a translucent vertical plane across the
 // pitch at the offside line, brightest at the base and fading up (alpha 0.34 at the base, x0.62 at mid-height, x0.16 at
-// the top; Yi, 2026-10-22: white and 4 m tall, where pitch_prism's was blue and 2 m), depth tested so players behind it are tinted through it and players in front are not.
+// the top; white and 4 m tall, where pitch_prism's was blue and 2 m), depth tested so players behind it are tinted through it and players in front are not.
 // Its crisp base line is drawn on the grass by the ground layer. The entrance is driven by the caller: the wall is
 // revealed outwards from the defender who sets the line (as the base line sweeps to both touchlines) and rises out of it.
 import { useEffect, useMemo } from 'react';
@@ -10,7 +10,7 @@ import { TELE } from './style';
 
 /** one wall: the line's x (scene), the line-setter's z where the reveal starts, how far either way it reaches (m), the
  *  height's share risen 0..1, an alpha; `rip`: up to three ripples spreading over the wall from where a body touches it
- *  (the close-up's; Yi, 2026-10-23), each [z, height, seconds since it began, strength 0..1] */
+ *  (the close-up's), each [z, height, seconds since it began, strength 0..1] */
 export interface WallReq { x: number; z0: number; reach: number; rise: number; alpha: number; rip?: [number, number, number, number][] }
 const POOL = 2, HALF_W = 34;
 

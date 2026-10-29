@@ -82,7 +82,7 @@ export interface MatchStats {
   passes: [number, number]; keyPasses: number;
   /** completed, attempted */
   dribbles: [number, number];
-  /** shots, on target (Yi: 射门 needs 射正 too) */
+  /** shots, on target (shots are shown with their on-target count) */
   shots: [number, number]; xg: number;
   /** won, attempted */
   tackles: [number, number]; interceptions: number; clearances: number;
@@ -140,7 +140,7 @@ export type StatKey = 'dist' | 'hsr' | 'spr' | 'top' | 'tch' | 'pas' | 'acc' | '
 const arrows = (z: number) => { const a = Math.abs(z), n = a >= 2.3 ? 3 : a >= 1.6 ? 2 : a >= 1 ? 1 : 0; return Math.sign(z) * n; };
 const mid = (r: [number, number]) => (r[0] + r[1]) / 2, half = (r: [number, number]) => (r[1] - r[0]) / 2;
 
-/** Every entry the card can show, with its arrows (FM style, Yi 2026-10-22). The reference is the usual for his role
+/** Every entry the card can show, with its arrows (FM style). The reference is the usual for his role
  *  (RATES): his match so far, against what a typical player in that role would have by now. Counts allow for chance
  *  (Poisson) as well as the spread between players, so a single early shot does not earn three arrows; no arrows on
  *  counts before 15 minutes. 失球 is the one where fewer is better. On example data the arrows are examples too. */
@@ -170,7 +170,7 @@ export function statCatalogue(role: Role, s: MatchStats, conceded: number, match
     lng: E(tr('长传', 'Long balls'), `${s.longBalls[0]}/${s.longBalls[1]}`, count(s.longBalls[1], 'lng')),
     key: E(tr('关键传球', 'Key passes'), String(s.keyPasses), count(s.keyPasses, 'key')),
     ast: E(tr('助攻', 'Assists'), String(s.assists), count(s.assists, 'ast')),
-    // on target / all, as the other pairs read (passes completed / played): Shots 1/2 (Yi, 2026-10-23: "Shots (on target)
+    // on target / all, as the other pairs read (passes completed / played): Shots 1/2 ("Shots (on target)
     // 1 (0)" ran too wide, worse with two digits)
     shot: E('Shots', `${s.shots[1]}/${s.shots[0]}`, count(s.shots[0], 'shot')),
     xg: E(tr('预期进球', 'xG'), s.xg.toFixed(2), early || R.shot[1] === 0 ? 0 : rate(s.xg, (mid(R.shot) * 0.11 * min) / 90, Math.sqrt((mid(R.shot) * 0.11 * min) / 90 * 0.3) || 1)),
@@ -185,7 +185,7 @@ export function statCatalogue(role: Role, s: MatchStats, conceded: number, match
   };
 }
 
-/** the card's default eight keys, two columns by four rows, chosen by role (Yi: defenders and attackers differ); each a
+/** the card's default eight keys, two columns by four rows, chosen by role (defenders and attackers differ); each a
  *  subset of the full stats' sixteen */
 export const DEFAULT_KEYS: Record<Role, StatKey[]> = {
   前锋: ['dist', 'top', 'spr', 'tch', 'xg', 'shot', 'drb', 'key'],   // shots in the right column with top speed: the two longest English rows side by side overflowed the card
@@ -205,17 +205,17 @@ export function fullGroups(role: Role): { title: string; keys: StatKey[] }[] {
   ];
 }
 
-// ---- real data from the 3D side's export (2026-10-22): line-up, running, synced match events --------------------------
+// ---- real data from the 3D side's export: line-up, running, synced match events --------------------------
 
 /** the side's shape in one phase, as the card needs it: MA33's label (e.g. '4-2-3-1 Off. FB'), the coarse formation
  *  (e.g. '4-5-1') and the role codes the side's players had in it */
 export interface PhaseShape { label: string; formation: string; codes: Set<string> }
 
-/** a position as eFootball writes it (Yi, 2026-10-23: short enough for the card, and the codes players know): GK, CB,
+/** a position as eFootball writes it (short enough for the card, and the codes players know): GK, CB,
  *  LB, RB, DMF, CMF, LMF, RMF, AMF, LWF, RWF, CF (SS has no MA33 counterpart). From an Opta MA33 role code and the
  *  side's shape in that phase, since some codes depend on it: wide players (W) are wing forwards when theirs is the
  *  front line (a formation ending in 3 or 4: 4-3-3, 4-2-1-3, 4-2-4, 3-4-3), else wide midfielders (4-4-2, 4-2-3-1 as
- *  4-5-1; Yi, 2026-10-23: a 4-2-3-1's winger is RMF, a 4-2-1-3's RWF);
+ *  4-5-1: a 4-2-3-1's winger is RMF, a 4-2-1-3's RWF);
  *  a lone CM is the holding DMF; the pair CM.L/CM.R is a double pivot (DMF) in a 4-2-… or 3-2-… shape, else CMF;
  *  F.L/F.R beside a centre forward (F) are wing forwards, else a front two of CFs; wing-backs are LMF/RMF, as eFootball
  *  has no wing-back (its back-three formations put LMF/RMF on the flanks). Checked on every shape in the 41 clips */
@@ -260,9 +260,9 @@ export function roleFromLineup(e: { position: string; side: string; detail: stri
 /** the card's position for a stats group when nothing better is known (the estimate from the tracking) */
 export const ROLE_POSITION: Record<Role, string> = { 门将: 'GK', 后卫: 'CB', 中场: 'CMF', 前锋: 'CF' };
 
-/** a player's position from what he really played (the export's `roles`, Opta MA33, Yi 2026-10-22), as an eFootball
+/** a player's position from what he really played (the export's `roles`, Opta MA33), as an eFootball
  *  code: the one in his side's phase in this clip, in possession for the attackers, out of it for the defenders. The
- *  other phase's position is not shown (Yi, 2026-10-23: a winger who presses beside the striker read "Out of
+ *  other phase's position is not shown (a winger who presses beside the striker read "Out of
  *  possession: CF"; that belongs to 讲解, told in words). `shapes` is his side's shape in each phase. Stats group from
  *  the role. null where the export has none (keepers, a shirt the tracking mislabelled), so the line-up takes over. */
 export function roleFromShape(r: { in: string | null; out: string | null } | null | undefined, attacking: boolean, shapes?: Partial<Record<'in' | 'out', PhaseShape>>): { label: string; role: Role } | null {
@@ -287,7 +287,7 @@ const ON_BALL = new Set(['Pass', 'BallTouch', 'TakeOn', 'BallRecovery', 'Clearan
  *  speed bands not reconciled) from `run`, the counts from `match_events`. Assists are passes tagged Assist that a
  *  team-mate's goal follows within 20 s (a shot's IntentionalGoalAssist tag means the shot was assisted, not that the
  *  shooter assisted). Top speed (the fastest second so far) and sprints come from `run` too where the package has them
- *  (since 2026-10-28; Yi: it showed a fixed example from the first second); the speed bands stay `fallback` (examples). */
+ *  (rather than a fixed example from the first second); the speed bands stay `fallback` (examples). */
 export function realStats(pkg: ClipPkg, p: number, t: number, fallback: MatchStats): MatchStats {
   const now = (pkg.clock0 ?? 0) + t, nAtt = nAttOf(pkg), all = pkg.match_events?.players ?? [];
   const ev = (all[p] ?? []).filter((e) => e[0] <= now);
@@ -321,7 +321,7 @@ export function realStats(pkg: ClipPkg, p: number, t: number, fallback: MatchSta
   };
 }
 
-/** Match stamina from the measured running (a PROPOSAL until Yi sets the formula): the load is 0.6 x distance over a typical
+/** Match stamina from the measured running (a PROPOSAL until the formula is settled): the load is 0.6 x distance over a typical
  *  full match plus 0.4 x high-speed distance over a typical full match (outfield 10.5 km and 0.8 km, keepers 5.5 km and
  *  0.05 km), and the bar loses 30 points per full match's load, so a typical player ends the 90 minutes near 70. */
 export function matchStaminaReal(pkg: ClipPkg, p: number, keeper: boolean, t: number) {

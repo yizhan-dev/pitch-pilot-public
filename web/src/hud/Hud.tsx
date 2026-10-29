@@ -40,8 +40,8 @@ export interface HudProps {
   /** bind the HUD's keys (the views' digits, M the mode menu, V the view menu, R the radar, in the 战术 mode the display switches' letters,
    *  Esc closes a panel); default true */
   keys?: boolean;
-  /** the designs Yi is still judging in the HUD preview (2026-10-23: the 战术 mode's analysis layers); leave it off in
-   *  ?ui=game until he accepts them */
+  /** the designs still on trial in the HUD preview (the 战术 mode's analysis layers); leave it off in
+   *  ?ui=game until they are accepted */
   draft?: boolean;
 }
 
@@ -53,7 +53,7 @@ export function Hud({ pkg, clock, looks, index, portraitOf, playback, keys = tru
   const hasOfficials = !!pkg.officials?.joints;
 
   // keys: 1-8 pick a view (src/hud/views.ts; the player views need a selection, the officials' views their tracking);
-  // M opens or closes the mode menu, V the view menu, R shows or hides the radar (Yi, 2026-10-26, in place of Q cycling
+  // M opens or closes the mode menu, V the view menu, R shows or hides the radar (in place of Q cycling
   // through the modes; R was the broadcast view, M the radar); Esc closes the open panel and marks the event handled
   // (defaultPrevented), so the pitch can keep Esc for clearing the selection when no panel is open
   useEffect(() => {
@@ -66,10 +66,10 @@ export function Hud({ pkg, clock, looks, index, portraitOf, playback, keys = tru
       if (summaryOpen.get() && /^[mvrMVR0-9]$/.test(e.key)) return;
       if (e.key === 'm' || e.key === 'M') { togglePanel('mode'); return; }
       if (e.key === 'v' || e.key === 'V') { togglePanel('view'); return; }
-      if (e.key === 'r' || e.key === 'R') { if (getSettings().mode !== 'tactics') toggleLayer('map'); return; }    // the radar, LAYERS' hotkey (none in 战术, Yi 2026-10-25)
+      if (e.key === 'r' || e.key === 'R') { if (getSettings().mode !== 'tactics') toggleLayer('map'); return; }    // the radar, LAYERS' hotkey (none in 战术)
       // the old display switches' letters (LAYERS' hotkeys), only where those switches still show: the 战术 mode of the
-      // preview's ?current=1. The game's 战术 column has none of them (its marks replaced them, chat 3's request 10,
-      // 2026-10-25), so there the letters do nothing
+      // preview's ?current=1. The game's 战术 column has none of them (its marks replaced them, hud-notes.md request
+      // 10), so there the letters do nothing
       const l = !draft && getSettings().mode === 'tactics' ? LAYERS.find((x) => x.hotkey.toLowerCase() === e.key.toLowerCase()) : undefined;
       if (l) { toggleLayer(l.key); return; }
       const v = VIEW_UI.find((x) => x.hotkey === e.key);
@@ -90,7 +90,7 @@ export function Hud({ pkg, clock, looks, index, portraitOf, playback, keys = tru
     return () => document.removeEventListener('pointerdown', press, true);
   }, []);
 
-  // the Explain mode only where the clip has a director script (Yi, 2026-10-26: Watch is the way into every clip); an
+  // the Explain mode only where the clip has a director script (Watch is the way into every clip); an
   // address or a clip change that lands in Explain without one falls back to Watch
   const { mode } = useGameSettings(), moment = momentOf(pkg), ok = useStore(explainable), wiOk = WHATIF_CLIPS.has(pkg.meta.id);
   useEffect(() => { whatifable.set(wiOk); }, [wiOk]);
@@ -104,7 +104,7 @@ export function Hud({ pkg, clock, looks, index, portraitOf, playback, keys = tru
   // the same for What-if, on a clip without a moment (its own list only loads clips with one)
   useEffect(() => { if (!wiOk && mode === 'whatif') setMode('watch'); }, [wiOk, mode]);
 
-  // the VAR check (game/varReplay.ts; Yi, 2026-10-26): on an offside clip in Watch, from the pass to the clip's end, a
+  // the VAR check (game/varReplay.ts): on an offside clip in Watch, from the pass to the clip's end, a
   // pulsing VAR button left of Radar. Play, a seek, or the button again ends it; a new clip or another mode drops it
   const check = useMemo(() => varCheckOf({ pkg: pkg as never }), [pkg]), vr = useStore(varReplay), varOn = varActive(vr);
   useEffect(() => { varReplay.set(VAR_OFF); }, [pkg]);
@@ -118,12 +118,12 @@ export function Hud({ pkg, clock, looks, index, portraitOf, playback, keys = tru
     seek: (x) => { if (varActive()) endVar(); playback.seek(x); },
   };
 
-  // played to its end: a button at the top centre (Yi, 2026-10-26). In Watch it plays the next clip; in the other modes
-  // it goes back to Watch ("in these tabs, the center top button would be: go back to watch mode"), on the same clip
+  // played to its end: a button at the top centre. In Watch it plays the next clip; in the other modes
+  // it goes back to Watch, on the same clip
   const swapping = useStore(clipSwap) !== 'off';
   const finished = !!playback && !playback.playing && t >= playback.duration - 0.1 && vr.phase === 'off' && !swapping;
   const next = finished && mode === 'watch' ? nextClipOf(index, pkg.meta.id) : null, backToWatch = finished && mode !== 'watch';
-  // the match summary (summary/, Yi 2026-10-26): offered at the end of the last clip in Watch, in place of Play Next Clip;
+  // the match summary (summary/): offered at the end of the last clip in Watch, in place of Play Next Clip;
   // it closes with another clip or mode
   const sumOpen = useStore(summaryOpen), lastClip = finished && mode === 'watch' && !!index && !next;
   useEffect(() => { if (lastClip) void loadSummary(); }, [lastClip]);
@@ -133,11 +133,10 @@ export function Hud({ pkg, clock, looks, index, portraitOf, playback, keys = tru
 
   // the drawings follow playback: unsaved strokes fade when play resumes (the preview stage and the 3D overlay both read it)
   useDrawingPlayback(!!playback?.playing);
-  // the per-mode replay player (Yi, 2026-10-23): watch, explain, tactics (an ordinary player, with the pen's freeze frames
-  // and steps), What-if (the clips with an approved moment, the What-if chat at Yi's word, 2026-10-26: "they should be just
-  // in media player")
-  // explain: only the clips with a director script (explain/director.ts, chat 4) and play / pause; its stand-in parts,
-  // which paused on their own against the narration's holds, are gone (Yi, 2026-10-25)
+  // the per-mode replay player: watch, explain, tactics (an ordinary player, with the pen's freeze frames
+  // and steps), What-if (the clips with an approved moment, in a plain media player)
+  // explain: only the clips with a director script (explain/director.ts) and play / pause; its stand-in parts,
+  // which paused on their own against the narration's holds, are gone
   const variant = draft ? (mode === 'explain' ? 'explain' : mode === 'tactics' ? 'tactics' : mode === 'whatif' ? 'whatif' : 'watch') : undefined;
   return (
     <div className={`hud${swapping ? ' hud-swapping' : ''}${sumOpen ? ' hud-summary' : ''}`}>

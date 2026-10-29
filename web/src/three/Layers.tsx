@@ -19,7 +19,7 @@ export function PitchControl({ pkg }: { pkg: MomentPkg }) {
   const carrier = pkg.frames[pkg.meta.decision_frame].att[pkg.decision.carrier];
   const tex = useMemo(() => {
     const { w, h, att } = pkg.decision.pitch_control, data = new Uint8Array(w * h * 4), c = new THREE.Color();
-    // each side's ground in its team's kit colour, home blue and away orange whichever attacks (coords.ts, Yi 2026-10-23)
+    // each side's ground in its team's kit colour, home blue and away orange whichever attacks (coords.ts)
     const ATT = new THREE.Color(kitOf('att', attackingOf(pkg.meta)).shirt), DEF = new THREE.Color(kitOf('def', attackingOf(pkg.meta)).shirt);
     for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) {
       const r = h - 1 - j, p = att[r * w + i], d = (p - 0.5) * 2, k = (j * w + i) * 4;

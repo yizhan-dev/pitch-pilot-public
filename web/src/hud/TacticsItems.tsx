@@ -11,14 +11,14 @@ import type { ClipPkg } from './match';
 import { spaceSide, useSpace } from './space';
 import { useClockTime } from './useClockTime';
 
-// The 战术 marks that chat 1 draws (the animation chat owns the marks on the pitch; docs/plans/telestration-notes.md):
-// - the offside line (Yi, 2026-10-25: one click, universal), chat 1's offside item following the clock, every player in an
+// The 战术 marks that the telestration draws (three/telestration owns the marks on the pitch; docs/plans/telestration-notes.md):
+// - the offside line (one click, universal), the telestration offside item following the clock, every player in an
 //   offside position ringed (`highlight: 'all'`). Its line is the side without the ball's: the side on the ball is the player
 //   on the ball's, or a keeper's holding it (passProb.ts holderSideAt), else the space export's held possession.
-// - the pass chance (Yi, 2026-10-25): chat 1's `passprob` links from the carrier to every team-mate in the passing
+// - the pass chance: the telestration `passprob` links from the carrier to every team-mate in the passing
 //   network's look (no link to an offside one), from passProb.ts's distilled model, following the clock; the numbers go in
-//   the head tags, which the Shell chat's ShowLayer draws from `passChances` (published here).
-// - the shot chance (Yi, 2026-10-26): chat 1's shot cone from the player on the ball, with his xG if he shot now.
+//   the head tags, which three/layers/ShowLayer.tsx draws from `passChances` (published here).
+// - the shot chance: the telestration shot cone from the player on the ball, with his xG if he shot now.
 // It also lists the clip's on-ball moments for the Tactics pause's previous / next event (clipMoments).
 // Its own Telestration, so nothing else re-renders with the clock; mounted by PitchOverlay3D, inside the Stage's canvas.
 
@@ -34,7 +34,7 @@ export function TacticsItems({ data, clock, surface, looks }: { data: Loaded; cl
   const onBall = offside ? holderSideAt(pkg, t) ?? (space ? spaceSide(space, t) : 1) : 1, side = onBall === 2 ? 'att' : 'def';
   const pass = passing ? passStateAt(pkg, t, modelLoaded) : null;
   const chances = pass && pass.carrier !== null && pass.opts ? pass : null;
-  // published for the head tags (the Shell chat's ShowLayer reads it each frame); null when off or nobody has the ball
+  // published for the head tags (ShowLayer reads it each frame); null when off or nobody has the ball
   useEffect(() => { passChances.set(chances); }, [chances?.carrier, chances?.opts, t]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => () => passChances.set(null), []);
   // the on-ball moments: each event by a player at his contact with the ball (passProb.ts contactAt: the 25 Hz sample
@@ -52,7 +52,7 @@ export function TacticsItems({ data, clock, surface, looks }: { data: Loaded; cl
     for (const m of found.sort((a, b) => a.t - b.t)) if (!out.length || m.t - out[out.length - 1].t >= 0.4) out.push(m);
     clipMoments.set(out);
   }, [pkg, looks]);
-  const shooter = shot ? shooterAt(pkg, t) : null;   // only in the opponents' half (Yi)
+  const shooter = shot ? shooterAt(pkg, t) : null;   // only in the opponents' half
   const items: Item[] = [
     ...(offside ? [{ id: `tactics-offside-${side}`, kind: 'offside', side, focus: null, highlight: 'all' } as const] : []),
     ...(shooter !== null ? [{ id: `tactics-xg-${shooter}`, kind: 'shot', shooter, labels: true } as const] : []),

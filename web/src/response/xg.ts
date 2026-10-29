@@ -27,8 +27,8 @@ function hidden(sx: number, sy: number, px: number, py: number, halfWidth: numbe
   return [Math.max(theta - half, gateLo), Math.min(theta + half, gateHi)];
 }
 
-/** the shot's technique, for a model fit with StatsBomb's labels (xg_shot.json, private/response/fit_xg_shot.py,
- *  2026-10-25): `volley` the ball struck off the ground (Volley, Half Volley, Overhead Kick), `firstTime` struck as it
+/** the shot's technique, for a model fit with StatsBomb's labels (xg_shot.json,
+ *  private/response/fit_xg_shot.py): `volley` the ball struck off the ground (Volley, Half Volley, Overhead Kick), `firstTime` struck as it
  *  came; a model without those features ignores them */
 export interface XgTech { volley?: boolean; firstTime?: boolean }
 

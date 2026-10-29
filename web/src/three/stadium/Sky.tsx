@@ -15,5 +15,7 @@ export function SkyDome({ top = '#020306', haze = '#141c2c', radius = 1400 }: { 
   }), []);
   useEffect(() => { mat.uniforms.uTop.value.set(top); mat.uniforms.uHaze.value.set(haze); }, [mat, top, haze]);
   useEffect(() => () => mat.dispose(), [mat]);   // its own material, released with it
-  return <mesh material={mat} renderOrder={-1}><sphereGeometry args={[radius, 32, 16]} /></mesh>;
+  // (drawn last of the opaque things, three/quality.ts xOn 'latefill': first, it was shaded over the whole screen and then
+  // covered; last, the depth test keeps it to where nothing else is. It writes no depth, so the rest is unchanged)
+  return <mesh material={mat} renderOrder={10}><sphereGeometry args={[radius, 32, 16]} /></mesh>;
 }

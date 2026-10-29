@@ -10,26 +10,26 @@ import { FIGURE_STENCIL, type HideRef } from '../players/Styles';
 import { jointAt } from '../camera/Director';
 import { attackingOf, playerTeam, roleTeam, type Team } from '../coords';
 
-// The display layers on the pitch (?ui=game, 2026-10-22), switched in src/game/settings.ts (the HUD's display panel). No
-// stamina bar over the heads since Yi's call the same day: stamina is the player card's.
+// The display layers on the pitch (?ui=game), switched in src/game/settings.ts (the HUD's display panel). No
+// stamina bar over the heads among them: stamina is the player card's.
 //  speed    a ring at the feet in the speed band's colour (FIFA bands as in MA45: walk < 7 km/h, jog < 15, run < 20,
 //           high-speed run < 25, sprint)
 //  trail    the last 3 s of each player's path, a ribbon on the grass fading out
 //  fov      where the face points (nose from between the ears), a 60-degree, 6 m sector on the grass
 //  lines    the defending side's back line and midfield line
 //  offside  the second-last defender (the keeper counted), across the pitch
-//  (the Spearman 'space' layer is gone, Yi 2026-10-24: pitch control is the 战术 mode's base map, the notebook's model
+//  (the Spearman 'space' layer is gone: pitch control is the Tactics mode's base map, the notebook's model
 //   precalculated at export; hud/space.ts, docs/plans/space-metrics.md)
 //  ball     the ball's last 2 s, a ribbon facing the camera, in every mode (the Show column's ball switch)
 // "Which players" (scope): all, the selected one, or the attackers. The player whose eyes the camera uses loses his own.
-// Colours go by team, as the kits: home blue and away orange in every clip (coords.ts, Yi 2026-10-23; until then the
-// attacking side was blue and the defending side orange).
+// Colours go by team, as the kits: home blue and away orange in every clip (coords.ts), not by role (the attacking
+// side blue and the defending side orange), which changed a team's colour from clip to clip.
 
 const BANDS: [number, string][] = [[7, '#8a93a3'], [15, '#e8ebef'], [20, '#67b0ff'], [25, '#ffc94d'], [Infinity, '#ff5a52']];
 /** the teams' colours on the pitch, the kits' hues a step lighter */
 const TEAM: Record<Team, THREE.Color> = { home: new THREE.Color('#62b0ff'), away: new THREE.Color('#ff8a4c') };
-/** the defending side's back line and midfield line, two pale tints of its team's colour: the orange pair as before
- *  2026-10-23, the blue pair the same steps towards white from #62b0ff (about 0.3 and 0.6) */
+/** the defending side's back line and midfield line, two pale tints of its team's colour: the orange pair as first
+ *  tuned, the blue pair the same steps towards white from #62b0ff (about 0.3 and 0.6) */
 const LINE_TINT: Record<Team, [string, string]> = { home: ['#91c8ff', '#c3e1ff'], away: ['#ffab85', '#ffd2bd'] };
 const TRAIL_N = 31, TRAIL_DT = 0.1, TRAIL_W = 0.2;
 const BALL_N = 50, BALL_DT = 0.04;   // the ball's trail: the last 2 s
@@ -92,7 +92,7 @@ export function GameLayers({ data, clock, looks: _looks, hide, mode }: { data: L
     ballGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(bv * 3), 3).setUsage(THREE.DynamicDrawUsage));
     ballGeo.setAttribute('color', new THREE.BufferAttribute(new Float32Array(bv * 4), 4).setUsage(THREE.DynamicDrawUsage));
     ballGeo.setIndex(bidx);
-    // always under every player, the referee and the ball (Yi, 2026-10-26), whether they are in front of it or behind: they
+    // always under every player, the referee and the ball, whether they are in front of it or behind: they
     // mark the stencil (players/Styles.tsx FIGURE_STENCIL) and the trail draws only where it is unmarked. Over the ground
     // marks (pitch control, the pen, telestration on the grass, orders up to 9), since the ball is above the grass
     const ballTrail = new THREE.Mesh(ballGeo, new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, depthWrite: false, toneMapped: false, side: THREE.DoubleSide,
@@ -128,7 +128,7 @@ export function GameLayers({ data, clock, looks: _looks, hide, mode }: { data: L
   useFrame((_, dt) => {
     const s = getSettings(), t = clock.t, hidden = hide.current;
     // the ball's trail, as a ribbon turned to the camera: in every mode but Explain, whose look is its director's (as the
-    // Show menu's choices are not taken there), not only on the board (Yi, 2026-10-26: the Show column's ball switch)
+    // Show menu's choices are not taken there), not only on the board (the Show column's ball switch)
     objs.ballTrail.visible = on('ball') && s.mode !== 'explain';
     if (objs.ballTrail.visible) {
       const pos = objs.ballTrail.geometry.attributes.position.array as Float32Array, col = objs.ballTrail.geometry.attributes.color.array as Float32Array;
@@ -153,7 +153,7 @@ export function GameLayers({ data, clock, looks: _looks, hide, mode }: { data: L
       objs.ballTrail.geometry.attributes.position.needsUpdate = true; objs.ballTrail.geometry.attributes.color.needsUpdate = true;
     }
     // the layers belong to the tactical mode: off, the pitch is the plain match. Coming in they wait for the board and
-    // fade in over the end of the hexagon change (Yi, 2026-10-22: pitch control showed on the grass first); going out they
+    // fade in over the end of the hexagon change (else pitch control showed on the grass first); going out they
     // go at once
     const k = mode ? THREE.MathUtils.smoothstep(mode.current, 0.8, 1) : 1;
     objs.group.visible = s.tactical && k > 0;

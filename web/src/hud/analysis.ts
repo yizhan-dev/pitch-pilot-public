@@ -1,4 +1,4 @@
-// The 战术 mode's numbers for the HUD preview's draft (Yi, 2026-10-23; docs/plans/hud-notes.md): the base maps (pitch
+// The 战术 mode's numbers for the HUD preview's draft (docs/plans/hud-notes.md): the base maps (pitch
 // control, space value, space quality, after Fernández and Bornn, ./fb.ts) and the annotations' data from the clip's
 // events and 10 Hz positions: the ΔxT of each pass and carry, shots with their xG, standard and potential xA, the
 // passing options, the better-placed team-mates, and line-breaking passes. Pitch metres, the clip's attackers attacking
@@ -32,7 +32,7 @@ export function xtAt([x, y]: XY, attackers = true): number {
   const c = Math.min(15, Math.max(0, Math.floor(((px + 52.5) / 105) * 16))), r = Math.min(11, Math.max(0, Math.floor(((py + 34) / 68) * 12)));
   return XT[r][c];
 }
-/** the grid as the Tactics base map draws it (hud/BaseMap3D.tsx, Yi 2026-10-27): XT_NX x XT_NY cells, row j the band across
+/** the grid as the Tactics base map draws it (hud/BaseMap3D.tsx): XT_NX x XT_NY cells, row j the band across
  *  (y), column i the band along (x), for the side attacking +x (the clip's attackers) or, mirrored through the centre spot,
  *  the other side */
 export const XT_NX = 16, XT_NY = 12;

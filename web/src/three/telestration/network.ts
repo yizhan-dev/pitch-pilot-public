@@ -1,6 +1,6 @@
 import { modelFile, matchFile } from '../../data/paths';
-// Two networks at a pause, both from where the players are now (Yi, 2026-10-22: not average positions).
-//  * chemistry (the passing network proper, Yi): how many passes the focus player and each teammate have exchanged
+// Two networks at a pause, both from where the players are now (not average positions).
+//  * chemistry (the passing network proper, the default): how many passes the focus player and each teammate have exchanged
 //    since kick-off, both ways, from the match's passes with their inferred receivers (private/hawkeye/
 //    export_passes.py -> <match>/passes.json; pitch_pilot's next-on-ball-event rule; 98.8% of the successful
 //    passes find a teammate, and all 192 the clips can check agree with Opta's own receiver)

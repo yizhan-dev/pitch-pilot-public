@@ -1,13 +1,13 @@
-// Free ribbons (the ball trace's round-two looks, BallTrace.tsx): polylines whose side vector the caller gives per point,
+// Free ribbons (the ball trace's ribbon looks, BallTrace.tsx): polylines whose side vector the caller gives per point,
 // so one layer draws a ribbon lying on the grass, one turned to the camera, one standing upright (a curtain), or one
 // turning from the one to the other along its length. Many lines in one draw call, each a separate triangle strip.
 //  - Constant width in metres (`half` per point), never under uMinPx pixels across, up to uCap times its width (thinner:
 //    wider and fainter, so the ribbon keeps its weight; or, uHold 1, wider at full strength: the ribbon on the grass,
-//    which the view flattens far away, Yi 2026-10-23), antialiased over the pixel's footprint across the ribbon (fwidth), so it reads the same
+//    which the view flattens far away), antialiased over the pixel's footprint across the ribbon (fwidth), so it reads the same
 //    lying flat, turned to the view, or nearly edge-on (where it fades instead of breaking up).
 //  - Alpha per point and per side (an upright curtain fades from its foot to its top).
 //  - An optional round cap at the line's head (its last point), a half disc of the ribbon's width.
-//  - Under the ball (Yi, round two, 2026-10-23: the trail always underneath the ball, else the ball looks messy): every
+//  - Under the ball (the trail always underneath the ball, else the ball looks messy): every
 //    fragment inside the ball's silhouette, grown by uBallGap.x pixels, is dropped, whatever its depth. The silhouette
 //    is exact for the perspective view: the view ray's distance to the ball's centre is under its radius. The ball
 //    (setBall) is read per camera when the layer is drawn (onBeforeRender), so a second view is right too.

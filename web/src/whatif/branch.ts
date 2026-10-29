@@ -1,4 +1,4 @@
-// A what-if as a clip of its own (Yi, 2026-10-24): the real clip up to the pause, the simulation after it, in the
+// A what-if as a clip of its own: the real clip up to the pause, the simulation after it, in the
 // package's format, so the stage, the players, the ball, the HUD and the radar play it as they play any clip. Bodies
 // after the pause are made from the simulated paths (motion.ts), cross-faded from the real pose over 0.4 s; the passer
 // turns from the way he faced to the pass while he holds the ball; over the bodies go his kick at the strike, the
@@ -8,8 +8,8 @@ import type { Loaded, Joints } from '../data';
 import type { MomentPkg } from '../types';
 import type { ClipEvent } from '../hud/match';
 import { synthesize, type AnimClip, type Track } from './motion';
-import { synthesizeGait, type GaitLib } from './gait';
-import { faceAt, type Played, type Scene0, type Outcome, type Pass } from './onball';
+import { synthesizeGait, gaitFits, type GaitLib } from './gait';
+import { faceAt, FIRST_HOLD, type Played, type Scene0, type Outcome, type Pass } from './onball';
 import type { XY } from '../response/engine';
 
 const FPS_J = 25, PRE_S = 0.4, FADE_S = 0.4;
@@ -20,11 +20,11 @@ const FPS_J = 25, PRE_S = 0.4, FADE_S = 0.4;
  *  1.0 s), the standing tackle (the first kick's left-foot jab, furthest out at 0.30 s), the slide tackle (right foot
  *  stretched out and low at 0.56 s, then up again) */
 /** `part`: what of the body the clip replaces, the rest keeping its strides: a leg (about its hip) with the upper body
- *  (about the hips), or the upper body alone; the whole body when unset (the slide). Since 2026-10-27 the touches
+ *  (about the hips), or the upper body alone; the whole body when unset (the slide). The touches
  *  are partial too: laid over whole, the receive ran in place for a second while the receiver's path still moved at a
- *  sprint, and he slid to the ball (Yi: "#37 was 平移 for the last few frames before showing xG") */
+ *  sprint, and he slid to the ball (#37 glided over the last few frames before the xG showed) */
 interface Act { clip: string; at: number; from: number; to: number; part?: 'r' | 'l' | 'upper' }
-/** the pass (Yi, 2026-10-25: "the ball does not feel like being passed from his feet"): the earlier kick
+/** the pass, so the ball is seen to leave his feet: the earlier kick
  *  (kick-soccerball-2) lifted the leg and stamped down, the foot moving back as the ball left; the penalty kick is the
  *  pack's one real swing, but it runs in at 2.7 m/s, so only its right leg is laid over, about his right hip, and the
  *  standing foot stays where his own steps put it: the leg from behind, contact at 0.71 s (the toe 3 cm off the grass,
@@ -39,13 +39,13 @@ const THIGH: Act = { clip: 'kneeing-soccerball-2', at: 0.28, from: 0.05, to: 0.5
 const CHEST: Act = { clip: 'header-soccerball', at: 0.78, from: 0.3, to: 0.95, part: 'upper' };
 const HEADER: Act = { clip: 'header-soccerball', at: 1.0, from: 0.6, to: 1.3, part: 'upper' };
 const STAND: Act = { clip: 'kick-soccerball', at: 0.3, from: 0, to: 0.56, part: 'l' };
-/** the first-time finishes (2026-10-27): the header whole (the head drives through at 1.0 s), lifted by the lay's `hop`
+/** the first-time finishes: the header whole (the head drives through at 1.0 s), lifted by the lay's `hop`
  *  for a ball above his standing head; the volley the kick's swing with the leg turned up about the hip until the foot
  *  reaches the ball (the lay's `lift`); a first-time drive the kick itself */
 const HEAD_SHOT: Act = { clip: 'header-soccerball', at: 1.0, from: 0.6, to: 1.3 };
 const VOLLEY: Act = { clip: 'soccer-penalty-kick', at: 0.71, from: 0.48, to: 1.04, part: 'r' };
 const SLIDE: Act = { clip: 'soccer-tackle-2', at: 0.56, from: 0.1, to: 1.72 };
-/** the keeper's claim of a ball into his goal area (onball.ts keeperRule / outcomes; 2026-10-28): the high catch, the
+/** the keeper's claim of a ball into his goal area (onball.ts keeperRule / outcomes): the high catch, the
  *  hands together 1.4 m up at 0.4 s, laid over whole, the ball into his hands */
 const GK_CATCH: Act = { clip: 'goalkeeper-catch-2', at: 0.4, from: 0, to: 0.8 };
 /** a ball along the ground he gathers low: the hands at the grass at 0.7 s */
@@ -63,8 +63,7 @@ const smooth = (u: number) => { const x = Math.min(1, Math.max(0, u)); return x 
 
 /** 10 Hz samples at any time: a cubic through them with Catmull-Rom tangents, except at a knot where the motion changes
  *  sharply (a kick from rest, a touch, a bounce, the real play handing over to the simulation), where each side keeps
- *  its own segment's slope; a plain Catmull-Rom ran the ball back 10 cm just before a kick and overshot every stop
- *  (2026-10-25) */
+ *  its own segment's slope; a plain Catmull-Rom ran the ball back 10 cm just before a kick and overshot every stop */
 function kinked(a: number[], b: number[]) {
   let dd = 0, na = 0, nb = 0;
   for (let i = 0; i < a.length; i++) { dd += (b[i] - a[i]) ** 2; na += a[i] ** 2; nb += b[i] ** 2; }
@@ -100,16 +99,16 @@ export interface BranchInfo { t0: number; target: XY; outcome: Outcome; carrier:
  *  their tracked paths (the off-ball what-if's passer and real receiver: his real first-time pass, the real touch) */
 export interface BranchOpts {
   real?: { p: number; until: number }[];
-  /** drag (Yi, 2026-10-25: "use the ghost player style to drag the player to that position, instead of animate it"):
+  /** drag (each ghost dragged to its position instead of animated):
    *  every player keeps his pose of the moment and is carried along his simulated path; no locomotion, kick or touch is
-   *  synthesised (the shell shows the branch in the ghost style, useWhatIf.tsx). The default until 2026-10-27, when
-   *  the real strides came (gait.ts; Yi: "actually animate each player to that spot"); kept behind ?widrag=1 */
+   *  synthesised (the shell shows the branch in the ghost style, useWhatIf.tsx). The real strides (gait.ts), which
+   *  animate each player to his spot, replaced it as the default; kept behind ?widrag=1 */
   drag?: boolean;
   /** the real strides (gait.ts): the locomotion comes from the library, each man continuing from his real pose at the
    *  pause, his own strides first; without it the Mixamo loops (motion.ts) */
   gait?: GaitLib | null;
-  /** the receiver's finish as the shot what-if decided it (shot.ts evalShot; 2026-10-27, Yi: "they are always ground
-   *  shot, never header or a volley"): first time, it is laid over at his touch facing the goal (a header, jumping for
+  /** the receiver's finish as the shot what-if decided it (shot.ts evalShot; a header or a volley as well as a ground
+   *  shot): first time, it is laid over at his touch facing the goal (a header, jumping for
    *  a ball above his standing head; a volley, the leg raised to the ball; a drive), and the ball stays where he met it
    *  (the shot itself is not simulated: the xG says it); after a touch, the touch as before */
   finish?: { how: 'first' | 'touch'; kind: 'header' | 'volley' | 'drive'; z: number } | null;
@@ -123,6 +122,25 @@ export function buildBranch(real: Loaded, clips: Record<string, AnimClip>, t0: n
   for (let n = 0; n < N; n++) {
     const b = pl.ball[n];
     frames.push({ att: Array.from({ length: nAtt }, (_, p) => simPos(n, p)), def: Array.from({ length: P - nAtt }, (_, p) => simPos(n, nAtt + p)), ball: [s * b[0], s * b[1], b[2]] });
+  }
+  // no opponent standing on the ball as the receiver takes it (at 26:40 the ball #37 was to shoot overlapped the
+  // defender in front of him): the engine keeps players apart (limits' minGap) but not a man
+  // from the ball, and a marker's path can run through it; round the touch any opponent within BALL_GAP of the ball
+  // is set that far off it, the shift faded in and out over three steps. Looks only: the models' numbers stand
+  if (outcome.who >= 0 && outcome.kind === 'kept') {
+    // (step n after the pause is frame k0 + n: the simulated frames start one step after the pause)
+    const nT = Math.round(outcome.t / 0.1), mine = outcome.who < 11, BALL_GAP = 0.6, FADE = 3;
+    for (let n = Math.max(1, nT - FADE); n <= Math.min(N, nT + FADE); n++) {
+      const f = frames[k0 + n], b = f.ball, w = 1 - Math.abs(n - nT) / (FADE + 1);
+      if (!b) continue;
+      for (let m = 0; m < 11; m++) {
+        const i = mine ? 11 + m : m, p = c.toPkg[i], q = p < nAtt ? f.att[p] : f.def[p - nAtt];
+        const dx = q[0] - b[0], dy = q[1] - b[1], d = Math.hypot(dx, dy);
+        if (d >= BALL_GAP) continue;
+        const ux = d > 1e-6 ? dx / d : 1, uy = d > 1e-6 ? dy / d : 0, push = (BALL_GAP - d) * w;
+        q[0] += ux * push; q[1] += uy * push;
+      }
+    }
   }
   const T0 = k0 / fps, tEnd = (frames.length - 1) / fps;
   // the ball at 25 Hz: the real one to the pause, the simulated one after (linear between its 10 Hz steps before the
@@ -152,7 +170,7 @@ export function buildBranch(real: Loaded, clips: Record<string, AnimClip>, t0: n
   const tracks: Track[] = Array.from({ length: P }, (_, p) => ({ keeper: (pkg.keepers ?? []).includes(p), pos: Array.from({ length: pre + 1 + simF }, (_, i) => posAt(T0 + (i - pre) / FPS_J, p)) }));
   const ballTrack = Array.from({ length: pre + 1 + simF }, (_, i) => { const b = ballFrames(T0 + (i - pre) / FPS_J); return b ? [b[0], b[1]] as [number, number] : null; });
   const pids = ((pkg.players ?? []) as { pid?: string }[]).map((q) => q?.pid ?? null);
-  const S = opts.drag ? null : opts.gait ? synthesizeGait(opts.gait, tracks, ballTrack, FPS_J, nAtt, J.names, Array.from({ length: P }, (_, p) => pids[p] ?? null), { J, f0, pre }) : synthesize(clips, tracks, ballTrack, FPS_J, nAtt, J.names);
+  const S = opts.drag ? null : opts.gait && gaitFits(opts.gait, J.names) ? synthesizeGait(opts.gait, tracks, ballTrack, FPS_J, nAtt, J.names, Array.from({ length: P }, (_, p) => pids[p] ?? null), { J, f0, pre }) : synthesize(clips, tracks, ballTrack, FPS_J, nAtt, J.names);
   const data = new Float32Array(F * P * nJ * 3);
   data.set(J.data.subarray(0, (f0 + 1) * P * nJ * 3));
   const hip = J.names.indexOf('midHip'), carrierPkg = c.toPkg[c.kicker], tStrike = T0 + pass.hold * 0.1, lost = outcome.kind === 'lost';
@@ -197,7 +215,7 @@ export function buildBranch(real: Loaded, clips: Record<string, AnimClip>, t0: n
       if (f <= fx) { data.set(J.data.subarray(((f * P + p) * nJ) * 3, ((f * P + p) * nJ + nJ) * 3), o); continue; }
       if (!S) {
         // dragged: his pose at the moment, carried along his path, turned about the hips to face the way he moves once
-        // he moves at all (over 0.5 m/s, fully by 1.5; Yi, 2026-10-25: the runs should look authentic)
+        // he moves at all (over 0.5 m/s, fully by 1.5), so the runs look authentic
         const ro = ((fx * P + p) * nJ) * 3, a = posAt(fx / FPS_J, p), b = posAt(f / FPS_J, p), dx = b[0] - a[0], dy = b[1] - a[1];
         for (let j = 0; j < nJ; j++) { data[o + j * 3] = J.data[ro + j * 3] + dx; data[o + j * 3 + 1] = J.data[ro + j * 3 + 1] + dy; data[o + j * 3 + 2] = J.data[ro + j * 3 + 2]; }
         const q0 = posAt(Math.max(0, f - 3) / FPS_J, p), q1 = posAt(Math.min(F - 1, f + 3) / FPS_J, p), vx = (q1[0] - q0[0]) * (FPS_J / 6), vy = (q1[1] - q0[1]) * (FPS_J / 6), sp = Math.hypot(vx, vy);
@@ -220,7 +238,8 @@ export function buildBranch(real: Loaded, clips: Record<string, AnimClip>, t0: n
         data[o + j * 3 + 2] = lerp(J.data[ro + j * 3 + 2], S.data[so + j * 3 + 2], w);
       }
       // the turn: rotate his body about the hips from the way it faces to the way he should
-      if (p === carrierPkg && f / FPS_J < tLet + 0.3 && !realAt(carrierPkg, tStrike)) {
+      // (a first-time ball: the foot goes to it along the pass, the body stays as it was)
+      if (p === carrierPkg && f / FPS_J < tLet + 0.3 && !realAt(carrierPkg, tStrike) && pass.hold > FIRST_HOLD) {
         const tau = Math.min(f / FPS_J, tLet) - T0, want = faceAt(c, pass.dir, pass.hold, tau), wa = Math.atan2(s * want[1], s * want[0]);
         const g = (j: number, d: number) => data[o + j * 3 + d], rx = g(RS, 0) - g(LS, 0) + g(RH, 0) - g(LH, 0), ry = g(RS, 1) - g(LS, 1) + g(RH, 1) - g(LH, 1);
         let da = wa - Math.atan2(-rx, ry); while (da > Math.PI) da -= 2 * Math.PI; while (da < -Math.PI) da += 2 * Math.PI;
@@ -240,7 +259,7 @@ export function buildBranch(real: Loaded, clips: Record<string, AnimClip>, t0: n
           // upper body about the hips; the other leg and the hips keep their strides
           const part = L.act.part;
           // a finish with the foot takes the foot the ball comes to (the hip nearer the ball at the act's first frame);
-          // the clip's leg is mirrored across his facing when it is the other one (2026-10-27 night)
+          // the clip's leg is mirrored across his facing when it is the other one
           if (L.pick && part !== 'upper' && L.side === undefined) {
             const b = ballFrames(L.t), lh = ix('lHip'), rh = ix('rHip');
             L.side = b && Math.hypot(b[0] - data[o + lh * 3], b[1] - data[o + lh * 3 + 1]) < Math.hypot(b[0] - data[o + rh * 3], b[1] - data[o + rh * 3 + 1]) ? 'l' : 'r';
@@ -290,7 +309,7 @@ export function buildBranch(real: Loaded, clips: Record<string, AnimClip>, t0: n
   }
   const joints: Joints = { ...J, frames: F, data };
 
-  // the ball on his foot (Yi, 2026-10-25): from where it was at the pause it comes on, slowing, to the point the kicking
+  // the ball on his foot: from where it was at the pause it comes on, slowing, to the point the kicking
   // toe meets (the clip's toe at contact about his right hip, 10 cm on along the pass), rests there, and leaves from it
   // at the strike, the simulated flight taking over within 0.5 s; for the eye only, the models keep their own ball
   const P0 = xyz[f0], Pm = xyz[Math.max(0, f0 - 2)];
@@ -322,8 +341,8 @@ export function buildBranch(real: Loaded, clips: Record<string, AnimClip>, t0: n
 
   // a first-time finish: over the last 0.3 s the ball comes to the part that strikes it, the toe for a volley or a
   // drive, the forehead for a header, and stays there, in the air (the shot is not played; the xG says it). The meeting
-  // point is under his body, so without this the ball sat at the standing foot while the other swung (Yi, 2026-10-27:
-  // "ball should be next to its feet ... if it is header, ball should be next to head")
+  // point is under his body, so without this the ball sat at the standing foot while the other swung (the ball belongs
+  // at the striking foot, or at the head for a header)
   if (opts.finish?.how === 'first' && who !== null && !lost && !realAt(who, tTouch) && finishDir !== null) {
     const fT = Math.min(F - 1, Math.round(tTouch * FPS_J)), g = (n: string, d: number) => data[((fT * P + who) * nJ + ix(n)) * 3 + d];
     const head = opts.finish.kind === 'header', cx = Math.cos(finishDir), cy = Math.sin(finishDir), toe = `${lays.find((L) => L.p === who && L.pick)?.side ?? 'r'}BigToe`;
@@ -363,7 +382,7 @@ export function buildBranch(real: Loaded, clips: Record<string, AnimClip>, t0: n
   if (who !== null && !lost) events.push(ev(tTouch, outcome.kind === 'cut' ? 'Interception' : 'BallTouch', who));
   if (tackler !== null) events.push(ev(tTackle, 'Tackle', tackler));
 
-  // (no real goal in a simulation: the stadium's crowd flashed for the real one at 55:43 while a branch played, 2026-10-26)
+  // (no real goal in a simulation: the stadium's crowd flashed for the real one at 55:43 while a branch played)
   const branch: Pkg = { ...pkg, frames, ball25: { fps: FPS_J, xyz }, events, meta: { ...pkg.meta, branch: true, goal: undefined } as Pkg["meta"] };
   return { data: { ...real, pkg: branch, joints }, info: { t0: T0, target, outcome, carrier: carrierPkg, who: who ?? -1, tackler, end: tEnd, turn: pass.turn, hold: pass.hold } };
 }

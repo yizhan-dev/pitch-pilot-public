@@ -5,7 +5,7 @@
    colours --home / --away, the fonts; so the show's overlays follow the game's */
 .lu-loading { position: fixed; inset: 0; display: grid; place-items: center; color: var(--ink-2); }
 .lu-vignette { position: fixed; inset: 0; pointer-events: none; background: radial-gradient(ellipse at 45% 50%, transparent 55%, rgba(0, 0, 0, .42) 100%); }
-/* each overlay in its team's colour: home blue, away orange (Yi, 2026-10-23); the title has both */
+/* each overlay in its team's colour: home blue, away orange; the title has both */
 .lu-ov { --team: var(--home); }
 .lu-ov .away { --team: var(--away); }
 .lu-ov svg { display: block; flex: none; }
@@ -24,7 +24,7 @@
 .lu-plate.big .lu-pflag { display: block; width: 21px; height: 16px; border-radius: 1px; object-fit: cover; outline: 1px solid rgba(0, 0, 0, .25); outline-offset: -1px; }
 .lu-plate.big .lu-short { display: none; }
 .lu-plate.big .lu-full { display: inline; font: 700 21px/1 var(--font-display); letter-spacing: .03em; }
-/* the opening title, crest against crest (Yi chose this layout, 2026-10-23): the HUD's score bug built large, dark
+/* the opening title, crest against crest: the HUD's score bug built large, dark
    glass with a hairline, a team cell each side (the crest on the outside, overhanging the bar, the name inside), the
    middle cell lighter between the two kit-colour strips */
 .lu-title { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; padding-bottom: 4vh; pointer-events: none; visibility: hidden; }
@@ -64,8 +64,8 @@
 /* the line's name, big, as the camera goes to it */
 .lu-word { position: fixed; left: 50%; top: 50%; pointer-events: none; visibility: hidden; white-space: nowrap; font-size: 150px; font-weight: 800; letter-spacing: .4em; text-indent: .4em;
   color: rgba(255, 255, 255, .92); text-shadow: 0 6px 40px rgba(0, 0, 0, .55); }
-/* the player's card through his hold, right of him (he is on the left third): free text over the scene (Yi,
-   2026-10-23: "more gamified" than the HUD's glass card), a shade on the right behind it; the tags are small chips
+/* the player's card through his hold, right of him (he is on the left third): free text over the scene (more
+   game-like than the HUD's glass card), a shade on the right behind it; the tags are small chips
    whose glass blurs what is behind them, so the boards' lettering cannot run through their words */
 .lu-scrim { position: fixed; inset: 0; pointer-events: none; visibility: hidden; background: linear-gradient(90deg, rgba(3, 5, 9, 0) 40%, rgba(3, 5, 9, .5) 62%, rgba(3, 5, 9, .62) 100%); }
 .lu-card { position: fixed; left: 54vw; top: 52%; pointer-events: none; visibility: hidden; text-shadow: 0 2px 14px rgba(0, 0, 0, .65); }
@@ -92,7 +92,7 @@
   background: var(--glass); backdrop-filter: blur(14px) saturate(1.2); border: 1px solid var(--hairline); color: var(--ink); font: 600 15px/1 var(--font-body); letter-spacing: .02em; cursor: pointer; }
 .lu-skip:hover { border-color: var(--hairline-strong); }
 .lu-skip span { font-size: 20px; line-height: 1; margin-top: -2px; }
-/* in English (the default, Yi 2026-10-23): the condensed face in capitals for names and words, tracking tightened */
+/* in English (the default): the condensed face in capitals for names and words, tracking tightened */
 html:lang(en) .lu-word { font: 700 168px/1 var(--font-display); text-transform: uppercase; letter-spacing: .16em; text-indent: .16em; }
 html:lang(en) .lu-line b { font: 700 26px/1 var(--font-display); text-transform: uppercase; letter-spacing: .14em; }
 html:lang(en) .lu-line span { letter-spacing: .06em; }

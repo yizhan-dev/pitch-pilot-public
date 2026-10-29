@@ -1,10 +1,10 @@
 import { useId } from 'react';
 import type { ClipCategory } from './match';
 
-// A clip's outcome as a badge (Yi, 2026-10-24: set D of /review/event-icons/, a filled circle in the
+// A clip's outcome as a badge (set D of /review/event-icons/, a filled circle in the
 // outcome's colour with the glyph in dark): on the replay plate, right of the clip's title. Goals green, a big chance
 // missed amber, the other shots grey-blue, an offside yellow, a line-breaking attack light blue; kick-off (the opening
-// animation's, another session's) light grey. Glyphs drawn by us on a 24 x 24 grid, shrunk into the circle.
+// animation's) light grey. Glyphs drawn by us on a 24 x 24 grid, shrunk into the circle.
 
 export type OutcomeKey = ClipCategory;
 
@@ -53,7 +53,7 @@ const PRESS = [arc(10.5, 13.5, 7.4, -15, 55), arc(10.5, 13.5, 7.4, 75, 145), arc
 function Glyph({ k, cut, id }: { k: OutcomeKey; cut: string; id: string }) {
   switch (k) {
     case 'goal': return <><path d={FRAME} fill="none" strokeWidth={2.6} {...line} /><Net id={id} bx={12} by={14.6} br={4.2} /><Ball cx={12} cy={14.6} r={4.2} cut={cut} /></>;
-    // a penalty: a bold P alone (Yi, 2026-10-24: with the goal's frame it read as a plain goal at 20 px)
+    // a penalty: a bold P alone (with the goal's frame it read as a plain goal at 20 px)
     case 'penalty': return <path d="M8.2 20.2 V4.4 H13.4 A4.9 4.9 0 0 1 13.4 14.2 H8.2" fill="none" strokeWidth={3.4} {...line} />;
     case 'setpiece': return <><path d="M5.5 21V3.5" strokeWidth={2.2} {...line} /><path d="M5.5 3.8 L15 6.6 L5.5 9.6 Z" fill="currentColor" strokeWidth={1.2} {...line} />
       <path d="M5.5 16.2 A4.8 4.8 0 0 1 10.3 21" fill="none" strokeWidth={1.8} {...line} /><Ball cx={16.6} cy={16.4} r={3.6} cut={cut} /></>;

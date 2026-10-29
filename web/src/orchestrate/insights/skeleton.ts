@@ -28,12 +28,12 @@ export interface Skel {
   /** the player's standing height for the hips (the 95th percentile of his midHip z over the clip, 0.95 m without) */
   standing(p: number): number;
   /** midHip z over standing: under 0.85 crouched, 0.85-0.92 low, 0.92-0.97 usual, over 0.97 upright (the
-   *  telestration session's handover, measured on two matches) */
+   *  telestration body handover, measured on two matches) */
   hipRatio(p: number, t: number): number;
   /** both feet off the ground: all four foot joints over 0.12 m */
   inAir(p: number, t: number): boolean;
   /** the head's pitch, degrees: the nose against the ears' middle (looking down at the ball at his feet -30 to -60;
-   *  head up, looking ahead, 0 or more; measured before the 41 clips' shots, 2026-10-23) */
+   *  head up, looking ahead, 0 or more; measured before the 41 clips' shots) */
   pitch(p: number, t: number): number;
   /** the front of the body as the offside law counts it (every joint but the arms and hands), the largest x */
   front(p: number, t: number): number;
@@ -70,7 +70,7 @@ export function makeSkel(data: Loaded): Skel {
     ok: true,
     joint: (p, name, t) => { const j = ix(name); if (j < 0) return null; const v = at(frame(t), p, j); return fin(v) ? v : null; },
     facing: (p, t) => facingAt(frame(t), p),
-    // the telestration session's recipe (docs/plans/telestration-body-handover.md): the horizontal normals of the
+    // the recipe in docs/plans/telestration-body-handover.md: the horizontal normals of the
     // shoulder line and the hip line, each on the nose's side, averaged (either alone when one is missing); for
     // players over 4 m/s it matches the running direction (median cos 0.983)
     torso: (p, t) => {

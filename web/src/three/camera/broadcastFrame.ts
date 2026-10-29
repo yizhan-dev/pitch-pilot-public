@@ -1,6 +1,5 @@
-// The broadcast camera's framing (Yi, 2026-10-27: "for the broadcast, we do not just shift the camera, but more like
-// 云台, we turn left and right and zoom in and out"; at a corner the taker was out of the frame, and near the goal the
-// space in front of the man on the ball): a head fixed in the main stand over the halfway line, as a TV match's main
+// The broadcast camera's framing (a pan-tilt head that turns and zooms rather than a camera that shifts; a shifting
+// one lost the taker at a corner, and near the goal the space in front of the man on the ball): a head fixed in the main stand over the halfway line, as a TV match's main
 // camera, that only pans, tilts and zooms. Each moment names the points the shot must hold, each inside its own share of
 // the frame (the ball well inside, where it is heading, the room in front of the man on the ball, the goal he attacks
 // once it is near, the men round the ball), and the aim and zoom are solved as the narrowest shot that holds them all,
