@@ -6,10 +6,9 @@ import type { Clock } from '../../clock';
 import { TEAM_KIT, playerTeam, type Team } from '../coords';
 import { Mannequins } from '../Mannequins';
 import { poseAt, poseIndex, jointOf, torsoFrame, focalPx } from './pose';
-import { LIMBS, BLOBS, DOTS_TORSO, TORSO_RINGS, TORSO_SEG, TORSO_N, pointOf, headFrame, blobFrame, kitColor, shapeW, bustAt, type Part } from './body';
+import { LIMBS, BLOBS, DOTS_TORSO, TORSO_RINGS, TORSO_SEG, TORSO_N, SEAT_SHAPE, SEAT_TILT, ringBack, pointOf, headFrame, blobFrame, kitColor, shapeW, bustAt, type Part } from './body';
 import { makeLooks, numberAtlas, nameAtlas, HAIR_PIECES, PIECE_NAMES, STYLE_PIECES, GK_KIT, type Look, type Zone } from './looks';
 import type { Grp } from './body';
-import { xOn } from '../quality';
 
 /** the players' figures' one bound: the stadium's ground round the pitch (see where the figures are made) */
 const FIGURE_BOUND = new THREE.Sphere(new THREE.Vector3(0, 1, 0), 400);
@@ -20,7 +19,7 @@ const FIGURE_BOUND = new THREE.Sphere(new THREE.Vector3(0, 1, 0), 400);
 
 const UP = new THREE.Vector3(0, 1, 0);
 /** the stencil value every figure (players, officials, the ball) writes where it is drawn: the ball's trail (GameLayers)
- *  is drawn only where it is not, so it is always under them, near or far (Yi, 2026-10-26). The stage's canvas has a
+ *  is drawn only where it is not, so it is always under them, near or far. The stage's canvas has a
  *  stencil buffer for it */
 export const FIGURE_STENCIL = 1;
 /** a figure's material marks the stencil (FIGURE_STENCIL) wherever it is drawn */
@@ -30,7 +29,7 @@ export function markFigure<M extends THREE.Material>(m: M): M {
   return m;
 }
 /** player p's team (the joints are in attack order; `attacking` says which team attacks): the kits go by team, not by
- *  role (coords.ts, Yi 2026-10-23) */
+ *  role (coords.ts) */
 const teamOf = (p: number, J: Joints, attacking: Team): Team => playerTeam(p, J.nAtt, attacking);
 /** the skeleton style's bones in a team's colour a step lighter than the shirt (as GameLayers' trails) */
 const LINE_TINT: Record<Team, string> = { home: '#62b0ff', away: '#ff8a4c' };
@@ -43,8 +42,8 @@ export function toonRamp() {
 
 /** the outline: the back faces pushed out along their normals. Close up it is about px pixels wide; past about 10 m it
  *  is a fixed 11 mm, so it thins with the figure instead of swallowing it, and from 35 m to 70 m it fades away, so from
- *  the broadcast and aerial cameras the players read by their kit colours alone. Yi, 2026-10-21: slightly thinner, so
- *  1.1 px and 11 mm (they were 1.4 px and 14 mm). */
+ *  the broadcast and aerial cameras the players read by their kit colours alone. 1.1 px and 11 mm: at 1.4 px and
+ *  14 mm the outline read as too heavy. */
 const OUTLINE_PX = 1.1, OUTLINE_MAX = 0.011;
 export function outlineMaterial(px = OUTLINE_PX, instanced = true) {
   return new THREE.ShaderMaterial({
@@ -154,7 +153,7 @@ const SEC_CZ = Array.from({ length: TORSO_SEG }, (_, j) => { const si = Math.sin
 
 /** the torsos' vertex normals exactly as three's computeVertexNormals makes them (each face's normal, by its area, added
  *  to its three corners, then normalised; the same order and float32 rounding), on the arrays directly: computeVertexNormals
- *  goes through BufferAttribute accessors and was a sixth of the players' frame time (profiled 2026-10-26) */
+ *  goes through BufferAttribute accessors and was a sixth of the players' frame time (profiled) */
 function torsoNormals(g: THREE.BufferGeometry) {
   const pos = g.attributes.position.array as Float32Array, attr = g.attributes.normal as THREE.BufferAttribute, n = attr.array as Float32Array, idx = g.index!.array;
   n.fill(0);
@@ -212,7 +211,7 @@ const OFFICIAL_KIT: Record<string, string> = { shirt: '#1b1e24', shorts: '#0e101
 
 /** hide: a player (index) drawn far below the grass, for a camera at his eyes; -1 for none. only: the reverse, every
  *  player but this one below the grass (-1: none shown; the shot's freeze draws the shooter in toon over everyone else
- *  in silhouette, telestration 2026-10-22). kit 'official': the referees, in their own kit and without shirt numbers */
+ *  in silhouette, as the telestration does). kit 'official': the referees, in their own kit and without shirt numbers */
 export interface HideRef { current: number }
 /** mask: only the players it accepts are drawn (the rest go below the grass), read every frame, for drawing one set of
  *  players in one style and the rest in another (the Show menu's style, Stage) */
@@ -228,7 +227,7 @@ function Figure({ J, clock, shade, looks, lag = 0, opacity = 1, hide, only, mask
       ? new THREE.LatheGeometry(l.prof.map(([t, r]) => new THREE.Vector2(r, t - 0.5)), 20)
       : new THREE.CylinderGeometry(l.rb, l.ra, 1, 20, 1, false));
     const blobGeo = new THREE.SphereGeometry(1, 28, 18);
-    // the far level of detail (2026-10-22, Yi): the same shapes with about a fifth of the faces, swapped in when every
+    // the far level of detail: the same shapes with about a fifth of the faces, swapped in when every
     // player is more than 22 m from the camera (back under 15 m); the players were nine tenths of the frame's triangles
     const limbGeoLo = LIMBS.map((l) => l.asym ? asymGeometry(l.asym, 10, 10) : l.prof
       ? new THREE.LatheGeometry(l.prof.map(([t, r]) => new THREE.Vector2(r, t - 0.5)), 8)
@@ -275,8 +274,8 @@ function Figure({ J, clock, shade, looks, lag = 0, opacity = 1, hide, only, mask
     // a fixed bound for each: the renderer sorts by it, and computing it from the first frame's vertices met a player not
     // yet placed (NaN, "computeBoundingSphere(): Computed radius is NaN" on every cold load); nothing culls or picks by it
     // (the outlines cast no shadow: a shell is the body's own geometry, pushed out in screen space only, and the shadow
-    // pass draws the raw geometry, so its shadow was the body's again, a second time; three/quality.ts xOn)
-    const shells = new Set<THREE.Object3D>(xOn('hullshadow') ? [...lines, ...(torsoLine ? [torsoLine] : [])] : []);
+    // pass draws the raw geometry, so its shadow was the body's again, a second time)
+    const shells = new Set<THREE.Object3D>([...lines, ...(torsoLine ? [torsoLine] : [])]);
     for (const m of [...limbs, blobs, ...hair, ...lines, torso, ...(torsoLine ? [torsoLine] : [])]) { m.frustumCulled = false; m.geometry.boundingSphere = FIGURE_BOUND.clone(); m.castShadow = shade !== 'ghost' && !shells.has(m); markFigure(m.material as THREE.Material); }
     const wears = PIECE_NAMES.map((name) => L.map((l) => STYLE_PIECES[l.style].includes(name)));
     // a hair piece nobody here wears is not drawn at all (no draw call for instances all scaled to nothing)
@@ -419,11 +418,14 @@ function Figure({ J, clock, shade, looks, lag = 0, opacity = 1, hide, only, mask
         rt.copy(rh).lerp(rs, k).normalize(); fw.crossVectors(up, rt).normalize();
         c.copy(hip).addScaledVector(up, ring.h * S);
         // a woman's figure (the cast's, looks.ts shape): narrower shoulders and waist, wider hips, the bust at the front
-        const sh = L[p].shape, w = ring.w * tw * shapeW(sh, ring.h), db = ring.d * tw, df = db * (1 + bustAt(sh, ring.h));
+        const sh = L[p].shape, w = ring.w * tw * shapeW(sh, ring.h), db = ringBack(ring) * tw, df = ring.d * tw * (1 + bustAt(sh, ring.h));
+        // the seat (body.ts SEAT): the lowest rings' backs carry the lobes and the cleft, and the pelvis tips forward,
+        // its front down and its back up by the tilt's sine of the depth
+        const sm = SEAT_SHAPE[r], tl = SEAT_TILT[r];
         for (let j = 0; j < NS; j++) {
           const cx = SEC_CX[j], cz = SEC_CZ[j], o = (b0 + r * NS + j) * 3;
-          const dd = cz > 0 ? df : db;
-          v.set(c.x + rt.x * w * cx + fw.x * dd * cz, c.y + rt.y * w * cx + fw.y * dd * cz, c.z + rt.z * w * cx + fw.z * dd * cz);
+          const dd = (cz > 0 ? df : sm ? db * sm[j] : db) * cz, dy = -dd * tl;
+          v.set(c.x + rt.x * w * cx + fw.x * dd + up.x * dy, c.y + rt.y * w * cx + fw.y * dd + up.y * dy, c.z + rt.z * w * cx + fw.z * dd + up.z * dy);
           if (ring.h < 0.2) {
             // below the waistband: the side's weight grows outwards from the middle and downwards from the waist
             const sI = cx >= 0 ? 0 : 1, wgt = Math.min(1, Math.abs(cx) / 0.6) * Math.min(1, (0.2 - ring.h) / 0.2);
@@ -623,14 +625,14 @@ function Dots({ J, clock, attacking }: { J: Joints; clock: Clock; attacking: Tea
 export type PlayerStyle = 'token' | 'lines' | 'dots' | 'mannequin' | 'toon' | 'silhouette' | 'ghost' | 'ghost-still' | 'rigged';
 
 /** the players in one of the candidate styles. attacking: the team of players 0..J.nAtt-1 (pkg.meta.attacking, through
- *  coords.ts attackingOf), so each team wears its own kit in every clip (Yi, 2026-10-23); without it they draw as
+ *  coords.ts attackingOf), so each team wears its own kit in every clip; without it they draw as
  *  before, the attackers in the home kit */
 export function Players({ ghosts, ...rest }: { J: Joints; clock: Clock; style: PlayerStyle; looks?: Look[]; hide?: HideRef; only?: HideRef; mask?: PlayerMask; kit?: 'official'; hover?: HideRef; lod?: boolean; attacking?: Team; ghosts?: Ghost[] }) {
   const main = <PlayersIn {...rest} />;
   return ghosts?.length ? <group>{main}<GhostPlayers J={rest.J} clock={rest.clock} looks={rest.looks} attacking={rest.attacking} ghosts={ghosts} /></group> : main;
 }
 
-/** a ghost (the Tactics pen's sketch of a move, chat 1's request, 2026-10-25): one player's body as he stands now (the
+/** a ghost (the Tactics pen's sketch of a move): one player's body as he stands now (the
  *  pause), in the ghost shade, at another ground point `at` (pitch metres, the package's frame), turned to face along the
  *  drag, from where he really is to `at`. alpha: the body's opacity (0.55 by default) */
 export interface Ghost { player: number; at: [number, number]; alpha?: number }
@@ -669,7 +671,7 @@ function PlayersIn({ J, clock, style, looks, hide, only, mask, kit, hover, lod, 
   if (style === 'lines') return <Lines J={J} clock={clock} hide={hide} mask={mask} hover={hover} attacking={attacking} />;
   if (style === 'dots') return <Dots J={J} clock={clock} attacking={attacking} />;
   if (style === 'mannequin') return <Mannequins joints={J} clock={clock} attacking={attacking} />;
-  // the ghost without its trail (the What-if mode's pause and touch, whatif/useWhatIf.tsx; Yi, 2026-10-25)
+  // the ghost without its trail (the What-if mode's pause and touch, whatif/useWhatIf.tsx)
   if (style === 'ghost-still') return <Figure J={J} clock={clock} shade="ghost" looks={looks} lag={0} opacity={0.6} hide={hide} only={only} mask={mask} kit={kit} hover={hover} attacking={attacking} />;
   if (style === 'ghost') {
     // the current pose bright, and echoes of the last third of a second fading behind it

@@ -71,11 +71,8 @@ const EXCL = new Set((q.get('qx') ?? '').split(',').filter(Boolean));
 export const lowHas = (lever: 'pitch' | 'light' | 'aa') => !EXCL.has(lever);
 
 
-/** an optimisation turned off from the address for an A/B (?xoff=stagememo,idlerender,hullshadow) */
-const XOFF = new Set((q.get('xoff') ?? '').split(',').filter(Boolean));
-export const xOn = (name: string) => !XOFF.has(name);
 
-/** the line-up show's own ceiling on a visit with no level kept yet (three/quality.ts xOn 'showbudget'): the canvas
+/** the line-up show's own ceiling on a visit with no level kept yet: the canvas
  *  pixels capped at SHOW_BUDGET_PX (1.3 Mpx: 1366x768 at 1 is under it, 1920x1080 goes to 0.79, 2109x1321 to 0.68).
  *  The show is cinematic and starts cold, on a device the page knows nothing of yet; a visit later starts from the
  *  level the game reached. Its sampler, reading the show slow, takes the level to this ceiling in one step and on down
@@ -95,7 +92,7 @@ export const showCeil = store<number>(SHOW_CEIL);
  *  show (a beat's change of state) had R3F set the prop's old value again, a resize and back (seen at 2109x1321) */
 export const appliedShow = { scale: Math.min(SHOW_CEIL, quality.get().scale) };
 
-/** the calibration (three/gpuMeter.ts; xOn 'calib'): each canvas times its first frames at full scale under the loader
+/** the calibration (three/gpuMeter.ts): each canvas times its first frames at full scale under the loader
  *  and reports the GPU's time for one; the level that fits TARGET_MS follows (the fill scales by the pixels, so the time
  *  at scale 1 is the time measured over the scale squared), in steps of 0.05, never above the ceiling nor below the
  *  floor. Only on a visit with no level kept and nothing held by the address: a kept level is the device's own

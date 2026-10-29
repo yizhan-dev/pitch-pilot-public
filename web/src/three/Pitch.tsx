@@ -306,7 +306,7 @@ export function Pitch({ glow = 0, surround = true, ground = false, mode }: { glo
       </mesh>
       {land ? (
         // well below the grass and the stadium's ground, so they never fight for depth at a distance
-        // (drawn after everything opaque, three/quality.ts xOn 'latefill': under the grass and behind the stands it was
+        // (drawn after everything opaque: under the grass and behind the stands it was
         // shaded and then covered, about a sixth of the frame; drawn last, the depth test turns those pixels away first.
         // Opaque, so the picture is the same)
         <mesh rotation-x={-Math.PI / 2} position-y={-0.3} geometry={land} renderOrder={10}>

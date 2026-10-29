@@ -198,7 +198,7 @@ export function GameApp() {
       setDirected(null); varReplay.set(VAR_OFF); drawMode.set(false);   // the commentary's voice stops; a VAR check or the pen ends
       setSettings({ view: 'tactical', selected: null });
       // (the camera up too: in the Tactics mode the board is down already and the pulse starts at once)
-      // (its downloads at once, its parsing and cleaning once the board is down: three/quality.ts xOn 'swapgate')
+      // (its downloads at once, its parsing and cleaning once the board is down)
       const gate = until(() => swapBoard.p >= 1 && swapBoard.cam >= 1, SWAP_WAIT_S);
       const load = Promise.race([loadMoment(m, gate).catch(() => null), wait(SWAP_LOAD_S).then(() => null)]);
       [d] = await Promise.all([load, until(() => swapBoard.pulseT >= SWAP_PULSE_S && swapBoard.cam >= 1, SWAP_WAIT_S)]);
@@ -296,7 +296,7 @@ export function GameApp() {
   // dropped in every two or three there, on an integrated GPU)
   const covered = intro === 'show', held = covered && stageReady;
   // the stage's 3D overlays (the pitch's, the What-if's), each render; handed in through a store when the stage is
-  // memoised, so only they render again with the clock, not the whole 3D tree (three/quality.ts xOn 'stagememo')
+  // memoised, so only they render again with the clock, not the whole 3D tree
   const overlay = (mode: PitchMode) => (data ? <><PitchOverlay3D data={data} clock={clock} looks={looks} mode={mode} />{whatIf.scene(mode)}</> : null);
   useLayoutEffect(() => { stageOverlay.set({ draw: overlay }); });
   if (!data) return <div className="app" />;

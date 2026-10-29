@@ -1,5 +1,6 @@
 import { MATCH, clipAddr, directorFile, inMatch } from '../data/paths';
-// The Explain mode's director (Yi, 2026-10-25: "wire it in the actual Explain page"): a clip's hand-tuned director
+import { hook, hooked } from '../dev';
+// The Explain mode's director, wired into the game itself: a clip's hand-tuned director
 // script (matches/<match>/director/<clip>.json, the one the orchestrator's board plays and records) played in the
 // game itself. One narration time n runs it all, as on the board: the clip's clock (held while a beat holds, so the
 // viewer's play state never changes), the drawings, the subject, the cameras (cuts, eased moves, the offside close-up),
@@ -22,17 +23,29 @@ import { makeTimeline, type NarrationScript, type Timeline } from './script';
 import { ballAt } from '../three/Ball';
 
 export interface Track { passages: { id: string; src: string; n0: number; dur: number }[]; subs: [number, number, string][] }
-interface DirectorFile { beats: Partial<Beat>[]; callouts?: Plan['callouts']; track?: Track }
+/** `cutIn`: the script's camera takes over with a cut, not a blend (a trailer cut's script, recorded a segment at a
+ *  time, wants hard cuts) */
+interface DirectorFile { beats: Partial<Beat>[]; callouts?: Plan['callouts']; track?: Track; cutIn?: boolean }
 type Pose = number[];
 
 /** one loaded clip's direction: the plan with the script's beats, its timeline, the voice and subtitle track, the
- *  pointers' names. (A script's `start` no longer moves anything: the mode opens where the clip is, Yi 2026-10-27) */
-export interface Directed { clip: string; plan: Plan; tl: Timeline; N: number; end: number; track: Track; names: (p: number) => string | null; ball: (t: number) => number[] | null }
+ *  pointers' names. (A script's `start` no longer moves anything: the mode opens where the clip is) */
+export interface Directed { clip: string; plan: Plan; tl: Timeline; N: number; end: number; track: Track; cutIn: boolean; names: (p: number) => string | null; ball: (t: number) => number[] | null }
+
+/** the clip the last script was loaded for (for __explainUse) */
+let lastData: Loaded | null = null;
 
 export async function loadDirected(data: Loaded): Promise<Directed | null> {
-  const pkg = data.pkg as unknown as { meta: { id: string; fps: number }; frames: unknown[]; teams?: { match?: string }; players?: { pid: string }[] };
+  lastData = data;
+  const pkg = data.pkg as unknown as { meta: { id: string }; teams?: { match?: string } };
   const match = pkg.teams?.match ?? MATCH, clip = pkg.meta.id;
   const dir: DirectorFile | null = await fetch(directorFile(clipAddr(clip, match))).then((r) => (r.ok ? r.json() : null)).catch(() => null);
+  return dir ? direct(data, dir) : null;
+}
+
+async function direct(data: Loaded, dir: DirectorFile): Promise<Directed | null> {
+  const pkg = data.pkg as unknown as { meta: { id: string; fps: number }; frames: unknown[]; teams?: { match?: string }; players?: { pid: string }[] };
+  const match = pkg.teams?.match ?? MATCH, clip = pkg.meta.id;
   if (!dir?.beats || !dir.track) return null;
   const [xg, resolver, profile, passes, roster] = await Promise.all([loadXg(), loadResolver(), loadProfile(match), loadPasses(match), loadRoster()]);
   const plan = orchestrate(data, { xg, resolver }, profile, passes);
@@ -46,7 +59,17 @@ export async function loadDirected(data: Loaded): Promise<Directed | null> {
   // the pointers' names: the surname, as a game shows it (the board's rule: a Chinese name's family name comes first)
   const byPid = new Map((roster?.players ?? []).map((r) => [r.pid, r]));
   const short = (pkg.players ?? []).map((x) => { const r = byPid.get(x.pid); if (!r) return null; const w = r.name.split(' '); return r.nat === 'cn' ? w[0] : w[w.length - 1]; });
-  return { clip, plan, tl, N, end, track: { ...dir.track, passages: dir.track.passages.map((p) => ({ ...p, src: inMatch(p.src, match) })) }, names: (p) => short[p] ?? null, ball: (t) => ballAt(data.pkg, t) };
+  return { clip, plan, tl, N, end, track: { ...dir.track, passages: dir.track.passages.map((p) => ({ ...p, src: inMatch(p.src, match) })) }, cutIn: !!dir.cutIn, names: (p) => short[p] ?? null, ball: (t) => ballAt(data.pkg, t) };
+}
+
+// for recordings (a trailer cut): play another director script, handed over whole by the recorder, on the
+// clip loaded now. It is never a file the game loads; the clip's own script comes back when the clip loads again
+if (typeof window !== 'undefined') {
+  hook('explainUse', async (dir: DirectorFile): Promise<boolean> => {
+    const d = lastData ? await direct(lastData, dir).catch((e) => { console.warn('__explainUse:', e); return null; }) : null;
+    if (d) setDirected(d);
+    return d !== null;
+  });
 }
 
 // ---- the state the layer and the subtitles read ----
@@ -88,8 +111,7 @@ export function setDirected(d: Directed | null) { directed = d; if (!d) stop(); 
 function start(clock: Clock, play: (p: boolean) => void): Ctl {
   const d = directed!, tn = d.tl.n(clock.t), from = switched;
   switched = false;
-  // every entry opens right where the clip is, never a jump to the narration (Yi, 2026-10-27: "right at where it was
-  // in previous mode, no need to jump"): from another mode, the clip list, a clip change, a fresh page. Before the
+  // every entry opens right where the clip is, never a jump to the narration: from another mode, the clip list, a clip change, a fresh page. Before the
   // narration the clip plays as in Watch until the script's first camera takes over. At or past the clip's end it
   // starts again from 0, as Watch's play does. From another mode it also plays, so one click starts the commentary
   const n = tn < d.N - 0.5 && clock.t < d.end - 0.1 ? tn : 0;
@@ -116,12 +138,12 @@ function fadeOut(a: HTMLAudioElement) {
     window.clearInterval(id); a.pause(); a.src = '';
   }, 20);
 }
-/** the camera director's next change of view blends over s seconds (chat 5's `__camBlend`; without it, its own 0.8 s) */
-const blendNext = (s: number) => (window as unknown as { __camBlend?: (s: number) => void }).__camBlend?.(s);
-/** how long the script's camera takes to take over from one it did not set: by how far the eye travels, 1.5-3 s (Yi,
- *  2026-10-26, 80:17: 16 m in 1.4 s read as "a camera sudden shift", in 3 s it did not) */
+/** the camera director's next change of view blends over s seconds (the camera director's `__camBlend`; without it, its own 0.8 s) */
+const blendNext = (s: number) => hooked<(s: number) => void>('camBlend')?.(s);
+/** how long the script's camera takes to take over from one it did not set: by how far the eye travels, 1.5-3 s (at
+ *  80:17, 16 m in 1.4 s read as a sudden shift of the camera, in 3 s it did not) */
 function takeoverS(pose: Pose | undefined): number {
-  const now = (window as unknown as { __cam?: () => { pos: number[] } }).__cam?.().pos;
+  const now = hooked<() => { pos: number[] }>('cam')?.().pos;
   if (!pose || !now) return 1.5;
   const [x, y, z, yaw, pitch, dist] = pose, p = (pitch * Math.PI) / 180, w = (yaw * Math.PI) / 180;
   const eye = [x + dist * Math.cos(p) * Math.sin(w), y + dist * Math.sin(p), z + dist * Math.cos(p) * Math.cos(w)];
@@ -129,7 +151,7 @@ function takeoverS(pose: Pose | undefined): number {
 }
 /** the free view's orbit now, as a script pose: its centre and distance, its yaw and pitch from where the camera stands */
 function orbitNow(): Pose | null {
-  const c = (window as unknown as { __cam?: () => { pos: number[]; target: number[]; dist: number } }).__cam?.();
+  const c = hooked<() => { pos: number[]; target: number[]; dist: number }>('cam')?.();
   if (!c) return null;
   const [x, y, z] = c.target, dx = c.pos[0] - x, dy = c.pos[1] - y, dz = c.pos[2] - z, r = Math.hypot(dx, dy, dz) || 1;
   return [x, y, z, (Math.atan2(dx, dz) * 180) / Math.PI, (Math.asin(dy / r) * 180) / Math.PI, c.dist];
@@ -153,9 +175,8 @@ function carrierAt(actions: Plan['actions'], t: number): number {
 
 // for the headless checks: put the narration at n (the viewer's play state kept), and read where it stands
 if (typeof window !== 'undefined') {
-  const W = window as unknown as Record<string, unknown>;
-  W.__explainSet = (n: number) => { if (!ctl) return false; ctl.n = Math.max(0, Math.min(ctl.d.N, n)); ctl.lastT = ctl.clock.t = Math.min(ctl.d.end - 0.05, ctl.d.tl.at(ctl.n).t); return true; };
-  W.__explainState = () => ({ ready: directed !== null, active: ctl !== null, n: ctl?.n ?? null, N: ctl?.d.N ?? directed?.N ?? null, t: ctl?.clock.t ?? null, sub: view.sub, items: view.items.map((i) => i.id), cam: ctl?.cam ?? null, voice: ctl?.audio.filter((x) => x.on).map((x) => x.a.src.split('/').pop()) ?? [], vol: ctl?.audio.filter((x) => x.on).map((x) => Math.round(x.a.volume * 100) / 100) ?? [], locked: view.locked, carrier: pointers.carrier.current, call: pointers.call.current, sel: getSettings().selected });
+  hook('explainSet', (n: number) => { if (!ctl) return false; ctl.n = Math.max(0, Math.min(ctl.d.N, n)); ctl.lastT = ctl.clock.t = Math.min(ctl.d.end - 0.05, ctl.d.tl.at(ctl.n).t); return true; });
+  hook('explainState', () => ({ ready: directed !== null, active: ctl !== null, n: ctl?.n ?? null, N: ctl?.d.N ?? directed?.N ?? null, t: ctl?.clock.t ?? null, sub: view.sub, items: view.items.map((i) => i.id), cam: ctl?.cam ?? null, voice: ctl?.audio.filter((x) => x.on).map((x) => x.a.src.split('/').pop()) ?? [], vol: ctl?.audio.filter((x) => x.on).map((x) => Math.round(x.a.volume * 100) / 100) ?? [], locked: view.locked, carrier: pointers.carrier.current, call: pointers.call.current, sel: getSettings().selected }));
 }
 
 /** GameApp's onTick, every frame: true while a director script runs the clip (the game's own clock then stands aside) */
@@ -178,14 +199,14 @@ export function explainTick(dt: number, clock: Clock, playing: boolean, play: (p
   const c = ctl && ctl.d === directed && ctl.clock === clock ? ctl : (stop(), start(clock, play));
   const { d } = c, tl = d.tl;
   // the viewer moved the clock (the replay plate's seek, play again from the end): n follows it, before the script's
-  // start too (Yi, 2026-10-26: the clip before the narration can still be watched; the mode only opens at the start)
+  // start too (the clip before the narration can still be watched; the mode only opens at the start)
   if (Math.abs(clock.t - c.lastT) > 1e-3) c.n = tl.n(clock.t);
   if (playing) {
     c.n = Math.min(d.N, c.n + dt);
     if (c.n >= d.N - 1e-6) play(false);
   }
   // never quite the clip's last instant: the 25 Hz bodies end on the frame before it, and the players vanished there for
-  // the wrap's last seconds (15:53, 2026-10-26)
+  // the wrap's last seconds (15:53)
   const n = c.n, t = Math.min(d.end - 0.05, tl.at(n).t);
   clock.t = t; c.lastT = t;
   apply(c, n);
@@ -201,7 +222,7 @@ function apply(c: Ctl, n: number) {
   const carrier = carrierAt(plan.actions, t), call = [...(plan.callouts ?? [])].reverse().find((x) => x.n0 <= n && n < x.n1);
   pointers.carrier.current = carrier;
   pointers.call.current = call && call.player !== carrier ? call.player : -1;
-  // the named player wears the Show layer's tag, as the player on the ball does (Yi, 2026-10-25: as in the Watch mode)
+  // the named player wears the Show layer's tag, as the player on the ball does (as in the Watch mode)
   showNamed.clear(); if (call) showNamed.add(call.player);
   const selNow = getSettings().selected; if (selNow !== null) showNamed.add(selNow);   // the script's subject too (EXPLAIN_SHOW)
   // drawings and the subject: every cue showing at n (the board's stateAt)
@@ -214,8 +235,8 @@ function apply(c: Ctl, n: number) {
   }
   const key = items.map((i) => i.id).join(',');
   if (key !== c.key) { c.key = key; publish({ items }); }
-  // never the selection's turning ring on a player who already stands in a light (Yi, 2026-10-26: "never show the
-  // pressure and rotating ring on the same player"): a pressure item's carrier (the one on the ball when it has none), a
+  // never the selection's turning ring on a player who already stands in a light (one light per player): a pressure
+  // item's carrier (the one on the ball when it has none), a
   // spotlight's player
   if (select !== undefined && select !== null) {
     const carrierNow = carrierAt(plan.actions, t);
@@ -232,33 +253,34 @@ function apply(c: Ctl, n: number) {
   // the camera of the latest beat with one that has started: a free pose (a cut, or eased over `move` s), else a view
   const camBeat = [...plan.beats].filter((b) => b.camera && tl.n(b.t0) <= n + 1e-6).sort((a, b) => tl.n(a.t0) - tl.n(b.t0)).pop();
   const cam = camBeat?.camera;
-  const W = window as unknown as { __camSet?: (...a: number[]) => void; __camCut?: () => void; __camEye?: (...a: number[]) => void };
+  const W = { camSet: hooked<(...a: number[]) => void>('camSet'), camCut: hooked<() => void>('camCut'), camEye: hooked<(...a: number[]) => void>('camEye') };
   const camKey = cam ? `${camBeat!.id}:${cam.view}:${cam.pose ?? ''}` : '';
   // before the script's first camera (the clip before the narration): the broadcast view, as Watch plays it
   if (!cam && c.cam !== '') {
     c.cam = ''; c.view = ''; c.mv = null; c.eye = false;
-    if (c.pose !== null || getSettings().view !== 'broadcast') { c.pose = null; W.__camCut?.(); setSettings({ view: 'broadcast' }); }
+    if (c.pose !== null || getSettings().view !== 'broadcast') { c.pose = null; W.camCut?.(); setSettings({ view: 'broadcast' }); }
   }
-  if (cam && camKey !== c.cam && (W.__camSet || !cam.pose)) {
+  if (cam && camKey !== c.cam && (W.camSet || !cam.pose)) {
     // the script's camera taking over from one it did not set (an entry from another mode, the clip played before the
-    // narration, a clip change's landing) eases in, by the camera director's blend (Yi, 2026-10-26: switching into
-    // Explain shifts the camera, no jump); between the script's own cameras a change of view cuts (the camera
+    // narration, a clip change's landing) eases in, by the camera director's blend (switching into
+    // Explain moves the camera, never jumps it); between the script's own cameras a change of view cuts (the camera
     // director's __camCut), as its free poses do among themselves
     const takeover = c.cam === '', was = getSettings().view;
     c.cam = camKey;
     const view = cam.pose ? 'free' : cam.view;
-    if (was !== view) { if (takeover) blendNext(takeoverS(cam.pose)); else W.__camCut?.(); }
+    const blendIn = takeover && !d.cutIn;
+    if (was !== view) { if (blendIn) blendNext(takeoverS(cam.pose)); else W.camCut?.(); }
     c.view = view;
     c.eye = !!cam.ball;
     // (the director blends only between views: taking over the viewer's own free view, the script eases the orbit)
-    const from = takeover ? (was === 'free' && cam.pose ? orbitNow() : null) : cam.move ? c.pose : null;
+    const from = takeover ? (blendIn && was === 'free' && cam.pose ? orbitNow() : null) : cam.move ? c.pose : null;
     if (cam.pose && from) c.mv = { from, to: cam.pose, n0: takeover ? n : tl.n(camBeat!.t0), d: takeover ? takeoverS(cam.pose) : cam.move! };
-    else if (cam.pose) { c.mv = null; c.pose = cam.pose; W.__camSet!(...cam.pose); }
+    else if (cam.pose) { c.mv = null; c.pose = cam.pose; W.camSet!(...cam.pose); }
     else if (cam.ball) { c.mv = null; c.pose = null; }
     else { c.mv = null; c.pose = null; if (getSettings().view !== cam.view) setSettings({ view: cam.view }); }
   }
   // the ball's camera, every frame: on the pass's line behind the ball, low, looking along it, till its stop
-  if (cam?.ball && W.__camEye) {
+  if (cam?.ball && W.camEye) {
     const B = cam.ball, b0 = d.ball(B.from), b1 = d.ball(B.to), b = d.ball(t);
     if (b0 && b1 && b) {
       // straight behind the ball itself (the pass's line bends a little), looking along the line; held where it
@@ -272,14 +294,14 @@ function apply(c: Ctl, n: number) {
         q = d.ball(hi) ?? b;
       }
       const px = q[0] - ux * B.behind - uy * side, py = q[1] - uy * B.behind + ux * side;
-      W.__camEye(px, B.up, py, px + ux * 10, B.lookY ?? 0.12, py + uy * 10, B.fov ?? 50);
+      W.camEye(px, B.up, py, px + ux * 10, B.lookY ?? 0.12, py + uy * 10, B.fov ?? 50);
     }
   }
-  if (c.mv && W.__camSet) {
+  if (c.mv && W.camSet) {
     const m = c.mv, u = Math.min(1, Math.max(0, (n - m.n0) / m.d)), e = u * u * (3 - 2 * u);
     let dy = m.to[3] - m.from[3]; dy -= 360 * Math.round(dy / 360);
     const p = [0, 1, 2].map((i) => m.from[i] + (m.to[i] - m.from[i]) * e).concat([m.from[3] + dy * e, m.from[4] + (m.to[4] - m.from[4]) * e, m.from[5] * Math.pow(m.to[5] / m.from[5], e)]);
-    W.__camSet(...p); c.pose = p;
+    W.camSet(...p); c.pose = p;
     if (u >= 1) c.mv = null;
   }
   // a scripted camera (a free pose, or a player's view: 22:54's over-the-shoulder view loses the ball each time Lowe looks
@@ -299,7 +321,7 @@ function voice(c: Ctl, n: number, playing: boolean) {
     if (!x.on && view.locked) continue;   // the browser wants a click first (ExplainPlayer's sound button)
     if (!x.on || jump || Math.abs(x.a.currentTime - want) > 0.3) {
       // a passage joined partway (an entry from another mode, a seek, play after a pause) fades in rather than cutting
-      // in mid-word (Yi, 2026-10-26: "make a fade in of voice effect? so it feels more seamless")
+      // in mid-word, so the join is seamless
       if (!x.on || jump) { x.fade = want > 0.1 ? performance.now() : -1; x.a.volume = x.fade < 0 ? 1 : 0; }
       x.a.currentTime = want;
     }

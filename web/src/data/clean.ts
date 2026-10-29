@@ -1,7 +1,7 @@
 // The tracked joints cleaned as a clip loads (data.ts loadMoment): one-frame spikes, bone lengths, bodies on the
-// ground. Pure, on the arrays it is given, so it runs the same on the main thread or in cleanWorker.ts (three/quality.ts
-// xOn 'cleanworker': the clip change's few hundred ms of it off the page, so the board and its pulse turn smoothly; on
-// the main thread the hexagons' fan-out lagged).
+// ground. Pure, on the arrays it is given, so it runs the same on the main thread or in cleanWorker.ts (in a worker,
+// the clip change's few hundred ms of it are off the page, so the board and its pulse turn smoothly; on the main
+// thread the hexagons' fan-out lagged).
 
 export interface CleanInput { names: string[]; frames: number; players: number; data: Float32Array }
 export interface CleanStats { spikes: number; fixedBones: number; lyingFrames: number; playerFrames: number }

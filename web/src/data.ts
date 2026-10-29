@@ -14,7 +14,7 @@ export interface Loaded { pkg: MomentPkg; joints: Joints | null; officials?: Off
 /** gate: the CPU's share of the load (the package's parse, the joints' alignment and cleaning, a few hundred ms on a slow
  *  machine) waits for it, the downloads not (GameApp's clip change: until the board is down, so the hexagons turn over
  *  smoothly; during the fan-out the work made it lag) */
-/** the joints cleaned (data/clean.ts), off the page in a worker where there is one (three/quality.ts xOn 'cleanworker'),
+/** the joints cleaned (data/clean.ts), off the page in a worker where there is one,
  *  on it otherwise or should the worker fail; the result the same either way */
 let cleaner: Worker | null | undefined;
 let cleanId = 0;

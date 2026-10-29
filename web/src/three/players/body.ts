@@ -14,9 +14,24 @@ export type Grp = 'arm' | 'leg' | 'neck' | 'torso' | 'head' | 'hand' | 'foot';
 /** asym: an uneven section along the limb, (t, side, front, back) half-widths in metres, the front facing `front`: the
  *  shin runs straight in front while the calf swells behind, the quadriceps swell at the front of the thigh, the biceps
  *  on the side the elbow bends to ("straights against curves") */
+/** seat: the thigh under the shorts, whose section setSeat rebuilds with the glutes' swell */
 export interface Limb { a: End; b: End; ra: number; rb: number; part: Part; prof?: [number, number][]; grp: Grp; arm?: boolean;
-  asym?: [number, number, number, number][]; front?: 'foot' | 'elbow' | 'thumb' | 'instep' }
+  asym?: [number, number, number, number][]; front?: 'foot' | 'elbow' | 'thumb' | 'instep'; seat?: boolean }
 export interface Blob { at: End; frame: 'torso' | 'head' | 'rHand' | 'lHand' | 'rFoot' | 'lFoot' | 'rThigh' | 'lThigh' | 'none'; r: [number, number, number]; part: Part; lift?: number; back?: number; grp: Grp; arm?: boolean }
+
+/** the thigh under the shorts, (t, side, front, back) half-widths from above the hip joint (t 0, inside the pelvis) to
+ *  the hem (t 1): a rounded dome over the joint, and behind it the glute, g of its full swell (the seat, below): fullest
+ *  just below the joint, 4.4 cm behind the thigh's own line, folding into the hamstring by a third of the way down; the
+ *  front a touch flatter at the groin. g 0 is the plain turned thigh */
+export const thighShape = (g: number): [number, number, number, number][] => [
+  [0, 0.03, 0.03, 0.03 + 0.016 * g],
+  [0.06, 0.068, 0.068 - 0.004 * g, 0.068 + 0.03 * g],
+  [0.16, 0.084, 0.084 - 0.008 * g, 0.084 + 0.042 * g],
+  [0.3, 0.089, 0.089 - 0.007 * g, 0.089 + 0.044 * g],
+  [0.5, 0.089, 0.089 - 0.002 * g, 0.089 + 0.022 * g],
+  [0.7, 0.089, 0.089, 0.089 + 0.008 * g],
+  [1, 0.087, 0.087, 0.087 + 0.004 * g],
+];
 
 // Limbs narrow into the joints and swell between them: the thigh tapers to the knee, the calf swells below it and
 // thins to the ankle, the forearm swells below the elbow and thins to the wrist, so a bend reads as a joint rather than
@@ -29,8 +44,9 @@ const side = (s: 'r' | 'l'): Limb[] => [
   { a: `${s}Wrist`, b: [`${s}Wrist`, `${s}Hand`, 0.62], ra: 0.022, rb: 0.031, part: 'skin', grp: 'hand' },
   { a: `${s}Elbow`, b: `${s}Wrist`, ra: 0.041, rb: 0.029, part: 'skin', asym: [[0, 0.04, 0.042, 0.04], [0.25, 0.047, 0.05, 0.044], [0.62, 0.032, 0.036, 0.033], [1, 0.02, 0.026, 0.024]], front: 'thumb', grp: 'arm', arm: true },   // swelling on the thumb side; the wrist flat, about 5 cm wide and 4 cm deep
   // the shorts' leg: the whole thigh, shown right up to the hip, its top a rounded dome above the hip joint that the
-  // short pelvis sits between; it swings with the leg, so the hip and seat move with the stride
-  { a: [`${s}Hip`, `${s}Knee`, -0.16], b: [`${s}Hip`, `${s}Knee`, 0.52], ra: 0.03, rb: 0.087, part: 'shorts', prof: [[0, 0.03], [0.06, 0.068], [0.16, 0.084], [0.3, 0.089], [0.7, 0.089], [1, 0.087]], grp: 'leg' },
+  // short pelvis sits between; it swings with the leg, so the hip and seat move with the stride. Uneven (thighShape):
+  // the glute swells behind the joint, so each side of the seat goes with its own leg
+  { a: [`${s}Hip`, `${s}Knee`, -0.16], b: [`${s}Hip`, `${s}Knee`, 0.52], ra: 0.03, rb: 0.087, part: 'shorts', asym: thighShape(0), front: 'foot', grp: 'leg', seat: true },
   { a: [`${s}Hip`, `${s}Knee`, 0.45], b: `${s}Knee`, ra: 0.075, rb: 0.05, part: 'skin', asym: [[0, 0.073, 0.077, 0.072], [0.45, 0.066, 0.073, 0.06], [0.85, 0.054, 0.057, 0.05], [1, 0.05, 0.052, 0.047]], front: 'foot', grp: 'leg' },
   // below the knee the kneecap stands at the front and the calf begins behind
   { a: `${s}Knee`, b: [`${s}Knee`, `${s}Ankle`, 0.16], ra: 0.05, rb: 0.054, part: 'skin', asym: [[0, 0.049, 0.054, 0.046], [1, 0.05, 0.048, 0.058]], front: 'foot', grp: 'leg' },
@@ -45,26 +61,60 @@ export const LIMBS: Limb[] = [...side('r'), ...side('l'),
   { a: 'neck', b: ['earMid', 'nose', 0.3], ra: 0.056, rb: 0.046, part: 'skin', prof: [[0, 0.056], [0.4, 0.049], [1, 0.046]], grp: 'neck' }];   // about 10 cm across
 
 /** The torso, lofted through cross-sections from below the hips to the collar: h is the height up the spine as a share of
- *  hip-to-neck (about 0.6 m), w and d the half-width and half-depth in metres. Each section is a rounded rectangle
- *  (a superellipse), turned from the hips' heading at the bottom to the shoulders' at the top, so the body twists as
- *  the player turns. The shorts run up to a waistband, where two sections at one height switch to the shirt. */
-export const TORSO_RINGS: { h: number; w: number; d: number; part: Part }[] = [
+ *  hip-to-neck (about 0.6 m), w the half-width and d the half-depth to the front in metres, b the half-depth to the back
+ *  with the seat fully on (SEAT.back 1; at 0 the back is as deep as the front, as it was). Each section is a rounded
+ *  rectangle (a superellipse), turned from the hips' heading at the bottom to the shoulders' at the top, so the body
+ *  twists as the player turns. The shorts run up to a waistband, where two sections at one height switch to the shirt. */
+export const TORSO_RINGS: { h: number; w: number; d: number; b: number; part: Part }[] = [
   // the pelvis is short: it ends at the hips, between the tops of the thighs, so the thighs show up to the hip rather
-  // than coming out of a block; below the waistband each side is still carried a little by its thigh (SEAT_FOLLOW)
-  { h: 0.02, w: 0.118, d: 0.088, part: 'shorts' },
-  { h: 0.09, w: 0.152, d: 0.1, part: 'shorts' },
-  { h: 0.13, w: 0.164, d: 0.105, part: 'shorts' },
-  { h: 0.13, w: 0.166, d: 0.106, part: 'shirt' },
-  { h: 0.26, w: 0.164, d: 0.11, part: 'shirt' },
-  { h: 0.45, w: 0.178, d: 0.12, part: 'shirt' },
-  { h: 0.65, w: 0.195, d: 0.13, part: 'shirt' },
-  { h: 0.82, w: 0.203, d: 0.125, part: 'shirt' },
-  { h: 0.93, w: 0.188, d: 0.11, part: 'shirt' },
-  { h: 0.99, w: 0.13, d: 0.086, part: 'shirt' },
-  { h: 1.03, w: 0.064, d: 0.058, part: 'shirt' },
-  { h: 1.065, w: 0.055, d: 0.052, part: 'shirt' },        // the neck's base (skin above the neckline, see Styles.tsx)
+  // than coming out of a block; below the waistband each side is still carried a little by its thigh (SEAT_FOLLOW).
+  // Its back bulges behind the spine (the glutes' upper mass, over the thighs' own), the lower back hollows above it
+  // and the upper back fills out again: the S of a side view
+  { h: 0.02, w: 0.118, d: 0.088, b: 0.135, part: 'shorts' },
+  { h: 0.09, w: 0.152, d: 0.1, b: 0.142, part: 'shorts' },
+  { h: 0.13, w: 0.164, d: 0.105, b: 0.13, part: 'shorts' },
+  { h: 0.13, w: 0.166, d: 0.106, b: 0.13, part: 'shirt' },
+  { h: 0.26, w: 0.164, d: 0.11, b: 0.105, part: 'shirt' },
+  { h: 0.45, w: 0.178, d: 0.12, b: 0.1, part: 'shirt' },
+  { h: 0.65, w: 0.195, d: 0.13, b: 0.125, part: 'shirt' },
+  { h: 0.82, w: 0.203, d: 0.125, b: 0.13, part: 'shirt' },
+  { h: 0.93, w: 0.188, d: 0.11, b: 0.112, part: 'shirt' },
+  { h: 0.99, w: 0.13, d: 0.086, b: 0.086, part: 'shirt' },
+  { h: 1.03, w: 0.064, d: 0.058, b: 0.058, part: 'shirt' },
+  { h: 1.065, w: 0.055, d: 0.052, b: 0.052, part: 'shirt' },        // the neck's base (skin above the neckline, see Styles.tsx)
 ];
 export const TORSO_SEG = 28, TORSO_N = 2.5;
+
+/** The seat (without it the figures were flat behind the hips). glute: the thighs' glutes behind the hip joints, a share of
+ *  thighShape's full swell; back: the pelvis's back bulge and the lower back's hollow, a share of the rings' b over d;
+ *  tilt: the pelvis tipped forward (radians: its front down, its back up, fading out up the waist); lobe and cleft:
+ *  on the back of the lowest rings, two lobes either side of a groove, as shares of the back depth. The trailer's body
+ *  page sets them to compare (setSeat); the app draws these. */
+export interface Seat { glute: number; back: number; tilt: number; lobe: number; cleft: number }
+export const SEAT: Seat = { glute: 0, back: 0, tilt: 0, lobe: 0, cleft: 0 };
+/** per ring, read by the torso loft each frame: the sine of the pelvis's tilt, and on the back half of the lowest rings
+ *  the lobes' and the cleft's factor on the back depth per segment (null: none) */
+export const SEAT_TILT: number[] = [], SEAT_SHAPE: (Float32Array | null)[] = [];
+/** the back's half-depth at a ring for the seat as set: from the front's (back 0) to the ring's own (back 1) */
+export const ringBack = (r: { d: number; b: number }) => r.d + (r.b - r.d) * SEAT.back;
+export function setSeat(s: Partial<Seat>) {
+  Object.assign(SEAT, s);
+  for (const l of LIMBS) if (l.seat) l.asym = thighShape(SEAT.glute);
+  TORSO_RINGS.forEach((r, k) => {
+    SEAT_TILT[k] = Math.sin(SEAT.tilt) * (1 - THREE.MathUtils.smoothstep(r.h, 0.13, 0.45));
+    const f = 1 - THREE.MathUtils.smoothstep(r.h, 0.02, 0.13);
+    if (f <= 0 || (SEAT.lobe === 0 && SEAT.cleft === 0)) { SEAT_SHAPE[k] = null; return; }
+    const m = new Float32Array(TORSO_SEG);
+    for (let j = 0; j < TORSO_SEG; j++) {
+      const th = (2 * Math.PI * j) / TORSO_SEG, co = Math.cos(th), cx = Math.sign(co) * Math.abs(co) ** (2 / TORSO_N);
+      // the lobes half way out to either side, the groove in the middle; the front half (sin >= 0) untouched
+      const lobe = Math.exp(-(((Math.abs(cx) - 0.5) / 0.28) ** 2)), cleft = Math.exp(-((cx / 0.2) ** 2));
+      m[j] = Math.sin(th) >= 0 ? 1 : 1 + f * (SEAT.lobe * lobe - SEAT.cleft * cleft);
+    }
+    SEAT_SHAPE[k] = m;
+  });
+}
+setSeat({});
 
 /** a body's shape beyond its build, for figures drawn as women (the cast's guide, src/cast): factors on the torso's
  *  width at the hips, the waist and the shoulders, and the bust's extra depth at the front as a share (0: none) */
@@ -88,9 +138,10 @@ export function bustAt(s: Shape | undefined, h: number) {
   return Math.abs(x) >= 1 ? 0 : s.bust * (1 - x * x) ** 2;
 }
 /** the torso's section at height h as the loft draws it (linear between the rings): half-width, and half-depth to the
- *  front and to the back, metres, for a build's torso factor tw and a shape */
+ *  front and to the back, metres, for a build's torso factor tw and a shape (without the seat's tilt and lobes, which
+ *  only reach the lowest rings) */
 export function torsoSection(h: number, tw: number, s?: Shape) {
-  const at = (r: (typeof TORSO_RINGS)[number]) => ({ w: r.w * tw * shapeW(s, r.h), f: r.d * tw * (1 + bustAt(s, r.h)), b: r.d * tw });
+  const at = (r: (typeof TORSO_RINGS)[number]) => ({ w: r.w * tw * shapeW(s, r.h), f: r.d * tw * (1 + bustAt(s, r.h)), b: ringBack(r) * tw });
   let k = 1; while (k < TORSO_RINGS.length - 1 && TORSO_RINGS[k].h < h) k++;
   const r0 = TORSO_RINGS[k - 1], r1 = TORSO_RINGS[k], a = at(r0), c = at(r1);
   const u = Math.min(1, Math.max(0, (h - r0.h) / ((r1.h - r0.h) || 1)));
@@ -108,7 +159,7 @@ const joints = (s: 'r' | 'l'): Blob[] => [
   // the boot's low collar sits on the ankle joint, so the shin runs straight into its middle
   { at: [`${s}Ankle`, `${s}Heel`, 0.3], frame: `${s}Foot`, r: [0.041, 0.038, 0.045], part: 'boot', grp: 'foot' },
   // the hand as a loose fist: the tracking gives the wrist, thumb and little finger, so the hand's direction and its turn,
-  // but not the fingers. A rounded fist 9 cm long, centred 8 cm out from the wrist; no thumb (Yi found it too big)
+  // but not the fingers. A rounded fist 9 cm long, centred 8 cm out from the wrist; no thumb (it read as too big)
   { at: [`${s}Wrist`, `${s}Hand`, 0.82], frame: `${s}Hand`, r: [0.04, 0.045, 0.034], part: 'skin', grp: 'hand' },
 ];
 /** the old torso of four ellipsoids, kept for the dot-matrix style, which samples blobs */
@@ -188,6 +239,6 @@ export function headFrame(pose: Float32Array, nJ: number, ix: PoseIndex, p: numb
   return m.makeBasis(right, up, fwd);
 }
 
-/** a part's colour in `team`'s kit (by team, not by role: coords.ts, Yi 2026-10-23) */
+/** a part's colour in `team`'s kit (by team, not by role: coords.ts) */
 export const kitColor = (part: Part, team: Team) =>
   part === 'skin' ? KIT.skin : part === 'boot' ? KIT.boot : part === 'hair' ? '#26221f' : TEAM_KIT[team][part];

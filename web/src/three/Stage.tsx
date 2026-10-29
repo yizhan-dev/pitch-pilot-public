@@ -1,7 +1,8 @@
 import { Fragment, memo, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { hook, hooked } from '../dev';
 import { PerfProbe } from './PerfProbe';
 import { AdaptiveQuality, ApplyScale } from './AdaptiveQuality';
-import { AA_OFF_AT_LOAD, applied, calib, calibrated, frameSkips, lowHas, useQuality, wantsCalibration, xOn } from './quality';
+import { AA_OFF_AT_LOAD, applied, calib, calibrated, frameSkips, lowHas, useQuality, wantsCalibration } from './quality';
 import { GpuMeter } from './gpuMeter';
 import { varActive } from '../game/varReplay';
 import { store, useStore } from '../hud/draft';
@@ -42,7 +43,7 @@ import { clipSwap, swapBoard } from '../game/clipSwap';
 export type Phase = 'lead' | 'decision' | 'tail';
 export interface LayerFlags { pc: boolean; opt: boolean; vis: boolean; }
 
-// The decision lab's scene (2026-10-21): the elements Yi accepted on the workbench, in one place. The floodlit night
+// The decision lab's scene: the elements accepted on the workbench, in one place. The floodlit night
 // stadium with the C7 crystal shell, its near stand cut away for the elevated camera; the shader grass; the goals,
 // boards, benches and corner flags; the cartoon players driven by the tracked joints, with their seeded looks; the
 // six-panel ball; and the champagne and fireworks where the package records a goal. The analysis layers draw over it.
@@ -79,7 +80,7 @@ function Rig({ data, clock, phase, onTick }: { data: Loaded; clock: Clock; phase
 /** the tactical mode's change of pitch: the hexagons' progress eases towards the board while the mode is on, back to
  *  grass when off, in 2.4 s. Render time, so it runs while play is paused (clip time when recording). The wave starts
  *  under the ball. The page opens on the final state, with no change played. */
-/** what the board leaves out (Yi, 2026-10-25: the referee and his assistants in 战术): hidden as the board's wave passes
+/** what the board leaves out (the referee and his assistants in the Tactics mode): hidden as the board's wave passes
  *  halfway, back as it returns */
 /** what belongs to the clip on screen (players, ball): under the board while a clip changes in place (game/clipSwap.ts),
  *  so the old clip's players go as the board closes over them and the next clip's come up as it opens */
@@ -97,7 +98,7 @@ function OffBoard({ mode, children }: { mode: PitchMode; children: ReactNode }) 
 function TacticalFlip({ data, clock, mode }: { data: Loaded; clock: Clock; mode: PitchMode }) {
   const st = useRef({ p: 0, target: -1, lastT: 0 });
   useFrame((_, raw) => {
-    const capture = !!(window as unknown as { __capture?: boolean }).__capture;
+    const capture = !!hooked<boolean>('capture');
     const dt = capture && clipSwap.get() === 'off' ? Math.max(0, Math.min(0.1, clock.t - st.current.lastT)) : Math.min(raw, 0.1);
     st.current.lastT = clock.t;
     // the board: the Tactics mode's, an Explain script's (scriptBoard), or a clip changing in place (clipSwap, from the
@@ -111,7 +112,7 @@ function TacticalFlip({ data, clock, mode }: { data: Loaded; clock: Clock; mode:
       // the wave runs to the farthest corner of the grass from where it starts, so all of its time is on screen
       mode.reach = Math.max(...[[60, 42], [60, -42], [-60, 42], [-60, -42]].map(([x, y]) => Math.hypot(x - mode.origin.x, y - mode.origin.y)));
     }
-    s.p = target > s.p ? Math.min(1, s.p + dt / 2.4) : target < s.p ? Math.max(0, s.p - dt / 2.4) : s.p;   // 2.4 s (Yi: 0.9 s, then 1.8 s, still slightly fast); settled: stay put
+    s.p = target > s.p ? Math.min(1, s.p + dt / 2.4) : target < s.p ? Math.max(0, s.p - dt / 2.4) : s.p;   // 2.4 s (0.9 s and 1.8 s both read as too fast); settled: stay put
     mode.current = 0.5 - 0.5 * Math.cos(Math.PI * s.p);   // sine in and out: a gentler start and end than quadratic
     // the loading pulse: in once the board is down, out over a third of a second when the next clip is in
     const pulseOn = swap === 'out' && s.p >= 1;
@@ -130,7 +131,7 @@ function TacticalFlip({ data, clock, mode }: { data: Loaded; clock: Clock; mode:
  *  keep it */
 /** overlay: what the HUD lays on the pitch inside this canvas with the director (hud/PitchOverlay3D.tsx), given the pitch's
  *  grass-to-board change so its 战术 layers wait for the board */
-/** the frame drawn less often while nothing on the stage moves (three/quality.ts xOn 'idlerender'): in Watch or Tactics,
+/** the frame drawn less often while nothing on the stage moves: in Watch or Tactics,
  *  the clock and the camera still for half a second, nobody selected or under the pointer, no pointer, wheel or key for a
  *  second, no VAR check or clip change: 20 frames a second instead of every frame, so what runs on its own (the corner
  *  flags, the big screen) still moves smoothly (at 13 it stepped); anything that moves the camera, the clock or the
@@ -185,7 +186,7 @@ function RenderGate({ clock, mode, hover, covered }: { clock: Clock; mode: Pitch
 }
 
 /** the overlay drawn in the stage (the game's 3D overlays and the What-if's scene), handed in through a store instead
- *  of a prop, so the stage need not render again with the page's clock (three/quality.ts xOn 'stagememo') */
+ *  of a prop, so the stage need not render again with the page's clock */
 export const stageOverlay = store<{ draw: (mode: PitchMode) => ReactNode } | null>(null);   // (wrapped: the store takes a bare function as an updater)
 function OverlayHost({ mode }: { mode: PitchMode }) {
   const f = useStore(stageOverlay);
@@ -193,9 +194,8 @@ function OverlayHost({ mode }: { mode: PitchMode }) {
 }
 
 /** covered: the stage is out of sight under the line-up show, warmed up already; it draws only when asked (a resize),
- *  so the show has the machine to itself, and carries on as the show hands over (GameApp, three/quality.ts xOn
- *  'holdbehind'; Yi, 2026-10-29: "the hexagon fan out and the center circle enlarging before kick off still slightly
- *  lagging", with both canvases drawing at full size) */
+ *  so the show has the machine to itself, and carries on as the show hands over (GameApp; with both canvases drawing at
+ *  full size the show's hexagon fan-out and centre-circle growth dropped frames) */
 /** covered (Stage covered): the stage draws its first two frames at once, with the line-up show's own first frames,
  *  under the loader (index.html hides it at the show's second frame): every program linked and every texture up in
  *  those two, about a second on the iGPU, where nobody sees it; then nothing until the show hands over. A compile ahead
@@ -204,7 +204,7 @@ function OverlayHost({ mode }: { mode: PitchMode }) {
 function StageImpl({ data, clock, phase, layers, selected, onTick, marker = null, director = false, onPortraits, overlay, clipKey = '', covered = false, held = false }: { data: Loaded; clock: Clock; phase: Phase; layers: LayerFlags; selected: number | null; onTick: (dt: number) => void; marker?: number | null; director?: boolean; onPortraits?: (urls: (string | null)[]) => void; overlay?: (mode: PitchMode) => ReactNode; clipKey?: string; covered?: boolean; held?: boolean }) {
   const lowLight = useQuality().tier === 'low' && lowHas('light');
   const pkg = data.pkg, atDecision = phase === 'decision';
-  // which team the package's attackers (players 0..nAtt-1) are: each team wears its own kit in every clip (Yi, 2026-10-23)
+  // which team the package's attackers (players 0..nAtt-1) are: each team wears its own kit in every clip
   const attacking = attackingOf(pkg.meta);
   // the match's ends (coords.ts viewSign): in the game, a clip that should read right to left turns the stadium round
   // and the director keeps its one-sided cameras on the other touchline
@@ -220,15 +220,20 @@ function StageImpl({ data, clock, phase, layers, selected, onTick, marker = null
   // ghosts of players at other spots (Styles' Ghost; the Tactics pen mounts its own through GhostPlayers):
   // window.__ghosts([{ player, at: [x, y] }]) sets them, for the headless checks
   const [ghosts, setGhosts] = useState<Ghost[]>([]);
-  // the Show menu's style (Yi, 2026-10-25): its chosen players (ShowLayer keeps showChosen each frame) in that style, the
+  // the Show menu's style: its chosen players (ShowLayer keeps showChosen each frame) in that style, the
   // rest toon, as two sets of the same players, each masked to its own
   const chosenMask = useMemo<PlayerMask>(() => ({ current: (p) => showChosen.has(p) }), []), restMask = useMemo<PlayerMask>(() => ({ current: (p) => !showChosen.has(p) }), []);
   // while a what-if is open every player is drawn in its style (whatif/state.ts wiStyle: ghosts, with or without their
-  // trail), in place of the toon players and the Show menu's style (the What-if chat, 2026-10-26)
+  // trail), in place of the toon players and the Show menu's style
   const wis = useWiStyle(), allStyle = director ? wis : null, showStyled = director && !allStyle && showOf(game).style !== 'toon';
-  useEffect(() => { (window as unknown as { __ghosts?: (g: Ghost[]) => void }).__ghosts = setGhosts; }, []);
-  (window as unknown as { __pitchMode?: PitchMode }).__pitchMode = pitchMode;   // for the headless checks   // no ring at the feet of the eyes we look through
-  // the match roster (src/lineup/roster.ts; Yi, 2026-10-23): each player the same name, shirt number and face in every
+  useEffect(() => { hook('ghosts', setGhosts); }, []);
+  // an empty pitch for a recording (the match summary's drone orbit round the stadium, filmed over an empty pitch):
+  // ?players=0 on the URL, or
+  // window.__players(false) at any time, draws no players, officials or ball
+  const [peopled, setPeopled] = useState(() => new URLSearchParams(location.search).get('players') !== '0');
+  useEffect(() => { hook('players', setPeopled); }, []);
+  hook('pitchMode', pitchMode);   // for the headless checks   // no ring at the feet of the eyes we look through
+  // the match roster (src/lineup/roster.ts): each player the same name, shirt number and face in every
   // clip and in the line-up show. undefined while it loads, so the players appear once, already in their roster looks
   // (the windows load it with the package, so this resolves at once); null if there is none
   const [roster, setRoster] = useState<Roster | null | undefined>(undefined);
@@ -240,7 +245,7 @@ function StageImpl({ data, clock, phase, layers, selected, onTick, marker = null
     const q = new URLSearchParams(location.search), n = (k: string) => +(q.get(k) ?? 1) || 1;
     const seeds = { hair: n('hair'), number: n('num'), skin: n('skin'), build: n('build'), boots: n('boots') };
     const L = clipLooks(pkg, roster, makeLooks(data.joints.players, data.joints.nAtt, seeds, keepersOf(pkg)), seeds);
-    (window as unknown as { __looks?: unknown }).__looks = L;   // for the probes (scripts/perf.mjs)
+    hook('looks', L);   // for the probes (scripts/perf.mjs)
     return L;
   }, [data, pkg, roster]);
   return (
@@ -264,46 +269,46 @@ function StageImpl({ data, clock, phase, layers, selected, onTick, marker = null
       <PerfProbe />
       <ApplyScale />
       <AdaptiveQuality />
-      {director && xOn('idlerender') && <RenderGate clock={clock} mode={pitchMode} hover={hover} covered={covered} />}
+      {director && <RenderGate clock={clock} mode={pitchMode} hover={hover} covered={covered} />}
       <BootFrame off={covered} />
       <Pitch glow={0.22} ground={director} mode={director ? pitchMode : undefined} />
       {director && <TacticalFlip data={data} clock={clock} mode={pitchMode} />}
       <group rotation-y={orient < 0 ? Math.PI : 0}>
       <Furniture />
-      {/* the full shell: drawing only the interior saved about 130,000 triangles but changed how the roof looks (Yi, 2026-10-22: keep it) */}
-      {/* the crowd follows the clip's clock (still when paused) and flashes after shots and goals (stadium session, Yi 2026-10-22) */}
+      {/* the full shell: drawing only the interior saved about 130,000 triangles but changed how the roof looks */}
+      {/* the crowd follows the clip's clock (still when paused) and flashes after shots and goals */}
       <ProceduralStadium cutaway={!director} clipPlane={director ? clipPlane : undefined} shell="crystal" time={() => clock.t} events={stadiumEv} />
       </group>
       {/* what belongs to the clip, mounted afresh for each clip (a clip changes in place: game/clipSwap.ts); the pitch, the
           stadium and the camera stay */}
       <Fragment key={clipKey}>
       <SwapHide mode={pitchMode}>
-      {data.joints && looks && <Players J={data.joints} clock={clock} style={allStyle ?? 'toon'} looks={looks} hide={hide} hover={director ? hover : undefined} attacking={attacking} ghosts={ghosts} mask={showStyled ? restMask : undefined} />}
-      {showStyled && data.joints && looks && <Players J={data.joints} clock={clock} style={showOf(game).style} looks={looks} hide={hide} hover={hover} attacking={attacking} mask={chosenMask} />}
+      {peopled && data.joints && looks && <Players J={data.joints} clock={clock} style={allStyle ?? 'toon'} looks={looks} hide={hide} hover={director ? hover : undefined} attacking={attacking} ghosts={ghosts} mask={showStyled ? restMask : undefined} />}
+      {peopled && showStyled && data.joints && looks && <Players J={data.joints} clock={clock} style={showOf(game).style} looks={looks} hide={hide} hover={hover} attacking={attacking} mask={chosenMask} />}
       </SwapHide>
-      {/* the hover and selection triangles (telestration, Yi 2026-10-22): sized in metres within on-screen bounds, white over
+      {/* the hover and selection triangles (telestration): sized in metres within on-screen bounds, white over
           the player under the mouse, the team colour over the selected one */}
       {director && <HoverPointer data={data} clock={clock} hover={hover} />}
       {director && <MateShotLayer data={data} clock={clock} />}
       {director && <TargetPicker data={data} />}
       {director && data.joints && looks && onPortraits && <PortraitStudio J={data.joints} looks={looks} attacking={attacking} onDone={onPortraits} delayS={covered ? 4.5 : 0} />}
-      {director && data.officials?.joints && <OffBoard mode={pitchMode}><Players J={data.officials.joints} clock={clock} style="toon" looks={officialLooks} hide={hideOfficial} kit="official" /></OffBoard>}
+      {peopled && director && data.officials?.joints && <OffBoard mode={pitchMode}><Players J={data.officials.joints} clock={clock} style="toon" looks={officialLooks} hide={hideOfficial} kit="official" /></OffBoard>}
       {director && <GameLayers data={data} clock={clock} looks={looks} hide={hide} mode={pitchMode} />}
-      {/* the Show menu's tags and speed rings, in every mode (Yi, 2026-10-24) */}
-      {director && <ShowLayer data={data} clock={clock} looks={looks} hide={hide} hover={hover} />}
+      {/* the Show menu's tags and speed rings, in every mode */}
+      {peopled && director && <ShowLayer data={data} clock={clock} looks={looks} hide={hide} hover={hover} />}
       {director && (overlay ? overlay(pitchMode) : <OverlayHost mode={pitchMode} />)}
       {pkg.meta.goal && <Celebration clock={clock} goalT={pkg.meta.goal.t} goalX={pkg.meta.goal.x} />}
-      {<SwapHide mode={pitchMode}><StyledBall pkg={pkg} clock={clock} style="modern" /></SwapHide>}
+      {peopled && <SwapHide mode={pitchMode}><StyledBall pkg={pkg} clock={clock} style="modern" /></SwapHide>}
       {atDecision && layers.pc && <PitchControl pkg={pkg} />}
       {atDecision && layers.vis && <Vision pkg={pkg} />}
       {atDecision && layers.opt && <Options pkg={pkg} selected={selected} showTags />}
       {atDecision && <CarrierMark pkg={pkg} />}
-      {/* the selected player's double ring on the grass (telestration, Yi 2026-10-22): dashed white outer band turning once
+      {/* the selected player's double ring on the grass (telestration): dashed white outer band turning once
           in 20 s, inner band in his team colour; none in his own first-person view */}
       {director
         ? <Telestration data={data} clock={clock} items={selectedItems(game)} surface={pitchMode} />
         : ring !== null && <Telestration data={data} clock={clock} items={[{ id: `sel-${ring}`, kind: 'marker', at: { player: ring } }]} />}
-      {/* the Explain mode's director script: its drawings, pointers and offside close-up (explain/, chat 4) */}
+      {/* the Explain mode's director script: its drawings, pointers and offside close-up (explain/) */}
       {director && <ExplainLayer data={data} clock={clock} surface={pitchMode} />}
       {director && <VarReplay data={data} clock={clock} surface={pitchMode} />}
       </Fragment>
@@ -312,6 +317,6 @@ function StageImpl({ data, clock, phase, layers, selected, onTick, marker = null
   );
 }
 
-/** the stage, again only when its own props change (three/quality.ts xOn 'stagememo'): the game's page renders with its
+/** the stage, again only when its own props change: the game's page renders with its
  *  clock fifteen times a second, and every one went through the whole 3D tree */
-export const Stage = xOn('stagememo') ? memo(StageImpl) : StageImpl;
+export const Stage = memo(StageImpl);

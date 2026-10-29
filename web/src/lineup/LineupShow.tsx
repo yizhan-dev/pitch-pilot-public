@@ -543,7 +543,7 @@ function TacticsBoard({ clock }: { clock: Clock }) {
   );
 }
 
-/** the show's later parts made ready in its first half second (three/quality.ts xOn 'showprewarm'): the scan's ring, the
+/** the show's later parts made ready in its first half second: the scan's ring, the
  *  sparks, the flashes, the board are mounted from the start but hidden, and their shaders were compiled as each first
  *  showed, mid-show: up to 60 ms as the ring spread, a visible stutter in the hexagons' fan-out and the growing
  *  centre ring before the kick-off. Shown for one synchronous call and hidden again, so nothing is
@@ -571,7 +571,7 @@ function ShowMeter({ onDone }: { onDone: () => void }) {
   return null;
 }
 
-/** the shadows by shot (three/quality.ts xOn 'showshadow'): in the far shots (the title's orbit and rise, the board,
+/** the shadows by shot: in the far shots (the title's orbit and rise, the board,
  *  the final, the scan, the end) the map is drawn every third frame and read with the plain PCF filter; in the close
  *  ones (the men one by one) every frame and soft, as before. Measured on the Ryzen's radeonsi path at 0.75: the soft
  *  filter costs 21% of the title's frame, the pass 9%; a shadow a few pixels across shows neither. Both program sets
